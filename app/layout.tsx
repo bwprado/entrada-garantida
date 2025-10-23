@@ -1,26 +1,29 @@
-import type React from "react"
-import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 
-const _geist = Geist({ subsets: ["latin"] })
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
+import { Analytics } from "@vercel/analytics/next"
+import { Geist, Geist_Mono } from "next/font/google"
+
+import type { Metadata } from "next"
+import type React from "react"
+
+const geist = Geist({ subsets: ["latin"] })
+const geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Programa Habitacional - Governo do Maranhão",
-  description: "Programa estadual de subsídio para aquisição de imóveis - Governo do Estado do Maranhão",
-  generator: "v0.app",
+  title: "Programa Entrada Garantida - Governo do Maranhão - SEMAG",
+  description:
+    "Programa estadual de subsídio para aquisição de imóveis - Governo do Estado do Maranhão - SEMAG",
+  generator: "Entrada Garantida"
 }
 
 export default function RootLayout({
-  children,
+  children
 }: Readonly<{
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body className={`font-sans antialiased`}>
+    <html lang="pt-BR">
+      <body className={`${geist.className} antialiased`}>
         {children}
         <Analytics />
       </body>
