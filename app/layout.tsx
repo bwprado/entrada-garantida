@@ -1,20 +1,24 @@
 import "./globals.css"
 
-import { Analytics } from "@vercel/analytics/next"
-import { Geist, Geist_Mono } from "next/font/google"
 import { Header } from "@/components/header"
+import { Analytics } from "@vercel/analytics/next"
+import { Geist } from "next/font/google"
 
 import type { Metadata } from "next"
 import type React from "react"
 
 const geist = Geist({ subsets: ["latin"] })
-const geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Programa Entrada Garantida - Governo do Maranhão - SEMAG",
   description:
     "Programa estadual de subsídio para aquisição de imóveis - Governo do Estado do Maranhão - SEMAG",
-  generator: "Entrada Garantida"
+  generator: "Entrada Garantida",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/favicon.ico"
+  }
 }
 
 export default function RootLayout({
