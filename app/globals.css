@@ -95,6 +95,14 @@
 @theme inline {
   --font-sans: "Geist", "Geist Fallback";
   --font-mono: "Geist Mono", "Geist Mono Fallback";
+
+  /* Programa Entrada Garantida colors */
+  --color-program-green-primary: #22c55e;
+  --color-program-green-hover: #16a34a;
+  --color-program-blue-dark: #0c4a6e;
+  --color-program-yellow-accent: #fbbf24;
+  --color-program-pink-accent: #db2777;
+  --color-program-teal-gradient: #0e7490;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

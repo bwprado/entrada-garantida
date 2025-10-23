@@ -1,31 +1,30 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Home, Building2, Plus, LogOut, Eye, Edit, BarChart3, Users, CheckCircle2, Clock, XCircle } from "lucide-react"
+import {
+  Home,
+  Building2,
+  Plus,
+  LogOut,
+  Eye,
+  Edit,
+  BarChart3,
+  Users,
+  CheckCircle2,
+  Clock,
+  XCircle
+} from "lucide-react"
 
 export default function ConstrutorDashboardPage() {
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <Home className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="font-bold text-base leading-tight">Programa Habitacional</h1>
-              <p className="text-xs text-muted-foreground">Portal do Construtor</p>
-            </div>
-          </Link>
-          <Button variant="ghost" size="sm">
-            <LogOut className="w-4 h-4 mr-2" />
-            Sair
-          </Button>
-        </div>
-      </header>
-
       {/* Main Content */}
       <div className="flex-1 bg-muted/30 py-8 px-4">
         <div className="container mx-auto max-w-7xl">
@@ -33,7 +32,9 @@ export default function ConstrutorDashboardPage() {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h2 className="text-3xl font-bold mb-2">Construtora ABC Ltda</h2>
-              <p className="text-muted-foreground">Gerencie seus empreendimentos no programa</p>
+              <p className="text-muted-foreground">
+                Gerencie seus empreendimentos no programa
+              </p>
             </div>
             <Button size="lg">
               <Plus className="w-5 h-5 mr-2" />
@@ -47,7 +48,9 @@ export default function ConstrutorDashboardPage() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Total de Imóveis</p>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Total de Imóveis
+                    </p>
                     <p className="text-3xl font-bold">12</p>
                   </div>
                   <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
@@ -61,7 +64,9 @@ export default function ConstrutorDashboardPage() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Aprovados</p>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Aprovados
+                    </p>
                     <p className="text-3xl font-bold text-secondary">8</p>
                   </div>
                   <div className="w-12 h-12 bg-secondary/10 rounded-lg flex items-center justify-center">
@@ -75,7 +80,9 @@ export default function ConstrutorDashboardPage() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Em Análise</p>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Em Análise
+                    </p>
                     <p className="text-3xl font-bold">3</p>
                   </div>
                   <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
@@ -89,7 +96,9 @@ export default function ConstrutorDashboardPage() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Solicitações</p>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Solicitações
+                    </p>
                     <p className="text-3xl font-bold">24</p>
                   </div>
                   <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
@@ -106,7 +115,9 @@ export default function ConstrutorDashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Imóveis Cadastrados</CardTitle>
-                  <CardDescription>Gerencie seus empreendimentos no programa</CardDescription>
+                  <CardDescription>
+                    Gerencie seus empreendimentos no programa
+                  </CardDescription>
                 </div>
                 <Button variant="outline" size="sm" className="bg-transparent">
                   <BarChart3 className="w-4 h-4 mr-2" />
@@ -128,22 +139,38 @@ export default function ConstrutorDashboardPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-4 mb-2">
                       <div>
-                        <h3 className="font-bold text-lg mb-1">Residencial Jardim das Flores</h3>
-                        <p className="text-sm text-muted-foreground">Apartamento • 2 quartos • 1 vaga</p>
+                        <h3 className="font-bold text-lg mb-1">
+                          Residencial Jardim das Flores
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          Apartamento • 2 quartos • 1 vaga
+                        </p>
                       </div>
-                      <Badge variant="secondary" className="bg-secondary/50 flex-shrink-0">
+                      <Badge
+                        variant="secondary"
+                        className="bg-secondary/50 flex-shrink-0">
                         Aprovado
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-3">Cohama, São Luís - MA</p>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Cohama, São Luís - MA
+                    </p>
                     <div className="flex items-center justify-between">
-                      <p className="text-xl font-bold text-primary">R$ 185.000</p>
+                      <p className="text-xl font-bold text-primary">
+                        R$ 185.000
+                      </p>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" className="bg-transparent">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="bg-transparent">
                           <Eye className="w-4 h-4 mr-2" />
                           Ver
                         </Button>
-                        <Button variant="outline" size="sm" className="bg-transparent">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="bg-transparent">
                           <Edit className="w-4 h-4 mr-2" />
                           Editar
                         </Button>
@@ -151,7 +178,8 @@ export default function ConstrutorDashboardPage() {
                     </div>
                     <div className="mt-3 pt-3 border-t">
                       <p className="text-sm text-muted-foreground">
-                        <Users className="w-4 h-4 inline mr-1" />8 solicitações de beneficiários
+                        <Users className="w-4 h-4 inline mr-1" />8 solicitações
+                        de beneficiários
                       </p>
                     </div>
                   </div>
@@ -169,20 +197,34 @@ export default function ConstrutorDashboardPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-4 mb-2">
                       <div>
-                        <h3 className="font-bold text-lg mb-1">Condomínio Vista Verde</h3>
-                        <p className="text-sm text-muted-foreground">Casa • 3 quartos • 2 vagas</p>
+                        <h3 className="font-bold text-lg mb-1">
+                          Condomínio Vista Verde
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          Casa • 3 quartos • 2 vagas
+                        </p>
                       </div>
                       <Badge className="flex-shrink-0">Em Análise</Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-3">Turu, São Luís - MA</p>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Turu, São Luís - MA
+                    </p>
                     <div className="flex items-center justify-between">
-                      <p className="text-xl font-bold text-primary">R$ 235.000</p>
+                      <p className="text-xl font-bold text-primary">
+                        R$ 235.000
+                      </p>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" className="bg-transparent">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="bg-transparent">
                           <Eye className="w-4 h-4 mr-2" />
                           Ver
                         </Button>
-                        <Button variant="outline" size="sm" className="bg-transparent">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="bg-transparent">
                           <Edit className="w-4 h-4 mr-2" />
                           Editar
                         </Button>
@@ -209,22 +251,38 @@ export default function ConstrutorDashboardPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-4 mb-2">
                       <div>
-                        <h3 className="font-bold text-lg mb-1">Edifício Solar do Atlântico</h3>
-                        <p className="text-sm text-muted-foreground">Apartamento • 2 quartos • 1 vaga</p>
+                        <h3 className="font-bold text-lg mb-1">
+                          Edifício Solar do Atlântico
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          Apartamento • 2 quartos • 1 vaga
+                        </p>
                       </div>
-                      <Badge variant="secondary" className="bg-secondary/50 flex-shrink-0">
+                      <Badge
+                        variant="secondary"
+                        className="bg-secondary/50 flex-shrink-0">
                         Aprovado
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-3">Renascença, São Luís - MA</p>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Renascença, São Luís - MA
+                    </p>
                     <div className="flex items-center justify-between">
-                      <p className="text-xl font-bold text-primary">R$ 198.000</p>
+                      <p className="text-xl font-bold text-primary">
+                        R$ 198.000
+                      </p>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" className="bg-transparent">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="bg-transparent">
                           <Eye className="w-4 h-4 mr-2" />
                           Ver
                         </Button>
-                        <Button variant="outline" size="sm" className="bg-transparent">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="bg-transparent">
                           <Edit className="w-4 h-4 mr-2" />
                           Editar
                         </Button>
@@ -251,18 +309,29 @@ export default function ConstrutorDashboardPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-4 mb-2">
                       <div>
-                        <h3 className="font-bold text-lg mb-1">Residencial Parque das Árvores</h3>
-                        <p className="text-sm text-muted-foreground">Casa • 2 quartos • 1 vaga</p>
+                        <h3 className="font-bold text-lg mb-1">
+                          Residencial Parque das Árvores
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          Casa • 2 quartos • 1 vaga
+                        </p>
                       </div>
                       <Badge variant="destructive" className="flex-shrink-0">
                         Reprovado
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-3">Vinhais, São Luís - MA</p>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Vinhais, São Luís - MA
+                    </p>
                     <div className="flex items-center justify-between">
-                      <p className="text-xl font-bold text-muted-foreground">R$ 265.000</p>
+                      <p className="text-xl font-bold text-muted-foreground">
+                        R$ 265.000
+                      </p>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" className="bg-transparent">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="bg-transparent">
                           <Eye className="w-4 h-4 mr-2" />
                           Ver
                         </Button>

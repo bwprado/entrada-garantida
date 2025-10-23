@@ -2,6 +2,7 @@ import "./globals.css"
 
 import { Analytics } from "@vercel/analytics/next"
 import { Geist, Geist_Mono } from "next/font/google"
+import { Header } from "@/components/header"
 
 import type { Metadata } from "next"
 import type React from "react"
@@ -24,6 +25,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={`${geist.className} antialiased`}>
+        <Header />
         {children}
         <Analytics />
       </body>

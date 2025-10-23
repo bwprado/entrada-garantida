@@ -17,28 +17,6 @@ import {
 export default function LandingPage() {
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b sticky top-0 z-50 drop-shadow-md h-20 bg-white">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-[#22c55e] rounded-lg flex items-center justify-center">
-              <Home className="w-7 h-7 text-white" />
-            </div>
-            <div>
-              <h1 className="font-bold text-lg leading-tight text-[#0c4a6e]">
-                Programa Entrada Garantida
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                Governo do Estado do Maranhão
-              </p>
-            </div>
-          </div>
-          <Button
-            asChild
-            className="bg-[#22c55e] hover:bg-[#16a34a] text-white">
-            <Link href="/login">Acessar Sistema</Link>
-          </Button>
-        </div>
-      </header>
 
       <section className="relative py-20 md:py-32 overflow-hidden h-[calc(100vh-80px)]">
         <div className="absolute inset-0 z-0">
@@ -54,7 +32,7 @@ export default function LandingPage() {
         </div>
         <div className="container mx-auto px-4 relative z-10 flex items-center justify-center h-full">
           <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 bg-white/95 text-[#0c4a6e] px-4 py-2 rounded-full text-sm font-medium mb-6 shadow-lg">
+            <div className="inline-flex items-center gap-2 bg-white/95 text-program-blue-dark px-4 py-2 rounded-full text-sm font-medium mb-6 shadow-lg">
               <Shield className="w-4 h-4" />
               Programa Oficial do Governo do Maranhão
             </div>
@@ -69,7 +47,7 @@ export default function LandingPage() {
               <Button
                 size="lg"
                 asChild
-                className="text-base bg-[#22c55e] hover:bg-[#16a34a] text-white shadow-xl">
+                className="text-base bg-program-green-primary hover:bg-program-green-hover text-white shadow-xl">
                 <Link href="/beneficiario/cadastro">
                   Quero me Cadastrar
                   <ArrowRight className="w-5 h-5 ml-2" />
@@ -79,7 +57,7 @@ export default function LandingPage() {
                 size="lg"
                 variant="outline"
                 asChild
-                className="text-base bg-white/95 hover:bg-white border-white text-[#0c4a6e] shadow-xl">
+                className="text-base bg-white/95 hover:bg-white border-white text-program-blue-dark shadow-xl">
                 <Link href="/imoveis">Ver Imóveis Disponíveis</Link>
               </Button>
             </div>
@@ -97,23 +75,23 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-16 bg-gradient-to-r from-[#0c4a6e] via-[#0e7490] to-[#0c4a6e] text-white h-[200px]">
+      <section className="py-16 bg-gradient-to-r from-program-blue-dark via-program-teal-gradient to-program-blue-dark text-white h-[200px]">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
             <div className="text-center">
-              <div className="text-4xl font-bold text-[#fbbf24] mb-2">
+              <div className="text-4xl font-bold text-program-yellow-accent mb-2">
                 10.000
               </div>
               <div className="text-white/90">Famílias Contempladas</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-[#fbbf24] mb-2">
+              <div className="text-4xl font-bold text-program-yellow-accent mb-2">
                 R$ 20 mil
               </div>
               <div className="text-white/90">Valor do Subsídio</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-[#fbbf24] mb-2">
+              <div className="text-4xl font-bold text-program-yellow-accent mb-2">
                 R$ 250 mil
               </div>
               <div className="text-white/90">Valor Máximo do Imóvel</div>
@@ -135,16 +113,16 @@ export default function LandingPage() {
                 />
               </div>
               <div>
-                <h3 className="text-3xl md:text-4xl font-bold mb-6 text-[#0c4a6e]">
+                <h3 className="text-3xl md:text-4xl font-bold mb-6 text-program-blue-dark">
                   O Programa em Foco: Moradia Digna e Acesso ao Crédito
                 </h3>
                 <div className="space-y-6">
                   <div className="flex gap-4">
-                    <div className="w-12 h-12 bg-[#fbbf24] rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Home className="w-6 h-6 text-[#0c4a6e]" />
+                    <div className="w-12 h-12 bg-program-yellow-accent rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Home className="w-6 h-6 text-program-blue-dark" />
                     </div>
                     <div>
-                      <h4 className="font-bold text-lg mb-2 text-[#0c4a6e]">
+                      <h4 className="font-bold text-lg mb-2 text-program-blue-dark">
                         Conceito
                       </h4>
                       <p className="text-muted-foreground leading-relaxed">
@@ -156,11 +134,11 @@ export default function LandingPage() {
                     </div>
                   </div>
                   <div className="flex gap-4">
-                    <div className="w-12 h-12 bg-[#22c55e] rounded-lg flex items-center justify-center flex-shrink-0">
+                    <div className="w-12 h-12 bg-program-green-primary rounded-lg flex items-center justify-center flex-shrink-0">
                       <Users className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h4 className="font-bold text-lg mb-2 text-[#0c4a6e]">
+                      <h4 className="font-bold text-lg mb-2 text-program-blue-dark">
                         Público-Alvo
                       </h4>
                       <p className="text-muted-foreground leading-relaxed">
@@ -173,11 +151,11 @@ export default function LandingPage() {
                     </div>
                   </div>
                   <div className="flex gap-4">
-                    <div className="w-12 h-12 bg-[#0c4a6e] rounded-lg flex items-center justify-center flex-shrink-0">
+                    <div className="w-12 h-12 bg-program-blue-dark rounded-lg flex items-center justify-center flex-shrink-0">
                       <Shield className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h4 className="font-bold text-lg mb-2 text-[#0c4a6e]">
+                      <h4 className="font-bold text-lg mb-2 text-program-blue-dark">
                         Cumulatividade
                       </h4>
                       <p className="text-muted-foreground leading-relaxed">
@@ -197,7 +175,7 @@ export default function LandingPage() {
       <section className="py-20 bg-white h-[calc(100vh-80px)]">
         <div className="container m-auto px-4 h-full">
           <div className="text-center mb-12">
-            <h3 className="text-3xl md:text-4xl font-bold mb-4 text-[#0c4a6e]">
+            <h3 className="text-3xl md:text-4xl font-bold mb-4 text-program-blue-dark">
               Fluxograma: Estruturação e Operacionalização
             </h3>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
@@ -207,12 +185,12 @@ export default function LandingPage() {
           </div>
           <div className="max-w-4xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <Card className="border-2 border-[#0c4a6e] shadow-lg hover:shadow-xl transition-shadow">
+              <Card className="border-2 border-program-blue-dark shadow-lg hover:shadow-xl transition-shadow">
                 <CardContent className="pt-6">
-                  <div className="w-16 h-16 bg-[#0c4a6e] rounded-full flex items-center justify-center mb-4 mx-auto">
+                  <div className="w-16 h-16 bg-program-blue-dark rounded-full flex items-center justify-center mb-4 mx-auto">
                     <FileText className="w-8 h-8 text-white" />
                   </div>
-                  <h4 className="font-bold text-xl mb-3 text-center text-[#0c4a6e]">
+                  <h4 className="font-bold text-xl mb-3 text-center text-program-blue-dark">
                     Preparação
                   </h4>
                   <p className="text-muted-foreground text-center leading-relaxed">
@@ -220,12 +198,12 @@ export default function LandingPage() {
                   </p>
                 </CardContent>
               </Card>
-              <Card className="border-2 border-[#db2777] shadow-lg hover:shadow-xl transition-shadow">
+              <Card className="border-2 border-program-pink-accent shadow-lg hover:shadow-xl transition-shadow">
                 <CardContent className="pt-6">
-                  <div className="w-16 h-16 bg-[#db2777] rounded-full flex items-center justify-center mb-4 mx-auto">
+                  <div className="w-16 h-16 bg-program-pink-accent rounded-full flex items-center justify-center mb-4 mx-auto">
                     <Building2 className="w-8 h-8 text-white" />
                   </div>
-                  <h4 className="font-bold text-xl mb-3 text-center text-[#db2777]">
+                  <h4 className="font-bold text-xl mb-3 text-center text-program-pink-accent">
                     Habilitação
                   </h4>
                   <p className="text-muted-foreground text-center leading-relaxed">
@@ -233,12 +211,12 @@ export default function LandingPage() {
                   </p>
                 </CardContent>
               </Card>
-              <Card className="border-2 border-[#fbbf24] shadow-lg hover:shadow-xl transition-shadow">
+              <Card className="border-2 border-program-yellow-accent shadow-lg hover:shadow-xl transition-shadow">
                 <CardContent className="pt-6">
-                  <div className="w-16 h-16 bg-[#fbbf24] rounded-full flex items-center justify-center mb-4 mx-auto">
-                    <Handshake className="w-8 h-8 text-[#0c4a6e]" />
+                  <div className="w-16 h-16 bg-program-yellow-accent rounded-full flex items-center justify-center mb-4 mx-auto">
+                    <Handshake className="w-8 h-8 text-program-blue-dark" />
                   </div>
-                  <h4 className="font-bold text-xl mb-3 text-center text-[#fbbf24]">
+                  <h4 className="font-bold text-xl mb-3 text-center text-program-yellow-accent">
                     Operacionalização
                   </h4>
                   <p className="text-muted-foreground text-center leading-relaxed">
@@ -254,7 +232,7 @@ export default function LandingPage() {
       <section className="py-20 bg-gradient-to-br from-gray-50 to-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h3 className="text-3xl md:text-4xl font-bold mb-4 text-[#0c4a6e]">
+            <h3 className="text-3xl md:text-4xl font-bold mb-4 text-program-blue-dark">
               Como Funciona o Programa
             </h3>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
@@ -265,10 +243,10 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
             <Card className="border-t-4 border-t-[#22c55e] shadow-lg hover:shadow-xl transition-shadow">
               <CardContent className="pt-6">
-                <div className="w-12 h-12 bg-[#22c55e]/10 rounded-lg flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-program-green-primary/10 rounded-lg flex items-center justify-center mb-4">
                   <Users className="w-6 h-6 text-[#22c55e]" />
                 </div>
-                <h4 className="font-bold text-lg mb-2 text-[#0c4a6e]">
+                <h4 className="font-bold text-lg mb-2 text-program-blue-dark">
                   1. Cadastre-se
                 </h4>
                 <p className="text-muted-foreground text-sm leading-relaxed">
@@ -279,10 +257,10 @@ export default function LandingPage() {
             </Card>
             <Card className="border-t-4 border-t-[#0c4a6e] shadow-lg hover:shadow-xl transition-shadow">
               <CardContent className="pt-6">
-                <div className="w-12 h-12 bg-[#0c4a6e]/10 rounded-lg flex items-center justify-center mb-4">
-                  <Home className="w-6 h-6 text-[#0c4a6e]" />
+                <div className="w-12 h-12 bg-program-blue-dark/10 rounded-lg flex items-center justify-center mb-4">
+                  <Home className="w-6 h-6 text-program-blue-dark" />
                 </div>
-                <h4 className="font-bold text-lg mb-2 text-[#0c4a6e]">
+                <h4 className="font-bold text-lg mb-2 text-program-blue-dark">
                   2. Escolha o Imóvel
                 </h4>
                 <p className="text-muted-foreground text-sm leading-relaxed">
@@ -293,10 +271,10 @@ export default function LandingPage() {
             </Card>
             <Card className="border-t-4 border-t-[#fbbf24] shadow-lg hover:shadow-xl transition-shadow">
               <CardContent className="pt-6">
-                <div className="w-12 h-12 bg-[#fbbf24]/10 rounded-lg flex items-center justify-center mb-4">
-                  <CheckCircle2 className="w-6 h-6 text-[#fbbf24]" />
+                <div className="w-12 h-12 bg-program-yellow-accent/10 rounded-lg flex items-center justify-center mb-4">
+                  <CheckCircle2 className="w-6 h-6 text-program-yellow-accent" />
                 </div>
-                <h4 className="font-bold text-lg mb-2 text-[#0c4a6e]">
+                <h4 className="font-bold text-lg mb-2 text-program-blue-dark">
                   3. Análise
                 </h4>
                 <p className="text-muted-foreground text-sm leading-relaxed">
@@ -306,10 +284,10 @@ export default function LandingPage() {
             </Card>
             <Card className="border-t-4 border-t-[#db2777] shadow-lg hover:shadow-xl transition-shadow">
               <CardContent className="pt-6">
-                <div className="w-12 h-12 bg-[#db2777]/10 rounded-lg flex items-center justify-center mb-4">
-                  <Shield className="w-6 h-6 text-[#db2777]" />
+                <div className="w-12 h-12 bg-program-pink-accent/10 rounded-lg flex items-center justify-center mb-4">
+                  <Shield className="w-6 h-6 text-program-pink-accent" />
                 </div>
-                <h4 className="font-bold text-lg mb-2 text-[#0c4a6e]">
+                <h4 className="font-bold text-lg mb-2 text-program-blue-dark">
                   4. Aprovação
                 </h4>
                 <p className="text-muted-foreground text-sm leading-relaxed">
@@ -321,7 +299,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-20 bg-[#22c55e] text-white relative overflow-hidden">
+      <section className="py-20 bg-program-green-primary text-white relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <Image
             src="/conjunto-habitacional.jpg"
@@ -353,11 +331,11 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="border-t py-12 bg-[#0c4a6e] text-white">
+      <footer className="border-t py-12 bg-program-blue-dark text-white">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
             <div>
-              <h4 className="font-bold mb-4 text-[#fbbf24]">
+              <h4 className="font-bold mb-4 text-program-yellow-accent">
                 Programa Entrada Garantida
               </h4>
               <p className="text-sm text-white/80 leading-relaxed">
@@ -366,7 +344,9 @@ export default function LandingPage() {
               </p>
             </div>
             <div>
-              <h4 className="font-bold mb-4 text-[#fbbf24]">Acesso Rápido</h4>
+              <h4 className="font-bold mb-4 text-program-yellow-accent">
+                Acesso Rápido
+              </h4>
               <ul className="space-y-2 text-sm">
                 <li>
                   <Link
@@ -399,7 +379,9 @@ export default function LandingPage() {
               </ul>
             </div>
             <div>
-              <h4 className="font-bold mb-4 text-[#fbbf24]">Contato</h4>
+              <h4 className="font-bold mb-4 text-program-yellow-accent">
+                Contato
+              </h4>
               <p className="text-sm text-white/80 leading-relaxed">
                 Dúvidas sobre o programa?
                 <br />

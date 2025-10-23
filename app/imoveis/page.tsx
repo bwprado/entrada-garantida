@@ -6,46 +6,46 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { Home, Search, SlidersHorizontal, MapPin, Bed, Car, Maximize, Heart, ChevronDown } from "lucide-react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger
+} from "@/components/ui/collapsible"
+import {
+  Home,
+  Search,
+  SlidersHorizontal,
+  MapPin,
+  Bed,
+  Car,
+  Maximize,
+  Heart,
+  ChevronDown
+} from "lucide-react"
 import { useState } from "react"
 
 export default function ImoveisPage() {
-  const [isFiltersOpen, setIsFiltersOpen] = useState(true)
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false)
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="border-b bg-card sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <Home className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="font-bold text-base leading-tight">Programa Habitacional</h1>
-              <p className="text-xs text-muted-foreground">Governo do Estado do Maranhão</p>
-            </div>
-          </Link>
-          <div className="flex gap-2">
-            <Button variant="outline" asChild className="bg-transparent">
-              <Link href="/login">Entrar</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/beneficiario/cadastro">Cadastrar</Link>
-            </Button>
-          </div>
-        </div>
-      </header>
-
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-12 border-b">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center mb-8">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Encontre Seu Imóvel</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Encontre Seu Imóvel
+            </h2>
             <p className="text-muted-foreground text-lg">
-              Navegue pelos imóveis disponíveis no programa e escolha o que melhor atende sua família
+              Navegue pelos imóveis disponíveis no programa e escolha o que
+              melhor atende sua família
             </p>
           </div>
 
@@ -54,7 +54,10 @@ export default function ImoveisPage() {
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input placeholder="Buscar por localização, bairro ou tipo de imóvel..." className="pl-10 h-12" />
+                <Input
+                  placeholder="Buscar por localização, bairro ou tipo de imóvel..."
+                  className="pl-10 h-12"
+                />
               </div>
               <Button size="lg" className="px-6">
                 Buscar
@@ -70,29 +73,37 @@ export default function ImoveisPage() {
           <div className="flex flex-col gap-6">
             <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
               <Card>
-                <CardContent className="pt-6">
+                <CardContent className="">
                   <CollapsibleTrigger asChild>
-                    <Button variant="ghost" className="w-full justify-between p-0 h-auto hover:bg-transparent">
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-between p-0 h-auto hover:bg-transparent">
                       <div className="flex items-center gap-2">
                         <SlidersHorizontal className="w-5 h-5 text-primary" />
                         <h3 className="font-bold text-lg">Filtros</h3>
                       </div>
-                      <ChevronDown className={`w-5 h-5 transition-transform ${isFiltersOpen ? "rotate-180" : ""}`} />
+                      <ChevronDown
+                        className={`w-5 h-5 transition-transform ${
+                          isFiltersOpen ? "rotate-180" : ""
+                        }`}
+                      />
                     </Button>
                   </CollapsibleTrigger>
 
                   <CollapsibleContent className="mt-6">
-                    <div className="flex flex-wrap gap-4">
+                    <div className="grid grid-cols-3 grid-rows-2 gap-4">
                       {/* Tipo de Imóvel */}
                       <div className="flex-1 min-w-[200px] space-y-2">
                         <Label>Tipo de Imóvel</Label>
                         <Select>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Todos" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="todos">Todos</SelectItem>
-                            <SelectItem value="apartamento">Apartamento</SelectItem>
+                            <SelectItem value="apartamento">
+                              Apartamento
+                            </SelectItem>
                             <SelectItem value="casa">Casa</SelectItem>
                           </SelectContent>
                         </Select>
@@ -102,13 +113,15 @@ export default function ImoveisPage() {
                       <div className="flex-1 min-w-[200px] space-y-2">
                         <Label>Cidade</Label>
                         <Select>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Todas" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="todas">Todas</SelectItem>
                             <SelectItem value="sao-luis">São Luís</SelectItem>
-                            <SelectItem value="imperatriz">Imperatriz</SelectItem>
+                            <SelectItem value="imperatriz">
+                              Imperatriz
+                            </SelectItem>
                             <SelectItem value="caxias">Caxias</SelectItem>
                           </SelectContent>
                         </Select>
@@ -118,14 +131,16 @@ export default function ImoveisPage() {
                       <div className="flex-1 min-w-[200px] space-y-2">
                         <Label>Bairro</Label>
                         <Select>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Todos" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="todos">Todos</SelectItem>
                             <SelectItem value="cohama">Cohama</SelectItem>
                             <SelectItem value="turu">Turu</SelectItem>
-                            <SelectItem value="renascenca">Renascença</SelectItem>
+                            <SelectItem value="renascenca">
+                              Renascença
+                            </SelectItem>
                             <SelectItem value="vinhais">Vinhais</SelectItem>
                           </SelectContent>
                         </Select>
@@ -135,7 +150,7 @@ export default function ImoveisPage() {
                       <div className="flex-1 min-w-[200px] space-y-2">
                         <Label>Quartos</Label>
                         <Select>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Qualquer" />
                           </SelectTrigger>
                           <SelectContent>
@@ -152,7 +167,7 @@ export default function ImoveisPage() {
                       <div className="flex-1 min-w-[200px] space-y-2">
                         <Label>Vagas de Garagem</Label>
                         <Select>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Qualquer" />
                           </SelectTrigger>
                           <SelectContent>
@@ -169,14 +184,20 @@ export default function ImoveisPage() {
                       <div className="flex-1 min-w-[200px] space-y-2">
                         <Label>Faixa de Preço</Label>
                         <Select>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Qualquer" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="qualquer">Qualquer</SelectItem>
-                            <SelectItem value="ate-150">Até R$ 150.000</SelectItem>
-                            <SelectItem value="150-200">R$ 150.000 - R$ 200.000</SelectItem>
-                            <SelectItem value="200-250">R$ 200.000 - R$ 250.000</SelectItem>
+                            <SelectItem value="ate-150">
+                              Até R$ 150.000
+                            </SelectItem>
+                            <SelectItem value="150-200">
+                              R$ 150.000 - R$ 200.000
+                            </SelectItem>
+                            <SelectItem value="200-250">
+                              R$ 200.000 - R$ 250.000
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -184,7 +205,9 @@ export default function ImoveisPage() {
 
                     <div className="flex gap-3 mt-6">
                       <Button className="flex-1">Aplicar Filtros</Button>
-                      <Button variant="outline" className="flex-1 bg-transparent">
+                      <Button
+                        variant="outline"
+                        className="flex-1 bg-transparent">
                         Limpar Filtros
                       </Button>
                     </div>
@@ -197,7 +220,10 @@ export default function ImoveisPage() {
             <div>
               <div className="flex items-center justify-between mb-6">
                 <p className="text-muted-foreground">
-                  <span className="font-semibold text-foreground">342 imóveis</span> encontrados
+                  <span className="font-semibold text-foreground">
+                    342 imóveis
+                  </span>{" "}
+                  encontrados
                 </p>
                 <Select defaultValue="recentes">
                   <SelectTrigger className="w-48">
@@ -223,17 +249,22 @@ export default function ImoveisPage() {
                     <Button
                       size="icon"
                       variant="secondary"
-                      className="absolute top-3 right-3 rounded-full bg-background/80 hover:bg-background"
-                    >
+                      className="absolute top-3 right-3 rounded-full bg-background/80 hover:bg-background">
                       <Heart className="w-4 h-4" />
                     </Button>
-                    <Badge className="absolute bottom-3 left-3">Disponível</Badge>
+                    <Badge className="absolute bottom-3 left-3">
+                      Disponível
+                    </Badge>
                   </div>
                   <CardContent className="p-4">
-                    <h3 className="font-bold text-lg mb-2 line-clamp-1">Residencial Jardim das Flores</h3>
+                    <h3 className="font-bold text-lg mb-2 line-clamp-1">
+                      Residencial Jardim das Flores
+                    </h3>
                     <div className="flex items-center gap-1 text-sm text-muted-foreground mb-3">
                       <MapPin className="w-4 h-4" />
-                      <span className="line-clamp-1">Cohama, São Luís - MA</span>
+                      <span className="line-clamp-1">
+                        Cohama, São Luís - MA
+                      </span>
                     </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
                       <div className="flex items-center gap-1">
@@ -251,8 +282,12 @@ export default function ImoveisPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-2xl font-bold text-primary">R$ 185.000</p>
-                        <p className="text-xs text-muted-foreground">Apartamento</p>
+                        <p className="text-2xl font-bold text-primary">
+                          R$ 185.000
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Apartamento
+                        </p>
                       </div>
                       <Button size="sm" asChild>
                         <Link href="/imoveis/1">Ver Detalhes</Link>
@@ -272,14 +307,17 @@ export default function ImoveisPage() {
                     <Button
                       size="icon"
                       variant="secondary"
-                      className="absolute top-3 right-3 rounded-full bg-background/80 hover:bg-background"
-                    >
+                      className="absolute top-3 right-3 rounded-full bg-background/80 hover:bg-background">
                       <Heart className="w-4 h-4" />
                     </Button>
-                    <Badge className="absolute bottom-3 left-3">Disponível</Badge>
+                    <Badge className="absolute bottom-3 left-3">
+                      Disponível
+                    </Badge>
                   </div>
                   <CardContent className="p-4">
-                    <h3 className="font-bold text-lg mb-2 line-clamp-1">Condomínio Vista Verde</h3>
+                    <h3 className="font-bold text-lg mb-2 line-clamp-1">
+                      Condomínio Vista Verde
+                    </h3>
                     <div className="flex items-center gap-1 text-sm text-muted-foreground mb-3">
                       <MapPin className="w-4 h-4" />
                       <span className="line-clamp-1">Turu, São Luís - MA</span>
@@ -300,7 +338,9 @@ export default function ImoveisPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-2xl font-bold text-primary">R$ 235.000</p>
+                        <p className="text-2xl font-bold text-primary">
+                          R$ 235.000
+                        </p>
                         <p className="text-xs text-muted-foreground">Casa</p>
                       </div>
                       <Button size="sm" asChild>
@@ -321,17 +361,22 @@ export default function ImoveisPage() {
                     <Button
                       size="icon"
                       variant="secondary"
-                      className="absolute top-3 right-3 rounded-full bg-background/80 hover:bg-background"
-                    >
+                      className="absolute top-3 right-3 rounded-full bg-background/80 hover:bg-background">
                       <Heart className="w-4 h-4" />
                     </Button>
-                    <Badge className="absolute bottom-3 left-3">Disponível</Badge>
+                    <Badge className="absolute bottom-3 left-3">
+                      Disponível
+                    </Badge>
                   </div>
                   <CardContent className="p-4">
-                    <h3 className="font-bold text-lg mb-2 line-clamp-1">Edifício Solar do Atlântico</h3>
+                    <h3 className="font-bold text-lg mb-2 line-clamp-1">
+                      Edifício Solar do Atlântico
+                    </h3>
                     <div className="flex items-center gap-1 text-sm text-muted-foreground mb-3">
                       <MapPin className="w-4 h-4" />
-                      <span className="line-clamp-1">Renascença, São Luís - MA</span>
+                      <span className="line-clamp-1">
+                        Renascença, São Luís - MA
+                      </span>
                     </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
                       <div className="flex items-center gap-1">
@@ -349,8 +394,12 @@ export default function ImoveisPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-2xl font-bold text-primary">R$ 198.000</p>
-                        <p className="text-xs text-muted-foreground">Apartamento</p>
+                        <p className="text-2xl font-bold text-primary">
+                          R$ 198.000
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Apartamento
+                        </p>
                       </div>
                       <Button size="sm" asChild>
                         <Link href="/imoveis/3">Ver Detalhes</Link>
@@ -370,17 +419,22 @@ export default function ImoveisPage() {
                     <Button
                       size="icon"
                       variant="secondary"
-                      className="absolute top-3 right-3 rounded-full bg-background/80 hover:bg-background"
-                    >
+                      className="absolute top-3 right-3 rounded-full bg-background/80 hover:bg-background">
                       <Heart className="w-4 h-4" />
                     </Button>
-                    <Badge className="absolute bottom-3 left-3">Disponível</Badge>
+                    <Badge className="absolute bottom-3 left-3">
+                      Disponível
+                    </Badge>
                   </div>
                   <CardContent className="p-4">
-                    <h3 className="font-bold text-lg mb-2 line-clamp-1">Residencial Parque das Árvores</h3>
+                    <h3 className="font-bold text-lg mb-2 line-clamp-1">
+                      Residencial Parque das Árvores
+                    </h3>
                     <div className="flex items-center gap-1 text-sm text-muted-foreground mb-3">
                       <MapPin className="w-4 h-4" />
-                      <span className="line-clamp-1">Vinhais, São Luís - MA</span>
+                      <span className="line-clamp-1">
+                        Vinhais, São Luís - MA
+                      </span>
                     </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
                       <div className="flex items-center gap-1">
@@ -398,7 +452,9 @@ export default function ImoveisPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-2xl font-bold text-primary">R$ 175.000</p>
+                        <p className="text-2xl font-bold text-primary">
+                          R$ 175.000
+                        </p>
                         <p className="text-xs text-muted-foreground">Casa</p>
                       </div>
                       <Button size="sm" asChild>
@@ -419,17 +475,22 @@ export default function ImoveisPage() {
                     <Button
                       size="icon"
                       variant="secondary"
-                      className="absolute top-3 right-3 rounded-full bg-background/80 hover:bg-background"
-                    >
+                      className="absolute top-3 right-3 rounded-full bg-background/80 hover:bg-background">
                       <Heart className="w-4 h-4" />
                     </Button>
-                    <Badge className="absolute bottom-3 left-3">Disponível</Badge>
+                    <Badge className="absolute bottom-3 left-3">
+                      Disponível
+                    </Badge>
                   </div>
                   <CardContent className="p-4">
-                    <h3 className="font-bold text-lg mb-2 line-clamp-1">Residencial Novo Horizonte</h3>
+                    <h3 className="font-bold text-lg mb-2 line-clamp-1">
+                      Residencial Novo Horizonte
+                    </h3>
                     <div className="flex items-center gap-1 text-sm text-muted-foreground mb-3">
                       <MapPin className="w-4 h-4" />
-                      <span className="line-clamp-1">Cohama, São Luís - MA</span>
+                      <span className="line-clamp-1">
+                        Cohama, São Luís - MA
+                      </span>
                     </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
                       <div className="flex items-center gap-1">
@@ -447,8 +508,12 @@ export default function ImoveisPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-2xl font-bold text-primary">R$ 220.000</p>
-                        <p className="text-xs text-muted-foreground">Apartamento</p>
+                        <p className="text-2xl font-bold text-primary">
+                          R$ 220.000
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Apartamento
+                        </p>
                       </div>
                       <Button size="sm" asChild>
                         <Link href="/imoveis/5">Ver Detalhes</Link>
@@ -468,14 +533,17 @@ export default function ImoveisPage() {
                     <Button
                       size="icon"
                       variant="secondary"
-                      className="absolute top-3 right-3 rounded-full bg-background/80 hover:bg-background"
-                    >
+                      className="absolute top-3 right-3 rounded-full bg-background/80 hover:bg-background">
                       <Heart className="w-4 h-4" />
                     </Button>
-                    <Badge className="absolute bottom-3 left-3">Disponível</Badge>
+                    <Badge className="absolute bottom-3 left-3">
+                      Disponível
+                    </Badge>
                   </div>
                   <CardContent className="p-4">
-                    <h3 className="font-bold text-lg mb-2 line-clamp-1">Condomínio Bela Vista</h3>
+                    <h3 className="font-bold text-lg mb-2 line-clamp-1">
+                      Condomínio Bela Vista
+                    </h3>
                     <div className="flex items-center gap-1 text-sm text-muted-foreground mb-3">
                       <MapPin className="w-4 h-4" />
                       <span className="line-clamp-1">Turu, São Luís - MA</span>
@@ -496,7 +564,9 @@ export default function ImoveisPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-2xl font-bold text-primary">R$ 192.000</p>
+                        <p className="text-2xl font-bold text-primary">
+                          R$ 192.000
+                        </p>
                         <p className="text-xs text-muted-foreground">Casa</p>
                       </div>
                       <Button size="sm" asChild>
