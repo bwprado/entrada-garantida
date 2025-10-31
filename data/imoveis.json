@@ -1,0 +1,83 @@
+[
+  {
+    "id": 1,
+    "title": "Residencial Jardim das Flores",
+    "location": "Cohama, São Luís - MA",
+    "imageSrc": "/modern-apartment-building.png",
+    "status": "Disponível",
+    "bedrooms": 2,
+    "parking": 1,
+    "areaM2": 65,
+    "priceBRL": 185000,
+    "type": "Apartamento",
+    "href": "/imoveis/1"
+  },
+  {
+    "id": 2,
+    "title": "Condomínio Vista Verde",
+    "location": "Turu, São Luís - MA",
+    "imageSrc": "/residential-house.jpg",
+    "status": "Disponível",
+    "bedrooms": 3,
+    "parking": 2,
+    "areaM2": 95,
+    "priceBRL": 235000,
+    "type": "Casa",
+    "href": "/imoveis/2"
+  },
+  {
+    "id": 3,
+    "title": "Edifício Solar do Atlântico",
+    "location": "Renascença, São Luís - MA",
+    "imageSrc": "/modern-apartment-complex.png",
+    "status": "Disponível",
+    "bedrooms": 2,
+    "parking": 1,
+    "areaM2": 70,
+    "priceBRL": 198000,
+    "type": "Apartamento",
+    "href": "/imoveis/3"
+  },
+  {
+    "id": 4,
+    "title": "Residencial Parque das Árvores",
+    "location": "Vinhais, São Luís - MA",
+    "imageSrc": "/modern-city-townhouses.png",
+    "status": "Disponível",
+    "bedrooms": 2,
+    "parking": 1,
+    "areaM2": 68,
+    "priceBRL": 175000,
+    "type": "Casa",
+    "href": "/imoveis/4"
+  },
+  {
+    "id": 5,
+    "title": "Residencial Novo Horizonte",
+    "location": "Cohama, São Luís - MA",
+    "imageSrc": "/modern-apartment-building.png",
+    "status": "Disponível",
+    "bedrooms": 3,
+    "parking": 2,
+    "areaM2": 85,
+    "priceBRL": 220000,
+    "type": "Apartamento",
+    "href": "/imoveis/5"
+  },
+  {
+    "id": 6,
+    "title": "Condomínio Bela Vista",
+    "location": "Turu, São Luís - MA",
+    "imageSrc": "/residential-house.jpg",
+    "status": "Disponível",
+    "bedrooms": 2,
+    "parking": 1,
+    "areaM2": 72,
+    "priceBRL": 192000,
+    "type": "Casa",
+    "href": "/imoveis/6"
+  }
+]
+
+
+

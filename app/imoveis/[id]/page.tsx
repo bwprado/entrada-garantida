@@ -1,53 +1,68 @@
+import imoveis from "@/data/imoveis.json"
 import Link from "next/link"
+
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle
 } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import {
-  Home,
   ArrowLeft,
-  MapPin,
-  Bed,
   Bath,
-  Car,
-  Maximize,
-  Heart,
-  Share2,
+  Bed,
   Building2,
-  CheckCircle2,
   Calendar,
-  DollarSign
+  Car,
+  CheckCircle2,
+  DollarSign,
+  Heart,
+  MapPin,
+  Maximize,
+  Share2
 } from "lucide-react"
+import BackButton from "@/components/back-button"
+import Image from "next/image"
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem
+} from "@/components/ui/carousel"
 
-export default function ImovelDetalhesPage() {
+export default async function ImovelDetalhesPage({
+  params
+}: {
+  params: Promise<{ id: string }>
+}) {
+  const { id } = await params
+  const imovel = imoveis.find((imovel) => imovel.id === Number(id))
+  if (!imovel) {
+    return <div>Imóvel não encontrado</div>
+  }
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex flex-col max-w-7xl mx-auto">
       {/* Main Content */}
-      <div className="flex-1 py-8 px-4">
-        <div className="container mx-auto max-w-7xl">
-          <Button variant="ghost" asChild className="mb-6">
-            <Link href="/imoveis">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar para o catálogo
-            </Link>
-          </Button>
+      <div className="flex-1 px-4">
+        <div className="space-y-4">
+          <BackButton>Voltar para o catálogo</BackButton>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Main Column */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-2 space-y-4">
               {/* Image Gallery */}
-              <Card className="overflow-hidden">
+              <Card className="overflow-hidden pt-0!">
                 <div className="relative h-96 bg-muted">
-                  <img
+                  <Image
                     src="/modern-apartment-building.png"
                     alt="Residencial Jardim das Flores"
-                    className="w-full h-full object-cover"
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    fill
+                    className="object-cover"
                   />
                   <div className="absolute top-4 right-4 flex gap-2">
                     <Button
@@ -65,32 +80,44 @@ export default function ImovelDetalhesPage() {
                   </div>
                   <Badge className="absolute bottom-4 left-4">Disponível</Badge>
                 </div>
-                <div className="grid grid-cols-4 gap-2 p-4">
-                  <div className="h-20 bg-muted rounded-lg overflow-hidden">
-                    <img
-                      src="/modern-apartment-building.png"
-                      alt="Foto 1"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="h-20 bg-muted rounded-lg overflow-hidden">
-                    <img
-                      src="/modern-apartment-complex.png"
-                      alt="Foto 2"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="h-20 bg-muted rounded-lg overflow-hidden">
-                    <img
-                      src="/modern-city-townhouses.png"
-                      alt="Foto 3"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="h-20 bg-muted rounded-lg overflow-hidden flex items-center justify-center">
-                    <span className="text-sm font-medium">+5 fotos</span>
-                  </div>
-                </div>
+                <CardFooter className="pt-6">
+                  <Carousel className="w-full" opts={{ dragFree: true }}>
+                    <CarouselContent>
+                      <CarouselItem className="basis-1/2 md:basis-1/3 lg:basis-1/4">
+                        <div className="h-20 bg-muted rounded-lg overflow-hidden">
+                          <img
+                            src="/modern-apartment-building.png"
+                            alt="Foto 1"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      </CarouselItem>
+                      <CarouselItem className="basis-1/2 md:basis-1/3 lg:basis-1/4">
+                        <div className="h-20 bg-muted rounded-lg overflow-hidden">
+                          <img
+                            src="/modern-apartment-complex.png"
+                            alt="Foto 2"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      </CarouselItem>
+                      <CarouselItem className="basis-1/2 md:basis-1/3 lg:basis-1/4">
+                        <div className="h-20 bg-muted rounded-lg overflow-hidden">
+                          <img
+                            src="/modern-city-townhouses.png"
+                            alt="Foto 3"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      </CarouselItem>
+                      <CarouselItem className="basis-1/2 md:basis-1/3 lg:basis-1/4">
+                        <div className="h-20 bg-muted rounded-lg overflow-hidden flex items-center justify-center">
+                          <span className="text-sm font-medium">+5 fotos</span>
+                        </div>
+                      </CarouselItem>
+                    </CarouselContent>
+                  </Carousel>
+                </CardFooter>
               </Card>
 
               {/* Property Details */}

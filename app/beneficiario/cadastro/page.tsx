@@ -1,4 +1,19 @@
+"use client"
+
+import BackButton from "@/components/back-button"
 import Link from "next/link"
+import { useEffect, useMemo, useState } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import SmoothTab from "@/components/smooth-tab"
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
+} from "@/components/ui/form"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -17,27 +32,557 @@ import {
   SelectValue
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { DollarSign, MapPin, User } from "lucide-react"
 import {
-  Home,
-  ArrowLeft,
-  User,
-  FileText,
-  MapPin,
-  DollarSign
-} from "lucide-react"
+  beneficiarioSchema,
+  deficienciaEnum,
+  identidadeGeneroEnum,
+  racaEnum,
+  rendaFamiliarFaixaEnum,
+  sexoEnum,
+  tipoRendaEnum,
+  type BeneficiarioFormData
+} from "@/lib/schemas/beneficiario"
+import { useLocalStorage } from "usehooks-ts"
+
+const STORAGE_KEY = "beneficiario-draft"
+
+const STEP_IDS = ["pessoais", "contato", "endereco", "resumo"] as const
+type StepId = (typeof STEP_IDS)[number]
 
 export default function BeneficiarioCadastroPage() {
+  const [selectedStep, setSelectedStep] = useState<StepId>("pessoais")
+
+  const form = useForm<BeneficiarioFormData>({
+    resolver: zodResolver(beneficiarioSchema),
+    mode: "onChange",
+    defaultValues: {
+      sexo: "nao-informado",
+      identidadeGenero: "nao-informado",
+      raca: "nao-informado",
+      deficiencias: ["nao_possui"],
+      aceitaComunicacoes: false,
+      estado: "MA"
+    }
+  })
+
+  const { watch, setValue, handleSubmit, trigger } = form
+  const [draft, setDraft] = useLocalStorage<Partial<BeneficiarioFormData>>(
+    STORAGE_KEY,
+    {}
+  )
+
+  // Hydrate from draft once
+  useEffect(() => {
+    if (draft && Object.keys(draft).length > 0) {
+      for (const [key, value] of Object.entries(draft)) {
+        // @ts-expect-error runtime set
+        setValue(key as keyof BeneficiarioFormData, value as any, {
+          shouldValidate: false
+        })
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Persist changes to localStorage
+  useEffect(() => {
+    const subscription = watch((values) => {
+      setDraft(values as Partial<BeneficiarioFormData>)
+    })
+    return () => subscription.unsubscribe()
+  }, [watch, setDraft])
+
+  const stepFields: Record<StepId, (keyof BeneficiarioFormData)[]> = useMemo(
+    () => ({
+      pessoais: [
+        "nome",
+        "cpf",
+        "rg",
+        "senha",
+        "sexo",
+        "identidadeGenero",
+        "raca",
+        "deficiencias"
+      ],
+      contato: [
+        "profissao",
+        "empregador",
+        "ramoAtividade",
+        "tipoRenda",
+        "rendaFaixa",
+        "pessoasFamilia",
+        "dddCelular",
+        "celular",
+        "dddTelefoneFixo",
+        "telefoneFixo",
+        "dddTelefoneRecado",
+        "telefoneRecado",
+        "falarCom",
+        "email",
+        "aceitaComunicacoes"
+      ],
+      endereco: [
+        "cep",
+        "endereco",
+        "numero",
+        "complemento",
+        "bairro",
+        "cidade",
+        "estado",
+        "empreendimento"
+      ],
+      resumo: []
+    }),
+    []
+  )
+
+  async function goNext() {
+    const currentIndex = STEP_IDS.indexOf(selectedStep)
+    const next = STEP_IDS[currentIndex + 1]
+    if (!next) return
+    const valid = await trigger(stepFields[selectedStep])
+    if (valid) setSelectedStep(next)
+  }
+
+  function goPrev() {
+    const currentIndex = STEP_IDS.indexOf(selectedStep)
+    const prev = STEP_IDS[currentIndex - 1]
+    if (prev) setSelectedStep(prev)
+  }
+
+  const onSubmit = (data: BeneficiarioFormData) => {
+    localStorage.removeItem(STORAGE_KEY)
+    console.log("Submitted:", data)
+  }
+
+  const tabItems = [
+    {
+      id: "pessoais",
+      title: "Pessoais",
+      color: "bg-blue-500 hover:bg-blue-600",
+      cardContent: (
+        <div className="p-6 space-y-4">
+          <div className="space-y-2">
+            <h3 className="text-xl font-semibold">Dados Pessoais</h3>
+            <p className="text-sm text-muted-foreground">
+              Informações básicas do beneficiário
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="nome"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome completo</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Seu nome completo" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="cpf"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>CPF</FormLabel>
+                  <FormControl>
+                    <Input placeholder="000.000.000-00" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="rg"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>RG</FormLabel>
+                  <FormControl>
+                    <Input placeholder="00.000.000-0" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="senha"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Senha</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      placeholder="Mínimo 6 caracteres"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormField
+              control={form.control}
+              name="sexo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Sexo</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {sexoEnum.options.map((opt) => (
+                        <SelectItem key={opt} value={opt}>
+                          {opt}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="identidadeGenero"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Identidade de Gênero</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {identidadeGeneroEnum.options.map((opt) => (
+                        <SelectItem key={opt} value={opt}>
+                          {opt}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="raca"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Raça/Cor</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {racaEnum.options.map((opt) => (
+                        <SelectItem key={opt} value={opt}>
+                          {opt}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div>
+            <FormLabel>Deficiências</FormLabel>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+              {deficienciaEnum.options.map((opt) => (
+                <label key={opt} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-input"
+                    checked={form.getValues("deficiencias").includes(opt)}
+                    onChange={(e) => {
+                      const current = new Set(form.getValues("deficiencias"))
+                      if (e.target.checked) current.add(opt)
+                      else current.delete(opt)
+                      const next = Array.from(current)
+                      form.setValue("deficiencias", next as any, {
+                        shouldValidate: true
+                      })
+                    }}
+                  />
+                  <span>{opt}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "contato",
+      title: "Contato",
+      color: "bg-purple-500 hover:bg-purple-600",
+      cardContent: (
+        <div className="p-6 space-y-4">
+          <div className="space-y-2">
+            <h3 className="text-xl font-semibold">Contato e Renda</h3>
+            <p className="text-sm text-muted-foreground">
+              Como falar com você e sua situação profissional
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormField
+              control={form.control}
+              name="dddCelular"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>DDD Celular</FormLabel>
+                  <FormControl>
+                    <Input placeholder="98" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="celular"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Celular</FormLabel>
+                  <FormControl>
+                    <Input placeholder="90000-0000" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>E-mail</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      placeholder="voce@email.com"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="profissao"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Profissão</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Sua profissão" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="tipoRenda"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipo de Renda</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {tipoRendaEnum.options.map((opt) => (
+                        <SelectItem key={opt} value={opt}>
+                          {opt}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormField
+              control={form.control}
+              name="rendaFaixa"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Renda Familiar (faixa)</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {rendaFamiliarFaixaEnum.options.map((opt) => (
+                        <SelectItem key={opt} value={opt}>
+                          {opt}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="pessoasFamilia"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Pessoas na família</FormLabel>
+                  <FormControl>
+                    <Input type="number" min={1} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "endereco",
+      title: "Endereço",
+      color: "bg-emerald-500 hover:bg-emerald-600",
+      cardContent: (
+        <div className="p-6 space-y-4">
+          <div className="space-y-2">
+            <h3 className="text-xl font-semibold">Endereço</h3>
+            <p className="text-sm text-muted-foreground">Onde você mora</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormField
+              control={form.control}
+              name="cep"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>CEP</FormLabel>
+                  <FormControl>
+                    <Input placeholder="00000-000" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="endereco"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Endereço</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Rua, Av., etc." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="numero"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Número</FormLabel>
+                  <FormControl>
+                    <Input placeholder="123" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormField
+              control={form.control}
+              name="complemento"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Complemento</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Apto, Bloco" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="bairro"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Bairro</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Bairro" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="cidade"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cidade</FormLabel>
+                  <FormControl>
+                    <Input placeholder="São Luís" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "resumo",
+      title: "Revisão",
+      color: "bg-amber-500 hover:bg-amber-600",
+      cardContent: (
+        <div className="p-6 space-y-2">
+          <h3 className="text-xl font-semibold">Revise seus dados</h3>
+          <p className="text-sm text-muted-foreground">
+            Ao enviar, seu rascunho local será apagado.
+          </p>
+        </div>
+      )
+    }
+  ]
+
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      {/* Form */}
-      <div className="flex-1 py-12 px-4">
-        <div className="container mx-auto max-w-3xl">
-          <Button variant="ghost" asChild className="mb-6">
-            <Link href="/">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar para o início
-            </Link>
-          </Button>
+    <div className="flex flex-col gap-4">
+      <div className="flex-1 space-y-4">
+        <div className="container mx-auto">
+          <BackButton>Voltar para o início</BackButton>
 
           <div className="mb-8">
             <h1 className="text-3xl font-bold mb-2">
@@ -49,306 +594,57 @@ export default function BeneficiarioCadastroPage() {
             </p>
           </div>
 
-          <form className="space-y-6">
-            {/* Dados Pessoais */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <User className="w-5 h-5 text-primary" />
-                  <CardTitle>Dados Pessoais</CardTitle>
-                </div>
-                <CardDescription>
-                  Informações básicas do beneficiário
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="nome">Nome Completo *</Label>
-                    <Input id="nome" placeholder="Seu nome completo" required />
+          <Form {...form}>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    {selectedStep === "pessoais" && (
+                      <User className="w-5 h-5 text-primary" />
+                    )}
+                    {selectedStep === "contato" && (
+                      <DollarSign className="w-5 h-5 text-primary" />
+                    )}
+                    {selectedStep === "endereco" && (
+                      <MapPin className="w-5 h-5 text-primary" />
+                    )}
+                    <CardTitle>Etapas</CardTitle>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="cpf">CPF *</Label>
-                    <Input id="cpf" placeholder="000.000.000-00" required />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="rg">RG *</Label>
-                    <Input id="rg" placeholder="00.000.000-0" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="data-nascimento">
-                      Data de Nascimento *
-                    </Label>
-                    <Input id="data-nascimento" type="date" required />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="estado-civil">Estado Civil *</Label>
-                    <Select required>
-                      <SelectTrigger id="estado-civil">
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="solteiro">Solteiro(a)</SelectItem>
-                        <SelectItem value="casado">Casado(a)</SelectItem>
-                        <SelectItem value="divorciado">
-                          Divorciado(a)
-                        </SelectItem>
-                        <SelectItem value="viuvo">Viúvo(a)</SelectItem>
-                        <SelectItem value="uniao-estavel">
-                          União Estável
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="telefone">Telefone *</Label>
-                    <Input
-                      id="telefone"
-                      placeholder="(98) 00000-0000"
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">E-mail *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    required
+                  <CardDescription>Progresso do cadastro</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <SmoothTab
+                    items={tabItems}
+                    defaultTabId={selectedStep}
+                    onChange={(id) => setSelectedStep(id as StepId)}
+                    className="w-full max-w-2xl"
                   />
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            {/* Endereço Atual */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-primary" />
-                  <CardTitle>Endereço Atual</CardTitle>
-                </div>
-                <CardDescription>Onde você mora atualmente</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="cep">CEP *</Label>
-                    <Input id="cep" placeholder="00000-000" required />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="endereco">Endereço *</Label>
-                    <Input
-                      id="endereco"
-                      placeholder="Rua, Avenida, etc."
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="numero">Número *</Label>
-                    <Input id="numero" placeholder="123" required />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="complemento">Complemento</Label>
-                    <Input id="complemento" placeholder="Apto, Bloco, etc." />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="bairro">Bairro *</Label>
-                    <Input id="bairro" placeholder="Nome do bairro" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="cidade">Cidade *</Label>
-                    <Input id="cidade" placeholder="São Luís" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="estado">Estado *</Label>
-                    <Input id="estado" value="MA" disabled />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Informações Socioeconômicas */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <DollarSign className="w-5 h-5 text-primary" />
-                  <CardTitle>Informações Socioeconômicas</CardTitle>
-                </div>
-                <CardDescription>
-                  Dados sobre sua situação financeira e familiar
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="renda-familiar">
-                      Renda Familiar Mensal *
-                    </Label>
-                    <Select required>
-                      <SelectTrigger id="renda-familiar">
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ate-2">Até R$ 2.000</SelectItem>
-                        <SelectItem value="2-4">R$ 2.000 - R$ 4.000</SelectItem>
-                        <SelectItem value="4-6">R$ 4.000 - R$ 6.000</SelectItem>
-                        <SelectItem value="6-8">R$ 6.000 - R$ 8.000</SelectItem>
-                        <SelectItem value="acima-8">
-                          Acima de R$ 8.000
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="pessoas-familia">
-                      Pessoas na Família *
-                    </Label>
-                    <Input
-                      id="pessoas-familia"
-                      type="number"
-                      min="1"
-                      placeholder="4"
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="profissao">Profissão *</Label>
-                    <Input
-                      id="profissao"
-                      placeholder="Sua profissão"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="situacao-emprego">
-                      Situação de Emprego *
-                    </Label>
-                    <Select required>
-                      <SelectTrigger id="situacao-emprego">
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="clt">CLT</SelectItem>
-                        <SelectItem value="autonomo">Autônomo</SelectItem>
-                        <SelectItem value="servidor">
-                          Servidor Público
-                        </SelectItem>
-                        <SelectItem value="desempregado">
-                          Desempregado
-                        </SelectItem>
-                        <SelectItem value="aposentado">Aposentado</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="observacoes">Observações Adicionais</Label>
-                  <Textarea
-                    id="observacoes"
-                    placeholder="Conte-nos mais sobre sua situação e por que você precisa deste programa..."
-                    rows={4}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Documentos */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-primary" />
-                  <CardTitle>Documentos</CardTitle>
-                </div>
-                <CardDescription>
-                  Anexe os documentos necessários (PDF ou imagem)
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="doc-identidade">RG ou CNH *</Label>
-                  <Input
-                    id="doc-identidade"
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="doc-cpf">CPF *</Label>
-                  <Input
-                    id="doc-cpf"
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="doc-comprovante-residencia">
-                    Comprovante de Residência *
-                  </Label>
-                  <Input
-                    id="doc-comprovante-residencia"
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="doc-comprovante-renda">
-                    Comprovante de Renda *
-                  </Label>
-                  <Input
-                    id="doc-comprovante-renda"
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    required
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Termos */}
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    id="termos"
-                    className="mt-1"
-                    required
-                  />
-                  <Label
-                    htmlFor="termos"
-                    className="text-sm leading-relaxed cursor-pointer">
-                    Declaro que todas as informações fornecidas são verdadeiras
-                    e estou ciente de que a prestação de informações falsas pode
-                    resultar em penalidades legais e exclusão do programa.
-                  </Label>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Botões */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button type="submit" size="lg" className="flex-1">
-                Enviar Cadastro
-              </Button>
-              <Button type="button" variant="outline" size="lg" asChild>
-                <Link href="/">Cancelar</Link>
-              </Button>
-            </div>
-          </form>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={goPrev}
+                  disabled={selectedStep === "pessoais"}>
+                  Voltar
+                </Button>
+                {selectedStep !== "resumo" ? (
+                  <Button type="button" onClick={goNext}>
+                    Próximo
+                  </Button>
+                ) : (
+                  <Button type="submit" className="flex-1">
+                    Enviar cadastro
+                  </Button>
+                )}
+                <Button type="button" variant="ghost" asChild>
+                  <Link href="/">Cancelar</Link>
+                </Button>
+              </div>
+            </form>
+          </Form>
         </div>
       </div>
     </div>

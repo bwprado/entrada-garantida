@@ -13,7 +13,7 @@ import { ArrowLeft } from "lucide-react"
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+    <div className="min-h-[calc(100vh-80px)] flex flex-col bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       {/* Login Form */}
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
