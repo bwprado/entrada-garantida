@@ -241,6 +241,7 @@ const DEFAULT_TABS: TabItem[] = [
 interface SmoothTabProps {
   items?: TabItem[]
   defaultTabId?: string
+  activeTabId?: string
   className?: string
   activeColor?: string
   onChange?: (tabId: string) => void
@@ -278,17 +279,33 @@ const transition = {
 export default function SmoothTab({
   items = DEFAULT_TABS,
   defaultTabId = DEFAULT_TABS[0].id,
+  activeTabId,
   className,
   activeColor = "bg-[#1F9CFE]",
   onChange
 }: SmoothTabProps) {
-  const [selected, setSelected] = React.useState<string>(defaultTabId)
+  const [internalSelected, setInternalSelected] =
+    React.useState<string>(defaultTabId)
+  const selected = activeTabId ?? internalSelected
   const [direction, setDirection] = React.useState(0)
   const [dimensions, setDimensions] = React.useState({ width: 0, left: 0 })
+  const prevSelectedRef = React.useRef<string>(activeTabId ?? defaultTabId)
 
   // Reference for the selected button
   const buttonRefs = React.useRef<Map<string, HTMLButtonElement>>(new Map())
   const containerRef = React.useRef<HTMLDivElement>(null)
+
+  // Handle external activeTabId changes
+  React.useEffect(() => {
+    if (activeTabId && activeTabId !== prevSelectedRef.current) {
+      const currentIndex = items.findIndex(
+        (item) => item.id === prevSelectedRef.current
+      )
+      const newIndex = items.findIndex((item) => item.id === activeTabId)
+      setDirection(newIndex > currentIndex ? 1 : -1)
+      prevSelectedRef.current = activeTabId
+    }
+  }, [activeTabId, items])
 
   // Update dimensions whenever selected tab changes or on mount
   React.useLayoutEffect(() => {
@@ -321,7 +338,8 @@ export default function SmoothTab({
     const currentIndex = items.findIndex((item) => item.id === selected)
     const newIndex = items.findIndex((item) => item.id === tabId)
     setDirection(newIndex > currentIndex ? 1 : -1)
-    setSelected(tabId)
+    setInternalSelected(tabId)
+    prevSelectedRef.current = tabId
     onChange?.(tabId)
   }
 

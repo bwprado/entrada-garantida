@@ -34,12 +34,11 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
           "auto-rows-min",
           "grid-rows-[auto_auto]",
           "items-start",
-          "gap-2",
-          "group-data-[size=sm]:px-2",
-          "group-data-[size=md]:px-4",
-          "group-data-[size=lg]:px-6",
-          "has-data-[slot=card-action]:grid-cols-[1fr_auto]",
-          "[.border-b]:pb-6"
+          "gap-1",
+          "group-data-[size=sm]:px-2 group-data-[size=sm]:pb-2",
+          "group-data-[size=md]:px-4 group-data-[size=md]:pb-4",
+          "group-data-[size=lg]:px-6 group-data-[size=lg]:pb-6",
+          "has-data-[slot=card-action]:grid-cols-[1fr_auto]"
         ],
         className
       )}

@@ -13,7 +13,7 @@ export default function BackButton({
   return (
     <Button
       variant="ghost"
-      className={buttonVariants({ variant: "ghost" })}
+      className={buttonVariants({ variant: "ghost", className: "w-fit" })}
       onClick={() => router.back()}>
       <ArrowLeft className="w-4 h-4" />
       {children}
