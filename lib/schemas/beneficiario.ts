@@ -94,14 +94,10 @@ export const beneficiarioSchema = z
       .int("Somente números inteiros")
       .min(1, "Mínimo 1 pessoa"),
 
-    dddCelular: z
-      .string()
-      .transform(onlyDigits)
-      .refine((v) => v.length === 2, "DDD do celular inválido"),
     celular: z
       .string()
       .transform(onlyDigits)
-      .refine((v) => v.length >= 8 && v.length <= 9, "Celular inválido"),
+      .refine((v) => v.length === 11, "Celular deve ter 11 dígitos (DDD + número)"),
     dddTelefoneFixo: z
       .string()
       .transform(onlyDigits)

@@ -11,6 +11,15 @@ importers:
       '@hookform/resolvers':
         specifier: ^3.10.0
         version: 3.10.0(react-hook-form@7.60.0(react@19.1.0))
+      '@maskito/core':
+        specifier: ^4.0.0
+        version: 4.0.0
+      '@maskito/kit':
+        specifier: ^4.0.0
+        version: 4.0.0(@maskito/core@4.0.0)
+      '@maskito/react':
+        specifier: ^4.0.0
+        version: 4.0.0(@maskito/core@4.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@radix-ui/react-accordion':
         specifier: 1.2.2
         version: 1.2.2(@types/react-dom@18.0.0)(@types/react@18.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -528,6 +537,21 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@maskito/core@4.0.0':
+    resolution: {integrity: sha512-lpoouYGMEyZsv6JicU7GDpB3kziElPzf/ggyv8l6zyXonQu/oPbZjxYtITI7PQIPXz2qyVhytQpw5+aTlKa4aA==}
+
+  '@maskito/kit@4.0.0':
+    resolution: {integrity: sha512-s6aZ4GrvgfgWyefeLC5J/LqntPMgrGjpgLfXLWxcq6LcMkf8hw2IqsgAnQRHgp1w+olgLwz4Zv3Icvsa16Wyew==}
+    peerDependencies:
+      '@maskito/core': ^4.0.0
+
+  '@maskito/react@4.0.0':
+    resolution: {integrity: sha512-iEbVoMc4CKCVQkDmfmYS/t3oRkwyqlG/XMy4Q3GExEzaVo12oLYqTUM/rbZiRnLD3AzzbDr6kWm0L06iyn0wIg==}
+    peerDependencies:
+      '@maskito/core': ^4.0.0
+      react: '>=16.8'
+      react-dom: '>=16.8'
 
   '@next/env@16.0.1':
     resolution: {integrity: sha512-LFvlK0TG2L3fEOX77OC35KowL8D7DlFF45C0OvKMC4hy8c/md1RC4UMNDlUGJqfCoCS2VWrZ4dSE6OjaX5+8mw==}
@@ -2454,6 +2478,18 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
+
+  '@maskito/core@4.0.0': {}
+
+  '@maskito/kit@4.0.0(@maskito/core@4.0.0)':
+    dependencies:
+      '@maskito/core': 4.0.0
+
+  '@maskito/react@4.0.0(@maskito/core@4.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
+    dependencies:
+      '@maskito/core': 4.0.0
+      react: 19.1.0
+      react-dom: 19.1.0(react@19.1.0)
 
   '@next/env@16.0.1': {}
 

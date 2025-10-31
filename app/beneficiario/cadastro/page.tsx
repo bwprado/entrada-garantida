@@ -51,6 +51,8 @@ import {
   sexoLabels,
   tipoRendaLabels
 } from "@/lib/schemas/mappers"
+import { useMaskito } from "@maskito/react"
+import type { MaskitoOptions } from "@maskito/core"
 
 const STEPS_ICONS: Record<StepId, React.ReactNode> = {
   pessoais: <User className="size-6 text-primary" />,
@@ -77,8 +79,7 @@ const PLACEHOLDERS = {
   profissao: "Desenvolvedor",
   rendaFaixa: "2-4",
   pessoasFamilia: 3,
-  dddCelular: "98",
-  celular: "987654321",
+  celular: "(98) 99115-0154",
   email: "teste@email.com",
   aceitaComunicacoes: false,
   cep: "65000000",
@@ -87,6 +88,26 @@ const PLACEHOLDERS = {
   bairro: "Centro",
   cidade: "São Luís",
   estado: "MA"
+}
+
+const phoneMaskOptions: MaskitoOptions = {
+  mask: [
+    "(",
+    /\d/,
+    /\d/,
+    ")",
+    " ",
+    /\d/,
+    /\d/,
+    /\d/,
+    /\d/,
+    /\d/,
+    "-",
+    /\d/,
+    /\d/,
+    /\d/,
+    /\d/
+  ]
 }
 
 export default function BeneficiarioCadastroPage() {
@@ -107,7 +128,6 @@ export default function BeneficiarioCadastroPage() {
       profissao: "",
       rendaFaixa: "2-4",
       pessoasFamilia: 1,
-      dddCelular: "98",
       celular: "",
       email: "",
       aceitaComunicacoes: false,
@@ -119,6 +139,8 @@ export default function BeneficiarioCadastroPage() {
       estado: ""
     }
   })
+
+  const celularInputRef = useMaskito({ options: phoneMaskOptions })
 
   const { watch, setValue, handleSubmit, trigger } = form
   const [draft, setDraft] = useLocalStorage<Partial<BeneficiarioFormData>>(
@@ -165,7 +187,6 @@ export default function BeneficiarioCadastroPage() {
         "tipoRenda",
         "rendaFaixa",
         "pessoasFamilia",
-        "dddCelular",
         "celular",
         "dddTelefoneFixo",
         "telefoneFixo",
@@ -449,23 +470,7 @@ export default function BeneficiarioCadastroPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="dddCelular"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>DDD Celular</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder={PLACEHOLDERS.dddCelular}
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="celular"
@@ -476,6 +481,10 @@ export default function BeneficiarioCadastroPage() {
                             <Input
                               placeholder={PLACEHOLDERS.celular}
                               {...field}
+                              ref={celularInputRef}
+                              onInput={(e) => {
+                                field.onChange(e)
+                              }}
                             />
                           </FormControl>
                           <FormMessage />
