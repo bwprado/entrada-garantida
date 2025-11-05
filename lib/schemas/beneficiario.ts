@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { validaCPF } from "@/lib/validate-cpf"
 
 // Basic helpers
 const onlyDigits = (value: string) => value.replace(/\D/g, "")
@@ -54,8 +55,10 @@ export const beneficiarioSchema = z
       .min(3, "Informe o nome completo"),
     cpf: z
       .string({ required_error: "CPF é obrigatório" })
+      .min(1, "CPF é obrigatório")
       .transform(onlyDigits)
-      .refine((v) => v.length === 11, "CPF deve ter 11 dígitos"),
+      .refine((v) => v.length === 11, "CPF deve ter 11 dígitos")
+      .refine((v) => v.length === 11 && validaCPF(v), "CPF inválido"),
     rg: z
       .string({ required_error: "RG é obrigatório" })
       .trim()
@@ -97,7 +100,10 @@ export const beneficiarioSchema = z
     celular: z
       .string()
       .transform(onlyDigits)
-      .refine((v) => v.length === 11, "Celular deve ter 11 dígitos (DDD + número)"),
+      .refine(
+        (v) => v.length === 11,
+        "Celular deve ter 11 dígitos (DDD + número)"
+      ),
     dddTelefoneFixo: z
       .string()
       .transform(onlyDigits)

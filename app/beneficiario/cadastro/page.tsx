@@ -28,6 +28,7 @@ import {
   SelectValue
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { cpfMaskOptions, phoneMaskOptions } from "@/lib/masks"
 import {
   beneficiarioSchema,
   deficienciaEnum,
@@ -38,11 +39,6 @@ import {
   tipoRendaEnum,
   type BeneficiarioFormData
 } from "@/lib/schemas/beneficiario"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { CheckCircle, DollarSign, MapPin, User } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
-import { useForm } from "react-hook-form"
-import { useLocalStorage } from "usehooks-ts"
 import {
   deficienciaLabels,
   identidadeGeneroLabels,
@@ -51,24 +47,51 @@ import {
   sexoLabels,
   tipoRendaLabels
 } from "@/lib/schemas/mappers"
+import { zodResolver } from "@hookform/resolvers/zod"
 import { useMaskito } from "@maskito/react"
-import type { MaskitoOptions } from "@maskito/core"
+import { CheckCircle, DollarSign, MapPin, User } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { useForm } from "react-hook-form"
+import { useLocalStorage } from "usehooks-ts"
 
-const STEPS_ICONS: Record<StepId, React.ReactNode> = {
-  pessoais: <User className="size-6 text-primary" />,
-  contato: <DollarSign className="size-6 text-primary" />,
-  endereco: <MapPin className="size-6 text-primary" />,
-  resumo: <CheckCircle className="size-6 text-primary" />
-}
+const STEPS = [
+  {
+    id: "pessoais",
+    title: "Dados Pessoais",
+    description: "Informações básicas do beneficiário",
+    icon: <User className="size-6 text-primary" />,
+    isLast: false
+  },
+  {
+    id: "contato",
+    title: "Contato e Renda",
+    description: "Como falar com você e sua situação profissional",
+    icon: <DollarSign className="size-6 text-primary" />,
+    isLast: false
+  },
+  {
+    id: "endereco",
+    title: "Endereço",
+    description: "Onde você mora",
+    icon: <MapPin className="size-6 text-primary" />,
+    isLast: false
+  },
+  {
+    id: "resumo",
+    title: "Revisão",
+    description: "Revise seus dados",
+    icon: <CheckCircle className="size-6 text-primary" />,
+    isLast: true
+  }
+] as const
+
+type StepId = (typeof STEPS)[number]["id"]
 
 const STORAGE_KEY = "beneficiario-draft"
 
-const STEP_IDS = ["pessoais", "contato", "endereco", "resumo"] as const
-type StepId = (typeof STEP_IDS)[number]
-
 const PLACEHOLDERS = {
   nome: "João Silva",
-  cpf: "12345678901",
+  cpf: "123.456.789-09",
   rg: "123456789",
   senha: "123456",
   sexo: "nao-informado",
@@ -90,32 +113,12 @@ const PLACEHOLDERS = {
   estado: "MA"
 }
 
-const phoneMaskOptions: MaskitoOptions = {
-  mask: [
-    "(",
-    /\d/,
-    /\d/,
-    ")",
-    " ",
-    /\d/,
-    /\d/,
-    /\d/,
-    /\d/,
-    /\d/,
-    "-",
-    /\d/,
-    /\d/,
-    /\d/,
-    /\d/
-  ]
-}
-
 export default function BeneficiarioCadastroPage() {
   const [selectedStep, setSelectedStep] = useState<StepId>("pessoais")
 
   const form = useForm<BeneficiarioFormData>({
     resolver: zodResolver(beneficiarioSchema),
-    mode: "onChange",
+    mode: "onBlur",
     defaultValues: {
       nome: "",
       cpf: "",
@@ -141,6 +144,7 @@ export default function BeneficiarioCadastroPage() {
   })
 
   const celularInputRef = useMaskito({ options: phoneMaskOptions })
+  const cpfInputRef = useMaskito({ options: cpfMaskOptions })
 
   const { watch, setValue, handleSubmit, trigger } = form
   const [draft, setDraft] = useLocalStorage<Partial<BeneficiarioFormData>>(
@@ -212,13 +216,13 @@ export default function BeneficiarioCadastroPage() {
   )
 
   async function goNext() {
-    const currentIndex = STEP_IDS.indexOf(selectedStep)
-    const next = STEP_IDS[currentIndex + 1]
+    const currentIndex = STEPS.findIndex((step) => step.id === selectedStep)
+    const next = STEPS[currentIndex + 1]?.id
     if (!next) return
 
     const valid = await trigger(stepFields[selectedStep])
     if (valid) {
-      setSelectedStep(next)
+      setSelectedStep(next as StepId)
     } else {
       // Scroll to first error
       const firstError = Object.keys(form.formState.errors)[0]
@@ -231,12 +235,17 @@ export default function BeneficiarioCadastroPage() {
   }
 
   function goPrev() {
-    const currentIndex = STEP_IDS.indexOf(selectedStep)
-    const prev = STEP_IDS[currentIndex - 1]
-    if (prev) setSelectedStep(prev)
+    const currentIndex = STEPS.findIndex((step) => step.id === selectedStep)
+    const prev = STEPS[currentIndex - 1]?.id
+    if (prev) setSelectedStep(prev as StepId)
   }
 
   const onSubmit = (data: BeneficiarioFormData) => {
+    if (STEPS.find((step) => step.id === selectedStep)?.isLast) {
+      console.log(data)
+    } else {
+      goNext()
+    }
     localStorage.removeItem(STORAGE_KEY)
   }
 
@@ -261,7 +270,7 @@ export default function BeneficiarioCadastroPage() {
             <Card size="md">
               <CardHeader>
                 <div className="flex items-center gap-2">
-                  {STEPS_ICONS[selectedStep]}
+                  {STEPS.find((step) => step.id === selectedStep)?.icon}
                   <CardTitle>Etapas</CardTitle>
                 </div>
                 <CardDescription>Progresso do cadastro</CardDescription>
@@ -306,7 +315,19 @@ export default function BeneficiarioCadastroPage() {
                         <FormItem>
                           <FormLabel>CPF</FormLabel>
                           <FormControl>
-                            <Input placeholder={PLACEHOLDERS.cpf} {...field} />
+                            <Input
+                              placeholder={PLACEHOLDERS.cpf}
+                              {...field}
+                              ref={cpfInputRef}
+                              onChange={(e) => {
+                                field.onChange(e)
+                                trigger("cpf")
+                              }}
+                              onBlur={(e) => {
+                                field.onBlur()
+                                trigger("cpf")
+                              }}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -739,13 +760,12 @@ export default function BeneficiarioCadastroPage() {
               disabled={selectedStep === "pessoais"}>
               Voltar
             </Button>
-            {selectedStep !== "resumo" ? (
-              <Button type="button" onClick={goNext}>
-                Próximo
-              </Button>
-            ) : (
-              <Button type="submit">Enviar cadastro</Button>
-            )}
+
+            <Button type="submit">
+              {STEPS.find((step) => step.id === selectedStep)?.isLast
+                ? "Enviar cadastro"
+                : "Próximo"}
+            </Button>
             <Button type="button" variant="ghost" asChild>
               <Link href="/">Cancelar</Link>
             </Button>
