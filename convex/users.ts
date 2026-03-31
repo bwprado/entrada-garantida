@@ -3,6 +3,8 @@ import { mutation, query, internalMutation, action } from './_generated/server'
 import { Doc, Id } from './_generated/dataModel'
 import { api } from './_generated/api'
 
+// ============ PHONE LOGIN MUTATIONS ============
+
 // Generate a 6-digit OTP
 function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString()
@@ -736,5 +738,292 @@ export const cleanupExpiredOTPs = internalMutation({
     }
 
     return { deleted: expired.length }
+  }
+})
+
+// ============ PHONE LOGIN MUTATIONS ============
+
+// Request OTP by phone for Ofertantes and Admins
+export const requestOTPByPhone = mutation({
+  args: {
+    telefone: v.string(),
+    tipo: v.union(v.literal('ofertante'), v.literal('admin'))
+  },
+  handler: async (ctx, args): Promise<{
+    success: boolean
+    telefoneMascarado?: string
+    codigo?: string
+    isNewUser?: boolean
+    error?: string
+  }> => {
+    const cleanedTelefone = args.telefone.replace(/\D/g, '')
+
+    if (cleanedTelefone.length !== 11) {
+      return { success: false, error: 'Telefone deve ter 11 dígitos' }
+    }
+
+    // Check if user exists by phone
+    const existingUser = await ctx.db
+      .query('users')
+      .filter((q) => q.eq(q.field('telefone'), cleanedTelefone))
+      .first()
+
+    if (args.tipo === 'admin') {
+      // Admin must exist and have admin role
+      if (!existingUser) {
+        return { success: false, error: 'Número de telefone não encontrado' }
+      }
+      if (existingUser.role !== 'admin') {
+        return { success: false, error: 'Este número não está cadastrado como administrador' }
+      }
+    } else if (args.tipo === 'ofertante') {
+      // Ofertante can be new or existing
+      if (existingUser && existingUser.role !== 'ofertante') {
+        return { success: false, error: 'Este telefone já está cadastrado para outro tipo de usuário' }
+      }
+    }
+
+    // Generate OTP
+    const codigo = generateOTP()
+    const expiraEm = Date.now() + 5 * 60 * 1000 // 5 minutes
+
+    // Invalidate previous OTPs for this phone
+    const previousOTPs = await ctx.db
+      .query('otpTokens')
+      .withIndex('by_cpf', (q) => q.eq('cpf', cleanedTelefone))
+      .collect()
+
+    for (const otp of previousOTPs) {
+      if (!otp.usado) {
+        await ctx.db.patch(otp._id, { usado: true })
+      }
+    }
+
+    // Create new OTP (using phone as CPF key for simplicity)
+    await ctx.db.insert('otpTokens', {
+      cpf: cleanedTelefone,
+      codigo,
+      telefone: cleanedTelefone,
+      expiraEm,
+      usado: false,
+      criadoEm: Date.now()
+    })
+
+    // Mask phone for display
+    const telefoneMascarado = cleanedTelefone.replace(
+      /(\d{2})(\d{5})(\d{4})/,
+      '$1*****$3'
+    )
+
+    // Log for development
+    console.log(`[DEV] OTP para ${cleanedTelefone}: ${codigo}`)
+
+    return {
+      success: true,
+      telefoneMascarado,
+      codigo,
+      isNewUser: !existingUser
+    }
+  }
+})
+
+// Register new ofertante
+export const registerOfertante = mutation({
+  args: {
+    telefone: v.string(),
+    nome: v.string()
+  },
+  handler: async (ctx, args): Promise<{
+    success: boolean
+    userId?: Id<'users'>
+    error?: string
+  }> => {
+    const cleanedTelefone = args.telefone.replace(/\D/g, '')
+
+    // Check phone uniqueness
+    const existingUser = await ctx.db
+      .query('users')
+      .filter((q) => q.eq(q.field('telefone'), cleanedTelefone))
+      .first()
+
+    if (existingUser) {
+      return { success: false, error: 'Este telefone já está cadastrado' }
+    }
+
+    const now = Date.now()
+
+    const userId = await ctx.db.insert('users', {
+      role: 'ofertante',
+      cpf: '', // Will be filled during onboarding
+      nome: args.nome,
+      telefone: cleanedTelefone,
+      status: 'onboarding',
+      onboardingCompleto: false,
+      documentosPendentes: ['rg', 'comp_residencia'],
+      criadoEm: now,
+      atualizadoEm: now
+    })
+
+    return { success: true, userId }
+  }
+})
+
+// Verify OTP for phone login (works for ofertantes and admins)
+export const verifyOTPByPhone = mutation({
+  args: {
+    telefone: v.string(),
+    codigo: v.string()
+  },
+  handler: async (ctx, args): Promise<{
+    success: boolean
+    userId?: Id<'users'>
+    userData?: any
+    isNewUser?: boolean
+    needsOnboarding?: boolean
+    error?: string
+  }> => {
+    const cleanedTelefone = args.telefone.replace(/\D/g, '')
+    const codigoClean = args.codigo.trim()
+
+    // Find valid OTP
+    const otpRecord = await ctx.db
+      .query('otpTokens')
+      .withIndex('by_codigo', (q) => q.eq('codigo', codigoClean))
+      .first()
+
+    if (!otpRecord) {
+      return { success: false, error: 'Código inválido' }
+    }
+
+    if (otpRecord.usado) {
+      return { success: false, error: 'Código já utilizado' }
+    }
+
+    if (otpRecord.telefone !== cleanedTelefone) {
+      return { success: false, error: 'Código não corresponde ao telefone informado' }
+    }
+
+    if (otpRecord.expiraEm < Date.now()) {
+      return { success: false, error: 'Código expirado' }
+    }
+
+    // Mark OTP as used
+    await ctx.db.patch(otpRecord._id, { usado: true })
+
+    // Find user by phone
+    const user = await ctx.db
+      .query('users')
+      .filter((q) => q.eq(q.field('telefone'), cleanedTelefone))
+      .first()
+
+    if (!user) {
+      return { success: false, error: 'Usuário não encontrado' }
+    }
+
+    // Update status if pending
+    if (user.status === 'pending') {
+      await ctx.db.patch(user._id, {
+        status: 'verified',
+        atualizadoEm: Date.now()
+      })
+    }
+
+    const needsOnboarding = user.role === 'ofertante' && !user.onboardingCompleto
+
+    return {
+      success: true,
+      userId: user._id,
+      userData: {
+        _id: user._id,
+        cpf: user.cpf,
+        nome: user.nome,
+        telefone: user.telefone,
+        role: user.role,
+        status: user.status,
+        endereco: user.endereco,
+        numero: user.numero,
+        bairro: user.bairro,
+        cidade: user.cidade,
+        estado: user.estado,
+        dataNascimento: user.dataNascimento,
+        onboardingCompleto: user.onboardingCompleto
+      },
+      isNewUser: !user.cpf, // New if CPF not set
+      needsOnboarding
+    }
+  }
+})
+
+// Complete ofertante onboarding
+export const completeOfertanteOnboarding = mutation({
+  args: {
+    userId: v.id('users'),
+    nome: v.optional(v.string()),
+    cpf: v.string(),
+    dataNascimento: v.string(),
+    cep: v.string(),
+    endereco: v.string(),
+    numero: v.string(),
+    complemento: v.optional(v.string()),
+    bairro: v.string(),
+    cidade: v.string(),
+    estado: v.string()
+  },
+  handler: async (ctx, args): Promise<{ success: boolean; error?: string }> => {
+    const user = await ctx.db.get(args.userId)
+    if (!user) {
+      return { success: false, error: 'Usuário não encontrado' }
+    }
+
+    if (user.role !== 'ofertante') {
+      return { success: false, error: 'Apenas ofertantes podem completar onboarding' }
+    }
+
+    // Validate CPF
+    const cleanedCPF = cleanCPF(args.cpf)
+    if (!isValidCPFLength(cleanedCPF)) {
+      return { success: false, error: 'CPF inválido' }
+    }
+
+    // Check if CPF is already in use by another user
+    const existingUserWithCPF = await ctx.db
+      .query('users')
+      .withIndex('by_cpf', (q) => q.eq('cpf', cleanedCPF))
+      .first()
+
+    if (existingUserWithCPF && existingUserWithCPF._id !== args.userId) {
+      return { success: false, error: 'CPF já cadastrado por outro usuário' }
+    }
+
+    await ctx.db.patch(args.userId, {
+      nome: args.nome || user.nome,
+      cpf: cleanedCPF,
+      dataNascimento: args.dataNascimento,
+      cep: args.cep,
+      endereco: args.endereco,
+      numero: args.numero,
+      complemento: args.complemento,
+      bairro: args.bairro,
+      cidade: args.cidade,
+      estado: args.estado,
+      onboardingCompleto: true,
+      status: 'active',
+      atualizadoEm: Date.now()
+    })
+
+    return { success: true }
+  }
+})
+
+// Get ofertantes with pending onboarding
+export const getOfertantesPendentes = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db
+      .query('users')
+      .withIndex('by_role_and_status', (q) =>
+        q.eq('role', 'ofertante').eq('status', 'onboarding')
+      )
+      .collect()
   }
 })

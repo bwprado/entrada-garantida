@@ -51,11 +51,13 @@ export default function AdminDashboardClient() {
   const [resolvingId, setResolvingId] = useState<string | null>(null);
 
   // Queries
-  const beneficiaries = useQuery(api.users.getBeneficiaries);
-  const beneficiariesWithErrors = useQuery(api.users.getBeneficiariesWithErrors);
-  const construtores = useQuery(api.users.getConstrutores);
-  const properties = useQuery(api.properties.getAllForAdmin);
-  const pendingProperties = useQuery(api.properties.getPendingValidation);
+  const beneficiaries = useQuery(api.users.getBeneficiaries, {});
+  const beneficiariesWithErrors = useQuery(api.users.getBeneficiariesWithErrors, {});
+  const construtores = useQuery(api.users.getConstrutores, {});
+  const ofertantes = useQuery(api.users.getOfertantes, {});
+  const ofertantesPendentes = useQuery(api.users.getOfertantesPendentes, {});
+  const properties = useQuery(api.properties.getAllForAdmin, {});
+  const pendingProperties = useQuery(api.properties.getPendingValidation, {});
 
   const resolveErrorMutation = useMutation(api.users.resolveDataError);
 
@@ -80,6 +82,8 @@ export default function AdminDashboardClient() {
     totalImoveis: properties?.length || 0,
     solicitacoesPendentes: pendingProperties?.length || 0,
     construtoresAtivos: construtores?.length || 0,
+    ofertantesAtivos: ofertantes?.filter(o => o.status === "active").length || 0,
+    ofertantesPendentes: ofertantesPendentes?.length || 0,
     beneficiariosComErros: beneficiariesWithErrors?.length || 0,
   };
 
@@ -194,7 +198,7 @@ export default function AdminDashboardClient() {
 
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+            <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
               <TabsTrigger value="beneficiarios">
                 Beneficiários
               </TabsTrigger>
@@ -203,6 +207,14 @@ export default function AdminDashboardClient() {
                 {stats.beneficiariosComErros > 0 && (
                   <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground rounded-full text-xs flex items-center justify-center">
                     {stats.beneficiariosComErros}
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="ofertantes" className="relative">
+                Ofertantes
+                {stats.ofertantesPendentes > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-500 text-white rounded-full text-xs flex items-center justify-center">
+                    {stats.ofertantesPendentes}
                   </span>
                 )}
               </TabsTrigger>
@@ -391,10 +403,147 @@ export default function AdminDashboardClient() {
                   )}
                 </CardContent>
               </Card>
-            </TabsContent>
+      </TabsContent>
 
-            {/* Construtores Tab */}
-            <TabsContent value="construtores" className="space-y-6">
+      {/* Ofertantes Tab */}
+      <TabsContent value="ofertantes" className="space-y-6">
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Home className="w-5 h-5 text-primary" />
+                  Gestão de Ofertantes
+                </CardTitle>
+                <CardDescription>
+                  Visualize e gerencie os proprietários cadastrados
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="pendentes" className="space-y-6">
+              <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-grid">
+                <TabsTrigger value="pendentes">
+                  <Clock className="w-4 h-4 mr-2" />
+                  Pendentes de Onboarding
+                  {stats.ofertantesPendentes > 0 && (
+                    <span className="ml-2 w-5 h-5 bg-yellow-500 text-white rounded-full text-xs flex items-center justify-center">
+                      {stats.ofertantesPendentes}
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="ativos">
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  Ativos
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="pendentes">
+                {ofertantesPendentes?.length === 0 ? (
+                  <div className="text-center py-12">
+                    <CheckCircle2 className="w-12 h-12 text-secondary mx-auto mb-4" />
+                    <p className="text-muted-foreground">
+                      Nenhum ofertante pendente de onboarding.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {ofertantesPendentes?.map((o) => (
+                      <div
+                        key={o._id}
+                        className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h4 className="font-semibold">{o.nome}</h4>
+                              <Badge variant="outline" className="bg-yellow-50">
+                                <Clock className="w-3 h-3 mr-1" />
+                                Pendente Onboarding
+                              </Badge>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-muted-foreground">
+                              <p>Telefone: {formatPhone(o.telefone)}</p>
+                              <p>
+                                Cadastro: {new Date(o.criadoEm).toLocaleDateString("pt-BR")}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm" className="bg-transparent">
+                              <Eye className="w-4 h-4 mr-2" />
+                              Ver Detalhes
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="ativos">
+                {ofertantes?.filter(o => o.status === "active").length === 0 ? (
+                  <div className="text-center py-12">
+                    <Home className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">
+                      Nenhum ofertante ativo.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {ofertantes?.filter(o => o.status === "active").map((o) => (
+                      <div
+                        key={o._id}
+                        className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h4 className="font-semibold">{o.nome}</h4>
+                              <Badge variant="secondary" className="bg-secondary/50">
+                                <CheckCircle2 className="w-3 h-3 mr-1" />
+                                Ativo
+                              </Badge>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-muted-foreground">
+                              <p>CPF: {o.cpf ? formatCPF(o.cpf) : "Não informado"}</p>
+                              <p>Telefone: {formatPhone(o.telefone)}</p>
+                              <p>
+                                Cadastro: {new Date(o.criadoEm).toLocaleDateString("pt-BR")}
+                              </p>
+                            </div>
+                            {o.endereco && (
+                              <p className="text-sm text-muted-foreground mt-2">
+                                <MapPin className="w-3 h-3 inline mr-1" />
+                                {formatAddress(o)}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm" className="bg-transparent">
+                              <Eye className="w-4 h-4 mr-2" />
+                              Ver Detalhes
+                            </Button>
+                            <Button variant="outline" size="sm" className="bg-transparent">
+                              <Phone className="w-4 h-4 mr-2" />
+                              Contatar
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      {/* Construtores Tab */}
+      <TabsContent value="construtores" className="space-y-6">
               <Card>
                 <CardHeader>
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

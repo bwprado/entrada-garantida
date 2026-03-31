@@ -18,7 +18,8 @@ export const userStatusEnum = v.union(
   v.literal("verified"),
   v.literal("active"),
   v.literal("rejected"),
-  v.literal("suspended")
+  v.literal("suspended"),
+  v.literal("onboarding")
 );
 
 // Document types
@@ -151,6 +152,11 @@ export const users = defineTable({
   
   // Term acceptance
   termoAceitoEm: v.optional(v.number()),
+
+  // Ofertante specific fields
+  dataNascimento: v.optional(v.string()),
+  onboardingCompleto: v.optional(v.boolean()),
+  documentosPendentes: v.optional(v.array(v.string())),
   
   // Property selections (max 3)
   propriedadesInteresse: v.optional(v.array(v.id("properties"))),
@@ -167,6 +173,13 @@ export const users = defineTable({
   dadosComErro: v.optional(v.boolean()),
   mensagemErroDados: v.optional(v.string()),
   erroReportadoEm: v.optional(v.number()),
+
+  // Phone uniqueness index support
+  loginType: v.optional(v.union(
+    v.literal("beneficiary"),
+    v.literal("ofertante"),
+    v.literal("admin")
+  )),
 })
   .index("by_cpf", ["cpf"])
   .index("by_role", ["role"])
