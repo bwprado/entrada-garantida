@@ -1,7 +1,7 @@
-import Image from "next/image"
-import Link from "next/link"
+import Image from 'next/image'
+import Link from 'next/link'
 
-import { Button } from "@/components/ui/button"
+import { Button } from '@/components/ui/button'
 
 export function Header({
   showLoginButton = true
@@ -13,18 +13,19 @@ export function Header({
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <Link
           href="/"
-          className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+          className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+        >
           <div className="aspect-square size-14 relative">
             <Image
-              src="/programa_garantida.png"
-              alt="Programa Entrada Garantida"
+              src="/icon.png"
+              alt="Programa Aquisição Assistida"
               fill
-              className="object-cover"
+              className="object-contain"
             />
           </div>
           <div>
-            <h1 className="font-bold text-lg leading-tight text-program-blue-dark">
-              Programa Entrada Garantida
+            <h1 className="font-bold text-xl leading-tight text-program-blue-dark">
+              Programa Aquisição Assistida
             </h1>
             <p className="text-xs text-muted-foreground">
               Governo do Estado do Maranhão
@@ -35,7 +36,8 @@ export function Header({
         {showLoginButton && (
           <Button
             asChild
-            className="bg-program-green-primary hover:bg-program-green-hover text-white">
+            className="bg-program-green-primary hover:bg-program-green-hover text-white"
+          >
             <Link href="/login">Acessar Sistema</Link>
           </Button>
         )}

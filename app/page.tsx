@@ -22,7 +22,7 @@ export default function LandingPage() {
         <div className="absolute inset-0 z-0">
           <Image
             src="/casas.png"
-            alt="Conjunto habitacional do Programa Entrada Garantida"
+            alt="Conjunto habitacional do Programa Aquisição Assistida"
             fill
             sizes="(max-width: 768px) 100vw, 50vw"
             className="object-cover antialiased brightness-70"
@@ -36,13 +36,13 @@ export default function LandingPage() {
               <Shield className="w-4 h-4" />
               Programa Oficial do Governo do Maranhão
             </div>
-            <h2 className="text-4xl md:text-6xl font-bold mb-6 text-balance text-white drop-shadow-lg">
-              Entrada Garantida para Sua Casa Própria
-            </h2>
-            <p className="text-xl text-white/95 mb-8 text-pretty leading-relaxed max-w-2xl mx-auto drop-shadow-md">
-              Política de Subsídio Habitacional para Famílias de Baixa Renda.
-              Subsídio de até R$ 20 mil para entrada do imóvel.
-            </p>
+        <h2 className="text-4xl md:text-6xl font-bold mb-6 text-balance text-white drop-shadow-lg">
+          Aquisição Assistida para Sua Casa Própria
+        </h2>
+        <p className="text-xl text-white/95 mb-8 text-pretty leading-relaxed max-w-2xl mx-auto drop-shadow-md">
+          Programa de Aquisição Assistida para famílias desalojadas pelas obras do PAC Rio Anil.
+          Teto de R$ 200 mil para aquisição do imóvel.
+        </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
                 size="lg"
@@ -77,26 +77,20 @@ export default function LandingPage() {
 
       <section className="py-16 bg-gradient-to-r from-program-blue-dark via-program-teal-gradient to-program-blue-dark text-white h-[200px]">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-            <div className="text-center">
-              <div className="text-4xl font-bold text-program-yellow-accent mb-2">
-                10.000
-              </div>
-              <div className="text-white/90">Famílias Contempladas</div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-program-yellow-accent mb-2">
-                R$ 20 mil
-              </div>
-              <div className="text-white/90">Valor do Subsídio</div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-program-yellow-accent mb-2">
-                R$ 250 mil
-              </div>
-              <div className="text-white/90">Valor Máximo do Imóvel</div>
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div className="text-center">
+          <div className="text-4xl font-bold text-program-yellow-accent mb-2">
+            233
           </div>
+          <div className="text-white/90">Famílias Beneficiárias</div>
+        </div>
+        <div className="text-center">
+          <div className="text-4xl font-bold text-program-yellow-accent mb-2">
+            R$ 200 mil
+          </div>
+          <div className="text-white/90">Valor Máximo do Imóvel</div>
+        </div>
+      </div>
         </div>
       </section>
 
@@ -116,56 +110,51 @@ export default function LandingPage() {
                 <h3 className="text-3xl md:text-4xl font-bold mb-6 text-program-blue-dark">
                   O Programa em Foco: Moradia Digna e Acesso ao Crédito
                 </h3>
-                <div className="space-y-6">
-                  <div className="flex gap-4">
-                    <div className="w-12 h-12 bg-program-yellow-accent rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Home className="w-6 h-6 text-program-blue-dark" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-lg mb-2 text-program-blue-dark">
-                        Conceito
-                      </h4>
-                      <p className="text-muted-foreground leading-relaxed">
-                        Política pública estratégica para atender o{" "}
-                        <strong>déficit habitacional</strong> do Maranhão,
-                        removendo a principal barreira financeira para a casa
-                        própria: a falta de recursos para a entrada.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-4">
-                    <div className="w-12 h-12 bg-program-green-primary rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Users className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-lg mb-2 text-program-blue-dark">
-                        Público-Alvo
-                      </h4>
-                      <p className="text-muted-foreground leading-relaxed">
-                        Grupos familiares com{" "}
-                        <strong>
-                          renda mensal bruta de até 2 (dois) salários mínimos
-                        </strong>
-                        .
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-4">
-                    <div className="w-12 h-12 bg-program-blue-dark rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Shield className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-lg mb-2 text-program-blue-dark">
-                        Cumulatividade
-                      </h4>
-                      <p className="text-muted-foreground leading-relaxed">
-                        O subsídio é <strong>cumulativo</strong> com outros
-                        benefícios, como o FGTS e subsídios federais (Minha Casa
-                        Minha Vida).
-                      </p>
-                    </div>
-                  </div>
-                </div>
+        <div className="space-y-6">
+          <div className="flex gap-4">
+            <div className="w-12 h-12 bg-program-yellow-accent rounded-lg flex items-center justify-center flex-shrink-0">
+              <Home className="w-6 h-6 text-program-blue-dark" />
+            </div>
+            <div>
+              <h4 className="font-bold text-lg mb-2 text-program-blue-dark">
+                Conceito
+              </h4>
+              <p className="text-muted-foreground leading-relaxed">
+                Programa de aquisição assistida para{" "}
+                <strong>famílias desalojadas</strong> pelas obras do PAC Rio Anil,
+                garantindo acesso à moradia digna por meio de subsidição na compra de imóveis.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-4">
+            <div className="w-12 h-12 bg-program-green-primary rounded-lg flex items-center justify-center flex-shrink-0">
+              <Users className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h4 className="font-bold text-lg mb-2 text-program-blue-dark">
+                Público-Alvo
+              </h4>
+              <p className="text-muted-foreground leading-relaxed">
+                <strong>233 famílias</strong> representadas por beneficiários já cadastrados,
+                que foram desalojadas pelas obras do PAC Rio Anil.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-4">
+            <div className="w-12 h-12 bg-program-blue-dark rounded-lg flex items-center justify-center flex-shrink-0">
+              <Shield className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h4 className="font-bold text-lg mb-2 text-program-blue-dark">
+                Validação
+              </h4>
+              <p className="text-muted-foreground leading-relaxed">
+                Os imóveis passam por <strong>validação pela Administração Pública</strong>,
+                e o valor final será o menor entre a avaliação da Caixa e a oferta.
+              </p>
+            </div>
+          </div>
+        </div>
               </div>
             </div>
           </div>
@@ -179,8 +168,8 @@ export default function LandingPage() {
               Fluxograma: Estruturação e Operacionalização
             </h3>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              O programa é executado, coordenado e monitorado pela Secretaria de
-              Estado de Monitoramento de Ações Governamentais (SEMAG)
+        O programa é executado, coordenado e monitorado pela Secretaria de
+        Estado de Cidades e Desenvolvimento Urbano (SECID)
             </p>
           </div>
           <div className="max-w-4xl mx-auto">
@@ -310,23 +299,23 @@ export default function LandingPage() {
         </div>
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-3xl mx-auto text-center">
-            <h3 className="text-3xl md:text-4xl font-bold mb-4">
-              Você é Construtor ou Incorporador?
-            </h3>
-            <p className="text-lg mb-8 opacity-95 leading-relaxed">
-              Cadastre seus empreendimentos e faça parte deste programa que vai
-              transformar a vida de milhares de famílias maranhenses
-            </p>
-            <Button
-              size="lg"
-              variant="secondary"
-              asChild
-              className="text-base bg-white text-[#22c55e] hover:bg-gray-100 shadow-xl">
-              <Link href="/construtor/cadastro">
-                <Building2 className="w-5 h-5 mr-2" />
-                Cadastrar Empreendimento
-              </Link>
-            </Button>
+        <h3 className="text-3xl md:text-4xl font-bold mb-4">
+          Tem um Imóvel para Vender?
+        </h3>
+        <p className="text-lg mb-8 opacity-95 leading-relaxed">
+          Cadastre seu imóvel e faça parte deste programa que vai
+          transformar a vida de famílias maranhenses desalojadas
+        </p>
+        <Button
+          size="lg"
+          variant="secondary"
+          asChild
+          className="text-base bg-white text-[#22c55e] hover:bg-gray-100 shadow-xl">
+          <Link href="/ofertante/cadastro">
+            <Building2 className="w-5 h-5 mr-2" />
+            Cadastrar Imóvel
+          </Link>
+        </Button>
           </div>
         </div>
       </section>
@@ -334,10 +323,10 @@ export default function LandingPage() {
       <footer className="border-t py-12 bg-program-blue-dark text-white">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-            <div>
-              <h4 className="font-bold mb-4 text-program-yellow-accent">
-                Programa Entrada Garantida
-              </h4>
+      <div>
+        <h4 className="font-bold mb-4 text-program-yellow-accent">
+          Programa Aquisição Assistida
+        </h4>
               <p className="text-sm text-white/80 leading-relaxed">
                 Iniciativa do Governo do Estado do Maranhão para facilitar o
                 acesso à moradia digna para famílias maranhenses de baixa renda.
@@ -355,13 +344,13 @@ export default function LandingPage() {
                     Cadastro de Beneficiário
                   </Link>
                 </li>
-                <li>
-                  <Link
-                    href="/construtor/cadastro"
-                    className="text-white/80 hover:text-white transition-colors">
-                    Cadastro de Construtor
-                  </Link>
-                </li>
+      <li>
+        <Link
+          href="/ofertante/cadastro"
+          className="text-white/80 hover:text-white transition-colors">
+          Cadastro de Ofertante
+        </Link>
+      </li>
                 <li>
                   <Link
                     href="/imoveis"
@@ -382,18 +371,18 @@ export default function LandingPage() {
               <h4 className="font-bold mb-4 text-program-yellow-accent">
                 Contato
               </h4>
-              <p className="text-sm text-white/80 leading-relaxed">
-                Dúvidas sobre o programa?
-                <br />
-                Entre em contato com a SEMAG - Secretaria de Estado de
-                Monitoramento de Ações Governamentais.
-              </p>
+        <p className="text-sm text-white/80 leading-relaxed">
+          Dúvidas sobre o programa?
+          <br />
+          Entre em contato com a SECID - Secretaria de Estado de
+          Cidades e Desenvolvimento Urbano.
+        </p>
             </div>
           </div>
           <div className="border-t border-white/20 pt-8 text-center text-sm text-white/70">
             <p>
-              © 2025 Governo do Estado do Maranhão - SEMAG. Todos os direitos
-              reservados.
+        © 2025 Governo do Estado do Maranhão - SECID. Todos os direitos
+        reservados.
             </p>
           </div>
         </div>

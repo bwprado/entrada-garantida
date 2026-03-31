@@ -338,10 +338,10 @@ export default function ConstrutorDashboardPage() {
                       </div>
                     </div>
                     <div className="mt-3 pt-3 border-t">
-                      <p className="text-sm text-destructive">
-                        <XCircle className="w-4 h-4 inline mr-1" />
-                        Valor acima do limite permitido (R$ 250.000)
-                      </p>
+      <p className="text-sm text-destructive">
+        <XCircle className="w-4 h-4 inline mr-1" />
+        Valor acima do limite permitido (R$ 200.000)
+      </p>
                     </div>
                   </div>
                 </div>

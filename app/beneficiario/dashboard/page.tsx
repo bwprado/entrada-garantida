@@ -1,14 +1,20 @@
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useAuth } from "@/lib/auth-context";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
-} from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   Home,
   User,
@@ -16,11 +22,83 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  LogOut,
-  Building2
-} from "lucide-react"
+  Building2,
+  Heart,
+  X,
+  Loader2,
+  MapPin,
+  Bed,
+  Car,
+  ArrowRight,
+} from "lucide-react";
+import { toast } from "sonner";
+import Image from "next/image";
 
 export default function BeneficiarioDashboardPage() {
+  const { user, isAuthenticated, logout } = useAuth();
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  
+  const userData = useQuery(
+    api.users.getById,
+    user ? { id: user._id } : "skip"
+  );
+
+  const selectedProperties = useQuery(
+    api.properties.getByIds,
+    userData?.propriedadesInteresse?.length 
+      ? { ids: userData.propriedadesInteresse }
+      : "skip"
+  );
+
+  const removePropertyMutation = useMutation(api.users.removePropertySelection);
+
+  const handleRemoveProperty = async (propertyId: string) => {
+    if (!user) return;
+    
+    setRemovingId(propertyId);
+    try {
+      await removePropertyMutation({
+        userId: user._id,
+        propertyId: propertyId as any,
+      });
+      toast.success("Imóvel removido da seleção");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao remover imóvel");
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
+  const selectionCount = userData?.propriedadesInteresse?.length || 0;
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="w-full max-w-md mx-4">
+          <CardHeader className="text-center">
+            <CardTitle>Acesso Negado</CardTitle>
+            <CardDescription>
+              Você precisa estar logado para acessar esta página
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild className="w-full">
+              <Link href="/login">Fazer Login</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Main Content */}
@@ -28,7 +106,9 @@ export default function BeneficiarioDashboardPage() {
         <div className="container mx-auto max-w-6xl">
           {/* Welcome Section */}
           <div className="mb-8">
-            <h2 className="text-3xl font-bold mb-2">Bem-vindo, João Silva</h2>
+            <h2 className="text-3xl font-bold mb-2">
+              Bem-vindo, {userData?.nome || user?.nome || "Beneficiário"}
+            </h2>
             <p className="text-muted-foreground">
               Acompanhe o status da sua solicitação no programa
             </p>
@@ -37,6 +117,123 @@ export default function BeneficiarioDashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Main Column */}
             <div className="lg:col-span-2 space-y-6">
+              {/* Selected Properties Card */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Heart className="w-5 h-5 text-primary" />
+                        Imóveis Selecionados
+                      </CardTitle>
+                      <CardDescription>
+                        Você pode selecionar até 3 imóveis de seu interesse
+                      </CardDescription>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-primary">
+                        {selectionCount}/3
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {selectionCount === 0 
+                          ? "Nenhum selecionado" 
+                          : selectionCount === 3 
+                            ? "Limite atingido"
+                            : `${3 - selectionCount} restante(s)`
+                        }
+                      </p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {selectionCount === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <Building2 className="w-12 h-12 text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground mb-4 max-w-md">
+                        Você ainda não selecionou nenhum imóvel. 
+                        Navegue pelo catálogo e escolha até 3 opções.
+                      </p>
+                      <Button asChild>
+                        <Link href="/imoveis">Ver Imóveis Disponíveis</Link>
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {selectedProperties?.map((property, index) => (
+                        <div
+                          key={property._id}
+                          className="relative flex gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                        >
+                          {/* Preference Number */}
+                          <div className="absolute -top-2 -left-2 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold text-sm">
+                            {index + 1}
+                          </div>
+
+                          {/* Property Image */}
+                          <div className="w-24 h-24 bg-muted rounded-lg overflow-hidden flex-shrink-0">
+                            <Image
+                              src="/placeholder-property.jpg"
+                              alt={property.titulo}
+                              width={96}
+                              height={96}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+
+                          {/* Property Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <h4 className="font-semibold line-clamp-1">
+                                {property.titulo}
+                              </h4>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                onClick={() => handleRemoveProperty(property._id)}
+                                disabled={removingId === property._id}
+                              >
+                                {removingId === property._id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <X className="w-4 h-4" />
+                                )}
+                              </Button>
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-2">
+                              <MapPin className="w-3 h-3 inline mr-1" />
+                              {property.bairro}, {property.cidade}
+                            </p>
+                            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Bed className="w-3 h-3" />
+                                {property.quartos}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Car className="w-3 h-3" />
+                                {property.vagasGaragem || 0}
+                              </span>
+                            </div>
+                            <p className="text-lg font-bold text-primary mt-2">
+                              {formatCurrency(property.precoOfertado)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+
+                      {selectionCount < 3 && (
+                        <Button asChild variant="outline" className="w-full mt-4">
+                          <Link href="/imoveis">
+                            <Heart className="w-4 h-4 mr-2" />
+                            Adicionar mais imóveis
+                          </Link>
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               {/* Status Card */}
               <Card>
                 <CardHeader>
@@ -44,11 +241,14 @@ export default function BeneficiarioDashboardPage() {
                     <CardTitle>Status da Solicitação</CardTitle>
                     <Badge
                       variant="secondary"
-                      className="bg-secondary text-secondary-foreground">
+                      className="bg-secondary text-secondary-foreground"
+                    >
                       Em Análise
                     </Badge>
                   </div>
-                  <CardDescription>Protocolo: #2025-MA-00123</CardDescription>
+                  <CardDescription>
+                    Protocolo: #{userData?._id?.slice(-6) || "N/A"}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-2">
@@ -56,9 +256,9 @@ export default function BeneficiarioDashboardPage() {
                       <span className="text-muted-foreground">
                         Progresso da análise
                       </span>
-                      <span className="font-medium">60%</span>
+                      <span className="font-medium">{selectionCount > 0 ? "40%" : "20%"}</span>
                     </div>
-                    <Progress value={60} className="h-2" />
+                    <Progress value={selectionCount > 0 ? 40 : 20} className="h-2" />
                   </div>
 
                   {/* Timeline */}
@@ -75,7 +275,10 @@ export default function BeneficiarioDashboardPage() {
                           Cadastro Realizado
                         </h4>
                         <p className="text-sm text-muted-foreground">
-                          15/01/2025 às 14:30
+                          {userData?.criadoEm 
+                            ? new Date(userData.criadoEm).toLocaleDateString("pt-BR")
+                            : "Data não disponível"
+                          }
                         </p>
                         <p className="text-sm mt-2">
                           Seu cadastro foi recebido com sucesso.
@@ -85,20 +288,31 @@ export default function BeneficiarioDashboardPage() {
 
                     <div className="flex gap-4">
                       <div className="flex flex-col items-center">
-                        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                          <CheckCircle2 className="w-4 h-4 text-primary-foreground" />
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                          selectionCount > 0 ? "bg-primary" : "bg-secondary"
+                        }`}>
+                          {selectionCount > 0 ? (
+                            <CheckCircle2 className="w-4 h-4 text-primary-foreground" />
+                          ) : (
+                            <Clock className="w-4 h-4 text-secondary-foreground" />
+                          )}
                         </div>
-                        <div className="w-0.5 h-full bg-primary mt-2" />
+                        <div className={`w-0.5 h-full mt-2 ${
+                          selectionCount > 0 ? "bg-primary" : "bg-border"
+                        }`} />
                       </div>
                       <div className="flex-1 pb-8">
                         <h4 className="font-semibold mb-1">
-                          Documentos Verificados
+                          Seleção de Imóveis
                         </h4>
                         <p className="text-sm text-muted-foreground">
-                          18/01/2025 às 10:15
+                          {selectionCount > 0 ? "Concluído" : "Pendente"}
                         </p>
                         <p className="text-sm mt-2">
-                          Todos os documentos foram aprovados.
+                          {selectionCount > 0 
+                            ? `Você selecionou ${selectionCount} imóvel(s).`
+                            : "Selecione até 3 imóveis de seu interesse."
+                          }
                         </p>
                       </div>
                     </div>
@@ -141,28 +355,6 @@ export default function BeneficiarioDashboardPage() {
                   </div>
                 </CardContent>
               </Card>
-
-              {/* Imóvel Solicitado */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Imóvel de Interesse</CardTitle>
-                  <CardDescription>
-                    Você ainda não selecionou um imóvel
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <Building2 className="w-12 h-12 text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground mb-4 max-w-md">
-                      Navegue pelo catálogo de imóveis disponíveis e escolha o
-                      que melhor atende sua família
-                    </p>
-                    <Button asChild>
-                      <Link href="/imoveis">Ver Imóveis Disponíveis</Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
 
             {/* Sidebar */}
@@ -178,71 +370,73 @@ export default function BeneficiarioDashboardPage() {
                 <CardContent className="space-y-3 text-sm">
                   <div>
                     <p className="text-muted-foreground">Nome</p>
-                    <p className="font-medium">João Silva</p>
+                    <p className="font-medium">{userData?.nome || "N/A"}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">CPF</p>
-                    <p className="font-medium">123.456.789-00</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">E-mail</p>
-                    <p className="font-medium">joao@email.com</p>
+                    <p className="font-medium">
+                      {userData?.cpf?.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4") || "N/A"}
+                    </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Telefone</p>
-                    <p className="font-medium">(98) 98765-4321</p>
+                    <p className="font-medium">
+                      {userData?.telefone?.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3") || "N/A"}
+                    </p>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full mt-4 bg-transparent">
-                    Editar Dados
-                  </Button>
+                  <div>
+                    <p className="text-muted-foreground">Endereço</p>
+                    <p className="font-medium">
+                      {userData?.endereco 
+                        ? `${userData.endereco}${userData.numero ? `, ${userData.numero}` : ""}`
+                        : "N/A"
+                      }
+                    </p>
+                    {userData?.bairro && (
+                      <p className="text-muted-foreground">
+                        {userData.bairro}, {userData.cidade} - {userData.estado}
+                      </p>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 
-              {/* Documentos */}
+              {/* Quick Actions */}
               <Card>
                 <CardHeader>
                   <div className="flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-primary" />
-                    <CardTitle className="text-lg">Documentos</CardTitle>
+                    <Home className="w-5 h-5 text-primary" />
+                    <CardTitle className="text-lg">Ações Rápidas</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <span>RG/CNH</span>
-                    <Badge variant="secondary" className="bg-secondary/50">
-                      <CheckCircle2 className="w-3 h-3 mr-1" />
-                      Aprovado
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span>CPF</span>
-                    <Badge variant="secondary" className="bg-secondary/50">
-                      <CheckCircle2 className="w-3 h-3 mr-1" />
-                      Aprovado
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Comp. Residência</span>
-                    <Badge variant="secondary" className="bg-secondary/50">
-                      <CheckCircle2 className="w-3 h-3 mr-1" />
-                      Aprovado
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Comp. Renda</span>
-                    <Badge variant="secondary" className="bg-secondary/50">
-                      <CheckCircle2 className="w-3 h-3 mr-1" />
-                      Aprovado
-                    </Badge>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full mt-4 bg-transparent">
-                    Enviar Novo Documento
+                  <Button asChild variant="outline" className="w-full justify-between">
+                    <Link href="/imoveis">
+                      <span className="flex items-center">
+                        <Building2 className="w-4 h-4 mr-2" />
+                        Ver Imóveis
+                      </span>
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="w-full justify-between">
+                    <Link href="/beneficiario/documentos">
+                      <span className="flex items-center">
+                        <FileText className="w-4 h-4 mr-2" />
+                        Documentos
+                      </span>
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-between text-destructive hover:text-destructive"
+                    onClick={logout}
+                  >
+                    <span className="flex items-center">
+                      Sair
+                    </span>
+                    <ArrowRight className="w-4 h-4" />
                   </Button>
                 </CardContent>
               </Card>
@@ -260,6 +454,13 @@ export default function BeneficiarioDashboardPage() {
                     Mantenha seus dados atualizados e acompanhe regularmente o
                     status da sua solicitação.
                   </p>
+                  {selectionCount === 0 && (
+                    <div className="mt-4 p-3 bg-primary/10 rounded-lg">
+                      <p className="text-sm text-primary">
+                        <strong>Dica:</strong> Selecione até 3 imóveis para aumentar suas chances!
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -267,5 +468,7 @@ export default function BeneficiarioDashboardPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
+
+import { useState } from "react";

@@ -11,6 +11,7 @@ import { Maximize } from "lucide-react"
 import { Heart } from "lucide-react"
 
 type ImovelCardProps = {
+  id: string
   title: string
   location: string
   imageSrc: string
@@ -24,6 +25,7 @@ type ImovelCardProps = {
 }
 
 export default function ImovelCard({
+  id,
   title,
   location,
   imageSrc,
@@ -49,12 +51,7 @@ export default function ImovelCard({
           fill
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
-        <Button
-          size="icon"
-          variant="secondary"
-          className="absolute top-3 right-3 rounded-full bg-background/80 hover:bg-background">
-          <Heart className="w-4 h-4" />
-        </Button>
+
         <Badge className="absolute bottom-3 left-3">{status}</Badge>
       </div>
       <CardContent className="p-4">

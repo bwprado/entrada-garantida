@@ -3,8 +3,8 @@
 
 @custom-variant dark (&:is(.dark *));
 
-:root {
-  /* Cores oficiais do Programa Entrada Garantida baseadas no logo */
+ :root {
+ /* Cores oficiais do Programa Aquisição Assistida */
   --background: oklch(0.99 0 0);
   --foreground: oklch(0.15 0 0);
   --card: oklch(1 0 0);
@@ -96,7 +96,7 @@
   --font-sans: "Geist", "Geist Fallback";
   --font-mono: "Geist Mono", "Geist Mono Fallback";
 
-  /* Programa Entrada Garantida colors */
+  /* Programa Aquisição Assistida colors */
   --color-program-green-primary: #22c55e;
   --color-program-green-hover: #16a34a;
   --color-program-blue-dark: #0c4a6e;
