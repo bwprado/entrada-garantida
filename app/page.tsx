@@ -49,7 +49,7 @@ export default function LandingPage() {
                 asChild
                 className="text-base bg-program-green-primary hover:bg-program-green-hover text-white shadow-xl"
               >
-                <Link href="/login">
+                <Link href="/login/beneficiario">
                   Sou beneficiário
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Link>

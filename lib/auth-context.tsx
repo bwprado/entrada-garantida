@@ -72,6 +72,15 @@ type AuthContextValue = {
     nome: string
     cpf: string
     dataNascimento: string
+    rg?: string
+    profissao?: string
+    estadoCivil?:
+      | 'solteiro'
+      | 'casado'
+      | 'divorciado'
+      | 'viuvo'
+      | 'uniao_estavel'
+      | 'separado'
     cep: string
     endereco: string
     numero: string
@@ -209,6 +218,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       nome: string
       cpf: string
       dataNascimento: string
+      rg?: string
+      profissao?: string
+      estadoCivil?:
+        | 'solteiro'
+        | 'casado'
+        | 'divorciado'
+        | 'viuvo'
+        | 'uniao_estavel'
+        | 'separado'
       cep: string
       endereco: string
       numero: string

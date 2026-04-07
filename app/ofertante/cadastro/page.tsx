@@ -1,17 +1,34 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { useEffect, useMemo, useState } from "react"
+import { Controller, useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useMaskito } from "@maskito/react"
+import { ChevronLeft, ChevronRight, Loader2, Phone, ShieldCheck, User } from "lucide-react"
+import { toast } from "sonner"
+
 import { Button } from "@/components/ui/button"
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card"
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel
+} from "@/components/ui/field"
+import {
+  FormFooter,
+  FormHeader,
+  MultiStepFormContent,
+  NextButton,
+  PreviousButton
+} from "@/components/multi-step-viewer"
+import {
+  MultiStepFormProvider,
+  useMultiStepForm,
+  type StepFieldConfig
+} from "@/hooks/use-multi-step-viewer"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -19,419 +36,756 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
-import { Home, ArrowLeft, Building2, FileText, User } from "lucide-react"
+import { useAuth } from "@/lib/auth-context"
+import { parseDataNascimentoBrParaIso } from "@/lib/date-br"
+import {
+  cepMaskOptions,
+  cpfMaskOptions,
+  dataNascimentoBrMaskOptions,
+  phoneMaskOptions
+} from "@/lib/masks"
+import { mergeRefs } from "@/lib/utils"
+import {
+  estadoCivilLabels,
+  ofertanteCadastroSchema,
+  ofertanteCadastroStep1Fields,
+  ofertanteCadastroStep2Fields,
+  onlyDigits,
+  otpVerifySchema,
+  type OfertanteCadastroFormValues
+} from "@/lib/schemas/ofertante-cadastro"
 
-export default function ConstrutorCadastroPage() {
-  const [termosAceitos, setTermosAceitos] = useState(false)
-  const [termosErro, setTermosErro] = useState(false)
+function CadastroFooter({
+  otpSent,
+  submitting,
+  onSendCode,
+  onVerify
+}: {
+  otpSent: boolean
+  submitting: boolean
+  onSendCode: () => void
+  onVerify: () => void
+}) {
+  const { isLast, isFirst } = useMultiStepForm()
+
+  if (!isLast) {
+    return (
+      <FormFooter className="border-t pt-4 mt-2">
+        <div className="flex flex-col gap-3 w-full sm:flex-row sm:justify-between sm:items-center">
+          <PreviousButton>
+            <ChevronLeft className="size-4" />
+            Anterior
+          </PreviousButton>
+          <NextButton>
+            Próximo
+            <ChevronRight className="size-4" />
+          </NextButton>
+        </div>
+      </FormFooter>
+    )
+  }
+
+  return (
+    <FormFooter className="border-t pt-4 mt-2">
+      <div className="flex w-full flex-col gap-3">
+        {!isFirst && (
+          <PreviousButton className="w-full sm:w-auto">
+            <ChevronLeft className="size-4" />
+            Anterior
+          </PreviousButton>
+        )}
+        {!otpSent ? (
+          <Button
+            type="button"
+            className="w-full sm:ms-auto sm:w-auto"
+            disabled={submitting}
+            onClick={() => void onSendCode()}>
+            {submitting ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                Enviando…
+              </>
+            ) : (
+              "Criar cadastro e enviar código"
+            )}
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            className="w-full sm:ms-auto sm:w-auto"
+            disabled={submitting}
+            onClick={() => void onVerify()}>
+            {submitting ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                Verificando…
+              </>
+            ) : (
+              "Verificar e concluir"
+            )}
+          </Button>
+        )}
+      </div>
+    </FormFooter>
+  )
+}
+
+function OtpSentReset({
+  setOtpSent
+}: {
+  setOtpSent: (v: boolean) => void
+}) {
+  const { currentStep, totalSteps } = useMultiStepForm()
+  useEffect(() => {
+    if (currentStep < totalSteps - 1) setOtpSent(false)
+  }, [currentStep, totalSteps, setOtpSent])
+  return null
+}
+
+export default function OfertanteCadastroPage() {
+  const router = useRouter()
+  const {
+    registerOfertante,
+    startPhoneSignIn,
+    completePhoneSignIn,
+    completeOnboarding
+  } = useAuth()
+
+  const [otpSent, setOtpSent] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+
+  const form = useForm<OfertanteCadastroFormValues>({
+    resolver: zodResolver(ofertanteCadastroSchema),
+    mode: "onBlur",
+    defaultValues: {
+      nome: "",
+      telefone: "",
+      cpf: "",
+      rg: "",
+      dataNascimento: "",
+      profissao: "",
+      estadoCivil: undefined,
+      cep: "",
+      endereco: "",
+      numero: "",
+      complemento: "",
+      bairro: "",
+      cidade: "",
+      estado: "MA",
+      otp: ""
+    }
+  })
+
+  const { control, trigger, getValues } = form
+
+  const phoneInputRef = useMaskito({ options: phoneMaskOptions })
+  const cpfInputRef = useMaskito({ options: cpfMaskOptions })
+  const cepInputRef = useMaskito({ options: cepMaskOptions })
+  const dataNascimentoInputRef = useMaskito({
+    options: dataNascimentoBrMaskOptions
+  })
+
+  const stepsFields = useMemo(
+    (): StepFieldConfig[] => [
+      {
+        fields: [...ofertanteCadastroStep1Fields],
+        component: (
+          <>
+            <Controller
+              name="nome"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field
+                  data-invalid={fieldState.invalid}
+                  className="gap-1 col-span-full"
+                >
+                  <FieldLabel htmlFor="nome">Nome completo *</FieldLabel>
+                  <Input
+                    id="nome"
+                    autoComplete="name"
+                    placeholder="Seu nome completo"
+                    aria-invalid={fieldState.invalid}
+                    {...field}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+            <Controller
+              name="telefone"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field
+                  data-invalid={fieldState.invalid}
+                  className="gap-1 col-span-full"
+                >
+                  <FieldLabel htmlFor="telefone">Celular *</FieldLabel>
+                  <Input
+                    ref={mergeRefs(field.ref, phoneInputRef)}
+                    id="telefone"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    placeholder="(98) 90000-0000"
+                    aria-invalid={fieldState.invalid}
+                    name={field.name}
+                    onBlur={field.onBlur}
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                  <FieldDescription>
+                    Usado para login e verificação por SMS.
+                  </FieldDescription>
+                </Field>
+              )}
+            />
+          </>
+        )
+      },
+      {
+        fields: [...ofertanteCadastroStep2Fields],
+        component: (
+          <>
+            <Controller
+              name="cpf"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field
+                  data-invalid={fieldState.invalid}
+                  className="gap-1 col-span-full"
+                >
+                  <FieldLabel htmlFor="cpf">CPF *</FieldLabel>
+                  <Input
+                    ref={mergeRefs(field.ref, cpfInputRef)}
+                    id="cpf"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    placeholder="000.000.000-00"
+                    aria-invalid={fieldState.invalid}
+                    name={field.name}
+                    onBlur={field.onBlur}
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+            <Controller
+              name="rg"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field
+                  data-invalid={fieldState.invalid}
+                  className="gap-1 col-span-full"
+                >
+                  <FieldLabel htmlFor="rg">RG *</FieldLabel>
+                  <Input
+                    id="rg"
+                    autoComplete="off"
+                    placeholder="Número do RG"
+                    aria-invalid={fieldState.invalid}
+                    {...field}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+            <Controller
+              name="dataNascimento"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field
+                  data-invalid={fieldState.invalid}
+                  className="gap-1 col-span-full"
+                >
+                  <FieldLabel htmlFor="dataNascimento">
+                    Data de nascimento *
+                  </FieldLabel>
+                  <Input
+                    ref={mergeRefs(field.ref, dataNascimentoInputRef)}
+                    id="dataNascimento"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="bday"
+                    placeholder="DD-MM-AAAA"
+                    aria-invalid={fieldState.invalid}
+                    name={field.name}
+                    onBlur={field.onBlur}
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                  />
+                  <FieldDescription>Formato DD-MM-AAAA (dia-mês-ano).</FieldDescription>
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+            <Controller
+              name="profissao"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field
+                  data-invalid={fieldState.invalid}
+                  className="gap-1 col-span-full"
+                >
+                  <FieldLabel htmlFor="profissao">Profissão *</FieldLabel>
+                  <Input
+                    id="profissao"
+                    autoComplete="organization-title"
+                    placeholder="Sua profissão"
+                    aria-invalid={fieldState.invalid}
+                    {...field}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+            <Controller
+              name="estadoCivil"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field
+                  data-invalid={fieldState.invalid}
+                  className="gap-1 col-span-full"
+                >
+                  <FieldLabel>Estado civil *</FieldLabel>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger
+                      id="estadoCivil"
+                      aria-invalid={fieldState.invalid}
+                      className="w-full"
+                    >
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(
+                        Object.entries(estadoCivilLabels) as [
+                          keyof typeof estadoCivilLabels,
+                          string
+                        ][]
+                      ).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+            <Controller
+              name="cep"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field
+                  data-invalid={fieldState.invalid}
+                  className="gap-1 col-span-full"
+                >
+                  <FieldLabel htmlFor="cep">CEP *</FieldLabel>
+                  <Input
+                    ref={mergeRefs(field.ref, cepInputRef)}
+                    id="cep"
+                    inputMode="numeric"
+                    autoComplete="postal-code"
+                    placeholder="00000-000"
+                    aria-invalid={fieldState.invalid}
+                    name={field.name}
+                    onBlur={field.onBlur}
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+            <Controller
+              name="endereco"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field
+                  data-invalid={fieldState.invalid}
+                  className="gap-1 col-span-full"
+                >
+                  <FieldLabel htmlFor="endereco">Logradouro *</FieldLabel>
+                  <Input
+                    id="endereco"
+                    autoComplete="street-address"
+                    placeholder="Rua, avenida…"
+                    aria-invalid={fieldState.invalid}
+                    {...field}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Controller
+                name="numero"
+                control={control}
+                render={({ field, fieldState }) => (
+                  <Field
+                    data-invalid={fieldState.invalid}
+                    className="gap-1"
+                  >
+                    <FieldLabel htmlFor="numero">Número *</FieldLabel>
+                    <Input
+                      id="numero"
+                      autoComplete="off"
+                      placeholder="Nº"
+                      aria-invalid={fieldState.invalid}
+                      {...field}
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
+              <Controller
+                name="complemento"
+                control={control}
+                render={({ field, fieldState }) => (
+                  <Field
+                    data-invalid={fieldState.invalid}
+                    className="gap-1"
+                  >
+                    <FieldLabel htmlFor="complemento">Complemento</FieldLabel>
+                    <Input
+                      id="complemento"
+                      autoComplete="off"
+                      placeholder="Apto, bloco…"
+                      aria-invalid={fieldState.invalid}
+                      {...field}
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
+            </div>
+            <Controller
+              name="bairro"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field
+                  data-invalid={fieldState.invalid}
+                  className="gap-1 col-span-full"
+                >
+                  <FieldLabel htmlFor="bairro">Bairro *</FieldLabel>
+                  <Input
+                    id="bairro"
+                    autoComplete="off"
+                    placeholder="Bairro"
+                    aria-invalid={fieldState.invalid}
+                    {...field}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Controller
+                name="cidade"
+                control={control}
+                render={({ field, fieldState }) => (
+                  <Field
+                    data-invalid={fieldState.invalid}
+                    className="gap-1"
+                  >
+                    <FieldLabel htmlFor="cidade">Cidade *</FieldLabel>
+                    <Input
+                      id="cidade"
+                      autoComplete="address-level2"
+                      placeholder="Cidade"
+                      aria-invalid={fieldState.invalid}
+                      {...field}
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
+              <Controller
+                name="estado"
+                control={control}
+                render={({ field, fieldState }) => (
+                  <Field
+                    data-invalid={fieldState.invalid}
+                    className="gap-1"
+                  >
+                    <FieldLabel htmlFor="estado">UF *</FieldLabel>
+                    <Input
+                      id="estado"
+                      autoComplete="off"
+                      maxLength={2}
+                      placeholder="MA"
+                      className="uppercase"
+                      aria-invalid={fieldState.invalid}
+                      {...field}
+                      onChange={(e) =>
+                        field.onChange(e.target.value.toUpperCase())
+                      }
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
+            </div>
+          </>
+        )
+      },
+      {
+        fields: [],
+        component: (
+          <div className="space-y-4">
+            <Field className="gap-1">
+              <FieldLabel>Verificação por SMS</FieldLabel>
+              <FieldDescription>
+                {otpSent
+                  ? "Digite o código de 6 dígitos enviado ao seu celular."
+                  : "Na próxima etapa, criaremos seu cadastro e enviaremos um código por SMS para confirmar o número."}
+              </FieldDescription>
+            </Field>
+            {otpSent && (
+              <Controller
+                name="otp"
+                control={control}
+                render={({ field, fieldState }) => (
+                  <Field
+                    data-invalid={fieldState.invalid}
+                    className="gap-1"
+                  >
+                    <FieldLabel htmlFor="otp">Código SMS *</FieldLabel>
+                    <Input
+                      id="otp"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                      placeholder="000000"
+                      aria-invalid={fieldState.invalid}
+                      {...field}
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
+            )}
+          </div>
+        )
+      }
+    ],
+    [
+      control,
+      cepInputRef,
+      cpfInputRef,
+      phoneInputRef,
+      dataNascimentoInputRef,
+      otpSent
+    ]
+  )
+
+  async function handleSendCode() {
+    const ok = await trigger([...ofertanteCadastroStep1Fields])
+    if (!ok) {
+      toast.error("Corrija os dados da primeira etapa.")
+      return
+    }
+    const ok2 = await trigger([...ofertanteCadastroStep2Fields])
+    if (!ok2) {
+      toast.error("Corrija os dados da segunda etapa.")
+      return
+    }
+
+    setSubmitting(true)
+    const nome = getValues("nome")
+    const telefone = getValues("telefone")
+
+    const reg = await registerOfertante(telefone, nome)
+    if (!reg.success) {
+      toast.error(reg.error ?? "Não foi possível cadastrar")
+      setSubmitting(false)
+      return
+    }
+
+    const otpResult = await startPhoneSignIn(telefone, "ofertante")
+    if (!otpResult.success) {
+      toast.error(otpResult.error ?? "Erro ao enviar código")
+      setSubmitting(false)
+      return
+    }
+
+    setOtpSent(true)
+    toast.success("Código enviado por SMS.")
+    setSubmitting(false)
+  }
+
+  async function handleVerify() {
+    const parsed = otpVerifySchema.safeParse({ otp: getValues("otp") })
+    if (!parsed.success) {
+      const first = parsed.error.flatten().fieldErrors.otp?.[0]
+      toast.error(first ?? "Código inválido")
+      return
+    }
+
+    setSubmitting(true)
+    const telefone = getValues("telefone")
+    const signInResult = await completePhoneSignIn(
+      telefone,
+      parsed.data.otp,
+      "ofertante"
+    )
+    if (!signInResult.success) {
+      toast.error(signInResult.error ?? "Código inválido")
+      setSubmitting(false)
+      return
+    }
+
+    const v = getValues()
+    const ec = v.estadoCivil
+    if (ec === undefined) {
+      toast.error("Estado civil inválido")
+      setSubmitting(false)
+      return
+    }
+
+    const dataIso = parseDataNascimentoBrParaIso(v.dataNascimento)
+    if (!dataIso) {
+      toast.error("Data de nascimento inválida")
+      setSubmitting(false)
+      return
+    }
+
+    const ob = await completeOnboarding({
+      nome: v.nome,
+      cpf: onlyDigits(v.cpf),
+      dataNascimento: dataIso,
+      rg: v.rg.trim(),
+      profissao: v.profissao.trim(),
+      estadoCivil: ec,
+      cep: onlyDigits(v.cep),
+      endereco: v.endereco.trim(),
+      numero: v.numero.trim(),
+      complemento: v.complemento?.trim() || undefined,
+      bairro: v.bairro.trim(),
+      cidade: v.cidade.trim(),
+      estado: v.estado.trim()
+    })
+
+    if (!ob.success) {
+      toast.error(ob.error ?? "Erro ao salvar dados")
+      setSubmitting(false)
+      return
+    }
+
+    toast.success("Cadastro concluído")
+    router.replace("/ofertante/dashboard")
+    setSubmitting(false)
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      {/* Form */}
-      <div className="flex-1 py-12 px-4">
-        <div className="container mx-auto max-w-3xl">
-          <Button variant="ghost" asChild className="mb-6">
+      <div className="flex-1 py-6 px-4 sm:py-10">
+        <div className="container mx-auto max-w-lg sm:max-w-xl">
+          <Button variant="ghost" asChild className="mb-4 -ms-2">
             <Link href="/">
-              <ArrowLeft className="w-4 h-4 mr-2" />
+              <ChevronLeft className="mr-2 size-4" />
               Voltar para o início
             </Link>
           </Button>
 
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">Cadastro de Construtor</h1>
-            <p className="text-muted-foreground leading-relaxed">
-              Cadastre sua empresa para oferecer imóveis no Programa
-              Habitacional
+          <div className="mb-6">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+              Cadastro de ofertante
+            </h1>
+            <p className="mt-2 text-sm sm:text-base text-muted-foreground leading-relaxed">
+              Preencha em etapas. Campos marcados com * são obrigatórios.
             </p>
           </div>
 
           <form
-            className="space-y-6"
             onSubmit={(e) => {
-              if (!termosAceitos) {
-                e.preventDefault()
-                setTermosErro(true)
-              }
-            }}>
-            {/* Dados da Empresa */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-primary" />
-                  <CardTitle>Dados da Empresa</CardTitle>
-                </div>
-                <CardDescription>
-                  Informações da construtora ou incorporadora
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="razao-social">Razão Social *</Label>
-                  <Input
-                    id="razao-social"
-                    placeholder="Nome completo da empresa"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="nome-fantasia">Nome Fantasia *</Label>
-                  <Input
-                    id="nome-fantasia"
-                    placeholder="Nome comercial"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="cnpj">CNPJ *</Label>
-                    <Input
-                      id="cnpj"
-                      placeholder="00.000.000/0000-00"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="inscricao-estadual">
-                      Inscrição Estadual *
-                    </Label>
-                    <Input
-                      id="inscricao-estadual"
-                      placeholder="000.000.000.000"
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="tipo-empresa">Tipo de Empresa *</Label>
-                    <Select required>
-                      <SelectTrigger id="tipo-empresa">
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="construtora">Construtora</SelectItem>
-                        <SelectItem value="incorporadora">
-                          Incorporadora
-                        </SelectItem>
-                        <SelectItem value="ambos">
-                          Construtora e Incorporadora
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="tempo-mercado">
-                      Tempo de Mercado (anos) *
-                    </Label>
-                    <Input
-                      id="tempo-mercado"
-                      type="number"
-                      min="0"
-                      placeholder="10"
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="telefone-empresa">Telefone *</Label>
-                    <Input
-                      id="telefone-empresa"
-                      placeholder="(98) 0000-0000"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email-empresa">E-mail Corporativo *</Label>
-                    <Input
-                      id="email-empresa"
-                      type="email"
-                      placeholder="contato@empresa.com"
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="site">Website</Label>
-                  <Input
-                    id="site"
-                    type="url"
-                    placeholder="https://www.empresa.com"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Endereço da Empresa */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Endereço da Empresa</CardTitle>
-                <CardDescription>Localização da sede</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="cep-empresa">CEP *</Label>
-                    <Input id="cep-empresa" placeholder="00000-000" required />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="endereco-empresa">Endereço *</Label>
-                    <Input
-                      id="endereco-empresa"
-                      placeholder="Rua, Avenida, etc."
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="numero-empresa">Número *</Label>
-                    <Input id="numero-empresa" placeholder="123" required />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="complemento-empresa">Complemento</Label>
-                    <Input
-                      id="complemento-empresa"
-                      placeholder="Sala, Andar, etc."
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="bairro-empresa">Bairro *</Label>
-                    <Input
-                      id="bairro-empresa"
-                      placeholder="Nome do bairro"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="cidade-empresa">Cidade *</Label>
-                    <Input
-                      id="cidade-empresa"
-                      placeholder="São Luís"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="estado-empresa">Estado *</Label>
-                    <Input id="estado-empresa" value="MA" disabled />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Responsável Legal */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <User className="w-5 h-5 text-primary" />
-                  <CardTitle>Responsável Legal</CardTitle>
-                </div>
-                <CardDescription>
-                  Dados do representante da empresa
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="nome-responsavel">Nome Completo *</Label>
-                  <Input
-                    id="nome-responsavel"
-                    placeholder="Nome do responsável"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="cpf-responsavel">CPF *</Label>
-                    <Input
-                      id="cpf-responsavel"
-                      placeholder="000.000.000-00"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="cargo-responsavel">Cargo *</Label>
-                    <Input
-                      id="cargo-responsavel"
-                      placeholder="Diretor, Sócio, etc."
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="telefone-responsavel">Telefone *</Label>
-                    <Input
-                      id="telefone-responsavel"
-                      placeholder="(98) 00000-0000"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email-responsavel">E-mail *</Label>
-                    <Input
-                      id="email-responsavel"
-                      type="email"
-                      placeholder="responsavel@empresa.com"
-                      required
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Informações Adicionais */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Informações Adicionais</CardTitle>
-                <CardDescription>
-                  Conte-nos mais sobre sua empresa
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="empreendimentos-anteriores">
-                    Número de Empreendimentos Entregues *
-                  </Label>
-                  <Input
-                    id="empreendimentos-anteriores"
-                    type="number"
-                    min="0"
-                    placeholder="5"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="descricao-empresa">
-                    Descrição da Empresa *
-                  </Label>
-                  <Textarea
-                    id="descricao-empresa"
-                    placeholder="Conte sobre a experiência da empresa, principais projetos, diferenciais..."
-                    rows={4}
-                    required
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Documentos */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-primary" />
-                  <CardTitle>Documentos</CardTitle>
-                </div>
-                <CardDescription>
-                  Anexe os documentos necessários (PDF)
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="doc-contrato-social">Contrato Social *</Label>
-                  <Input
-                    id="doc-contrato-social"
-                    type="file"
-                    accept=".pdf"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="doc-cnpj">Cartão CNPJ *</Label>
-                  <Input id="doc-cnpj" type="file" accept=".pdf" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="doc-certidoes">
-                    Certidões Negativas (Federal, Estadual, Municipal) *
-                  </Label>
-                  <Input
-                    id="doc-certidoes"
-                    type="file"
-                    accept=".pdf"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="doc-alvara">Alvará de Funcionamento *</Label>
-                  <Input id="doc-alvara" type="file" accept=".pdf" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="doc-responsavel-tecnico">
-                    Registro do Responsável Técnico (CREA/CAU) *
-                  </Label>
-                  <Input
-                    id="doc-responsavel-tecnico"
-                    type="file"
-                    accept=".pdf"
-                    required
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Termos */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Declaração</CardTitle>
-                <CardDescription>
-                  Confirme a veracidade das informações para concluir o cadastro
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col gap-4 rounded-lg border bg-card/50 p-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <Label
-                      htmlFor="termos-construtor"
-                      className="text-sm font-medium leading-none">
-                      Veracidade e regularidade
-                    </Label>
-                    <p
-                      id="termos-construtor-desc"
-                      className="text-sm leading-relaxed text-muted-foreground">
-                      Declaro que todas as informações e documentos fornecidos são
-                      verdadeiros e que a empresa está em situação regular
-                      perante os órgãos competentes. Estou ciente de que a
-                      prestação de informações falsas pode resultar em
-                      penalidades legais e exclusão do programa.
-                    </p>
-                    {termosErro && (
-                      <p className="text-sm text-destructive" role="alert">
-                        Ative o interruptor para confirmar a declaração.
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex shrink-0 items-center gap-3 sm:flex-col sm:items-end">
-                    <span className="text-xs text-muted-foreground sm:order-2">
-                      Aceito
-                    </span>
-                    <Switch
-                      id="termos-construtor"
-                      checked={termosAceitos}
-                      onCheckedChange={(v) => {
-                        setTermosAceitos(v)
-                        if (v) setTermosErro(false)
-                      }}
-                      aria-describedby="termos-construtor-desc"
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Botões */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button type="submit" size="lg" className="flex-1">
-                Enviar Cadastro
-              </Button>
-              <Button type="button" variant="outline" size="lg" asChild>
-                <Link href="/">Cancelar</Link>
-              </Button>
-            </div>
+              e.preventDefault()
+            }}
+            className="flex flex-col rounded-lg border bg-card p-4 sm:p-6 shadow-sm gap-4"
+          >
+            <MultiStepFormProvider
+              stepsFields={stepsFields}
+              onStepValidation={async (step) => {
+                if (step.fields.length === 0) return true
+                return form.trigger(step.fields as never)
+              }}
+            >
+              <OtpSentReset setOtpSent={setOtpSent} />
+              <MultiStepFormContent>
+                <FormHeader />
+                <StepFieldsWithIcon />
+                <CadastroFooter
+                  otpSent={otpSent}
+                  submitting={submitting}
+                  onSendCode={handleSendCode}
+                  onVerify={handleVerify}
+                />
+              </MultiStepFormContent>
+            </MultiStepFormProvider>
           </form>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function StepFieldsWithIcon() {
+  const { currentStep, stepsFields } = useMultiStepForm()
+  const step = stepsFields[currentStep]
+  if (!step) return null
+
+  const icons = [
+    <User key="u" className="size-5 text-primary shrink-0" />,
+    <ShieldCheck key="s" className="size-5 text-primary shrink-0" />,
+    <Phone key="p" className="size-5 text-primary shrink-0" />
+  ]
+
+  const titles = ["Nome e celular", "Dados pessoais e endereço", "Verificação"]
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        {icons[currentStep] ?? icons[0]}
+        <span className="font-medium">{titles[currentStep] ?? "Etapa"}</span>
+      </div>
+      <div key={currentStep} className="grid grid-cols-1 gap-4">
+        {step.component}
       </div>
     </div>
   )

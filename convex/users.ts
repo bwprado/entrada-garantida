@@ -3,6 +3,7 @@ import { v } from 'convex/values'
 import { normalizePhone } from '../lib/normalize-phone'
 import { Doc, Id } from './_generated/dataModel'
 import { internalMutation, mutation, query } from './_generated/server'
+import { estadoCivilEnum } from './schema'
 
 // Clean CPF (remove non-digits)
 function cleanCPF(cpf: string): string {
@@ -697,6 +698,9 @@ export const completeOfertanteOnboarding = mutation({
     nome: v.optional(v.string()),
     cpf: v.string(),
     dataNascimento: v.string(),
+    rg: v.optional(v.string()),
+    profissao: v.optional(v.string()),
+    estadoCivil: v.optional(estadoCivilEnum),
     cep: v.string(),
     endereco: v.string(),
     numero: v.string(),
@@ -738,10 +742,16 @@ export const completeOfertanteOnboarding = mutation({
       return { success: false, error: 'CPF já cadastrado por outro usuário' }
     }
 
+    const rgTrim = args.rg?.trim()
+    const profTrim = args.profissao?.trim()
+
     await ctx.db.patch(userId, {
       nome: args.nome || user.nome,
       cpf: cleanedCPF,
       dataNascimento: args.dataNascimento,
+      ...(rgTrim !== undefined && rgTrim !== '' ? { rg: rgTrim } : {}),
+      ...(profTrim ? { profissao: profTrim } : {}),
+      ...(args.estadoCivil !== undefined ? { estadoCivil: args.estadoCivil } : {}),
       cep: args.cep,
       endereco: args.endereco,
       numero: args.numero,

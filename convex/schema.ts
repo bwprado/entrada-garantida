@@ -113,6 +113,15 @@ export const rendaFamiliarFaixaEnum = v.union(
   v.literal('acima_8')
 )
 
+export const estadoCivilEnum = v.union(
+  v.literal('solteiro'),
+  v.literal('casado'),
+  v.literal('divorciado'),
+  v.literal('viuvo'),
+  v.literal('uniao_estavel'),
+  v.literal('separado')
+)
+
 // Users table (merged with @convex-dev/auth user fields + app fields)
 export const users = defineTable({
   // Convex Auth profile fields
@@ -157,6 +166,8 @@ export const users = defineTable({
 
   // Ofertante specific fields
   dataNascimento: v.optional(v.string()),
+  rg: v.optional(v.string()),
+  estadoCivil: v.optional(estadoCivilEnum),
   onboardingCompleto: v.optional(v.boolean()),
   documentosPendentes: v.optional(v.array(v.string())),
 
