@@ -237,7 +237,7 @@ export default function AdminBulkUploadPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-muted/30 py-8 px-4">
+    <div className="flex w-full flex-1 flex-col bg-muted/30 px-4 py-8">
       <div className="container mx-auto max-w-4xl">
         <Button variant="ghost" asChild className="mb-4">
           <Link href="/admin/dashboard">

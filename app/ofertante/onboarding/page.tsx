@@ -108,7 +108,6 @@ export default function OfertanteOnboardingPage() {
     setError("");
 
     const result = await completeOnboarding({
-      userId: user._id,
       nome,
       cpf: cpf.replace(/\D/g, ""),
       dataNascimento,

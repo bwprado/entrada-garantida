@@ -1,83 +1,36 @@
-import { v } from "convex/values";
-import { action } from "./_generated/server";
+import { Twilio } from '@convex-dev/twilio'
+import { v } from 'convex/values'
+import { components } from './_generated/api'
+import { internalAction } from './_generated/server'
 
-// Twilio configuration - these should be set in Convex environment variables
-const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
-const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
-const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;
+let twilioClient: Twilio<{ defaultFrom: string }> | null | undefined
 
-interface TwilioResponse {
-  sid: string;
-  status: string;
-  error_code?: string;
-  error_message?: string;
-}
-
-async function sendSMS(
-  to: string,
-  message: string
-): Promise<{ success: boolean; sid?: string; error?: string }> {
-  try {
-    if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_PHONE_NUMBER) {
-      console.error("[Twilio] Missing credentials");
-      return { success: false, error: "Twilio credentials not configured" };
-    }
-
-    const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
-    
-    const body = new URLSearchParams({
-      To: to,
-      From: TWILIO_PHONE_NUMBER,
-      Body: message,
-    });
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString("base64")}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: body.toString(),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("[Twilio] API error:", errorData);
-      return { 
-        success: false, 
-        error: errorData.message || `HTTP ${response.status}` 
-      };
-    }
-
-    const data: TwilioResponse = await response.json();
-    
-    if (data.error_code) {
-      return { success: false, error: data.error_message || `Error ${data.error_code}` };
-    }
-
-    return { success: true, sid: data.sid };
-  } catch (error) {
-    console.error("[Twilio] Error sending SMS:", error);
-    return { success: false, error: String(error) };
+/** Lazy init so missing env in dev does not fail module load (Twilio ctor throws). */
+export function getTwilioClient(): Twilio<{ defaultFrom: string }> | null {
+  if (twilioClient !== undefined) return twilioClient
+  const sid = process.env.TWILIO_ACCOUNT_SID
+  const token = process.env.TWILIO_AUTH_TOKEN
+  const from = process.env.TWILIO_PHONE_NUMBER
+  if (!sid || !token || !from) {
+    twilioClient = null
+    return null
   }
+  twilioClient = new Twilio(components.twilio, { defaultFrom: from })
+  return twilioClient
 }
 
-export const sendOTP = action({
+/** Used by Convex Auth `sendVerificationRequest` (see convex/auth.ts). */
+export const sendVerificationSms = internalAction({
   args: {
-    telefone: v.string(),
-    codigo: v.string(),
+    to: v.string(),
+    body: v.string()
   },
   handler: async (ctx, args) => {
-    const message = `Código de verificação Aquisição Assistida: ${args.codigo}. Válido por 5 minutos. Não compartilhe este código.`;
-    
-    const result = await sendSMS(args.telefone, message);
-    
-    if (!result.success) {
-      // Log the error but don't fail the OTP request
-      // The OTP is still created and can be shown in development mode
-      console.error("[Twilio] Failed to send SMS:", result.error);
+    const client = getTwilioClient()
+    if (!client) {
+      console.warn('[DEV] Phone OTP (sem Twilio):', args.to, args.body)
+      return
     }
-    
-    return result;
-  },
-});
+    await client.sendMessage(ctx, { to: args.to, body: args.body })
+  }
+})

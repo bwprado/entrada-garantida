@@ -1,4 +1,7 @@
+"use client"
+
 import Link from "next/link"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -17,9 +20,13 @@ import {
   SelectValue
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
 import { Home, ArrowLeft, Building2, FileText, User } from "lucide-react"
 
 export default function ConstrutorCadastroPage() {
+  const [termosAceitos, setTermosAceitos] = useState(false)
+  const [termosErro, setTermosErro] = useState(false)
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       {/* Form */}
@@ -40,7 +47,14 @@ export default function ConstrutorCadastroPage() {
             </p>
           </div>
 
-          <form className="space-y-6">
+          <form
+            className="space-y-6"
+            onSubmit={(e) => {
+              if (!termosAceitos) {
+                e.preventDefault()
+                setTermosErro(true)
+              }
+            }}>
             {/* Dados da Empresa */}
             <Card>
               <CardHeader>
@@ -360,23 +374,49 @@ export default function ConstrutorCadastroPage() {
 
             {/* Termos */}
             <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    id="termos-construtor"
-                    className="mt-1"
-                    required
-                  />
-                  <Label
-                    htmlFor="termos-construtor"
-                    className="text-sm leading-relaxed cursor-pointer">
-                    Declaro que todas as informações e documentos fornecidos são
-                    verdadeiros e que a empresa está em situação regular perante
-                    os órgãos competentes. Estou ciente de que a prestação de
-                    informações falsas pode resultar em penalidades legais e
-                    exclusão do programa.
-                  </Label>
+              <CardHeader>
+                <CardTitle>Declaração</CardTitle>
+                <CardDescription>
+                  Confirme a veracidade das informações para concluir o cadastro
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col gap-4 rounded-lg border bg-card/50 p-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <Label
+                      htmlFor="termos-construtor"
+                      className="text-sm font-medium leading-none">
+                      Veracidade e regularidade
+                    </Label>
+                    <p
+                      id="termos-construtor-desc"
+                      className="text-sm leading-relaxed text-muted-foreground">
+                      Declaro que todas as informações e documentos fornecidos são
+                      verdadeiros e que a empresa está em situação regular
+                      perante os órgãos competentes. Estou ciente de que a
+                      prestação de informações falsas pode resultar em
+                      penalidades legais e exclusão do programa.
+                    </p>
+                    {termosErro && (
+                      <p className="text-sm text-destructive" role="alert">
+                        Ative o interruptor para confirmar a declaração.
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3 sm:flex-col sm:items-end">
+                    <span className="text-xs text-muted-foreground sm:order-2">
+                      Aceito
+                    </span>
+                    <Switch
+                      id="termos-construtor"
+                      checked={termosAceitos}
+                      onCheckedChange={(v) => {
+                        setTermosAceitos(v)
+                        if (v) setTermosErro(false)
+                      }}
+                      aria-describedby="termos-construtor-desc"
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>

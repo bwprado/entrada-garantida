@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { MapPin } from "lucide-react"
 import { Bed } from "lucide-react"
-import { Car } from "lucide-react"
 import { Maximize } from "lucide-react"
 import { Heart } from "lucide-react"
 
@@ -16,8 +15,7 @@ type ImovelCardProps = {
   location: string
   imageSrc: string
   status: string
-  bedrooms: number
-  parking: number
+  compartimentos: number
   areaM2: number
   priceBRL: number
   type: string
@@ -30,8 +28,7 @@ export default function ImovelCard({
   location,
   imageSrc,
   status,
-  bedrooms,
-  parking,
+  compartimentos,
   areaM2,
   priceBRL,
   type,
@@ -63,13 +60,7 @@ export default function ImovelCard({
         <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
           <div className="flex items-center gap-1">
             <Bed className="w-4 h-4" />
-            <span>{bedrooms} quartos</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Car className="w-4 h-4" />
-            <span>
-              {parking} vaga{parking === 1 ? "" : "s"}
-            </span>
+            <span>{compartimentos} compart.</span>
           </div>
           <div className="flex items-center gap-1">
             <Maximize className="w-4 h-4" />

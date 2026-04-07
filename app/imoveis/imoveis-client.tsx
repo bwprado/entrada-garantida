@@ -28,7 +28,7 @@ import PropertyFilters from "./property-filters";
 
 export default function ImoveisClient() {
   const { user, isAuthenticated } = useAuth();
-  const properties = useQuery(api.properties.getValidated);
+  const properties = useQuery(api.properties.getValidated, {});
   const userSelections = useQuery(
     api.users.getById,
     user ? { id: user._id } : "skip"
@@ -53,8 +53,6 @@ export default function ImoveisClient() {
     const query = searchQuery.toLowerCase();
     return (
       property.titulo.toLowerCase().includes(query) ||
-      property.bairro.toLowerCase().includes(query) ||
-      property.cidade.toLowerCase().includes(query) ||
       property.endereco.toLowerCase().includes(query)
     );
   });
@@ -63,9 +61,9 @@ export default function ImoveisClient() {
   const sortedProperties = [...(filteredProperties || [])].sort((a, b) => {
     switch (sortBy) {
       case "menor-preco":
-        return a.precoOfertado - b.precoOfertado;
+        return a.valorVenda - b.valorVenda;
       case "maior-preco":
-        return b.precoOfertado - a.precoOfertado;
+        return b.valorVenda - a.valorVenda;
       case "recentes":
       default:
         return b.criadoEm - a.criadoEm;
@@ -227,16 +225,13 @@ export default function ImoveisClient() {
                     <ImovelCard
                       id={property._id}
                       title={property.titulo}
-                      location={`${property.bairro}, ${property.cidade} - ${property.estado}`}
+                      location={property.endereco}
                       imageSrc="/placeholder-property.jpg"
                       status={property.status === "validated" ? "Disponível" : property.status}
-                      bedrooms={property.quartos}
-                      parking={property.vagasGaragem || 0}
-                      areaM2={property.areaUtil}
-                      priceBRL={property.precoOfertado}
-                      type={property.tipoImovel === "apartamento" ? "Apartamento" : 
-                            property.tipoImovel === "casa" ? "Casa" : 
-                            property.tipoImovel === "sobrado" ? "Sobrado" : "Imóvel"}
+                      compartimentos={property.compartimentos}
+                      areaM2={property.tamanho}
+                      priceBRL={property.valorVenda}
+                      type="Imóvel"
                       href={`/imoveis/${property._id}`}
                     />
                     

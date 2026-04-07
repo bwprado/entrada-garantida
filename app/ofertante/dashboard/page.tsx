@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,7 +15,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Home, 
   Plus, 
-  LogOut, 
   Eye, 
   Edit, 
   BarChart3, 
@@ -33,13 +31,13 @@ import { useAuth } from "@/lib/auth-context";
 
 export default function OfertanteDashboardPage() {
   const router = useRouter();
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   // Check authentication and onboarding
   useEffect(() => {
     if (!isLoading) {
       if (!isAuthenticated) {
-        router.push("/login");
+        router.push("/login/ofertante");
       } else if (user?.role !== "ofertante") {
         router.push("/");
       } else if (!user.onboardingCompleto) {
@@ -58,47 +56,18 @@ export default function OfertanteDashboardPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="bg-background border-b sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">Painel do Ofertante</h1>
-              <p className="text-sm text-muted-foreground">
-                Bem-vindo, {user?.nome}
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <Button variant="outline" size="sm" asChild>
-                <Link href="/imoveis">
-                  <Home className="w-4 h-4 mr-2" />
-                  Ver Imóveis
-                </Link>
-              </Button>
-              <Button variant="ghost" size="sm" onClick={logout}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Sair
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
+      {/* Main Content — menu actions live in ofertante/layout Header */}
       <div className="flex-1 bg-muted/30 py-8 px-4">
         <div className="container mx-auto max-w-7xl">
-          {/* Welcome Section */}
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
-            <div>
-              <h2 className="text-3xl font-bold mb-2">Meus Imóveis</h2>
-              <p className="text-muted-foreground">
-                Gerencie suas propriedades disponibilizadas no programa
-              </p>
-            </div>
-            <Button size="lg">
-              <Plus className="w-5 h-5 mr-2" />
-              Cadastrar Imóvel
-            </Button>
+          <p className="mb-8 text-sm text-muted-foreground">
+            Bem-vindo, {user?.nome}
+          </p>
+
+          <div className="mb-8">
+            <h2 className="mb-2 text-2xl font-bold md:text-3xl">Meus Imóveis</h2>
+            <p className="text-muted-foreground">
+              Gerencie suas propriedades disponibilizadas no programa
+            </p>
           </div>
 
           {/* Stats Cards */}

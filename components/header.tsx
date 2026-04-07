@@ -1,21 +1,38 @@
+'use client'
+
+import type { ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 
 import { Button } from '@/components/ui/button'
 
 export function Header({
-  showLoginButton = true
+  showLoginButton = true,
+  actions
 }: {
   showLoginButton?: boolean
+  actions?: ReactNode
 }) {
+  const right =
+    actions != null ? (
+      <div className="flex flex-wrap items-center justify-end gap-2">{actions}</div>
+    ) : showLoginButton ? (
+      <Button
+        asChild
+        className="bg-program-green-primary hover:bg-program-green-hover text-white"
+      >
+        <Link href="/login">Acessar Sistema</Link>
+      </Button>
+    ) : null
+
   return (
-    <header className="border-b sticky top-0 z-50 drop-shadow-md h-20 bg-white">
-      <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+    <header className="border-b sticky top-0 z-50 drop-shadow-md min-h-20 bg-white">
+      <div className="container mx-auto flex min-h-20 flex-wrap items-center justify-between gap-3 px-4 py-3">
         <Link
           href="/"
-          className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+          className="flex min-w-0 items-center gap-3 transition-opacity hover:opacity-80"
         >
-          <div className="aspect-square size-14 relative">
+          <div className="relative aspect-square size-14 shrink-0">
             <Image
               src="/icon.png"
               alt="Programa Aquisição Assistida"
@@ -23,8 +40,8 @@ export function Header({
               className="object-contain"
             />
           </div>
-          <div>
-            <h1 className="font-bold text-xl leading-tight text-program-blue-dark">
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold leading-tight text-program-blue-dark">
               Programa Aquisição Assistida
             </h1>
             <p className="text-xs text-muted-foreground">
@@ -33,14 +50,7 @@ export function Header({
           </div>
         </Link>
 
-        {showLoginButton && (
-          <Button
-            asChild
-            className="bg-program-green-primary hover:bg-program-green-hover text-white"
-          >
-            <Link href="/login">Acessar Sistema</Link>
-          </Button>
-        )}
+        {right}
       </div>
     </header>
   )

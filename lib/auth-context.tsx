@@ -1,277 +1,278 @@
-"use client";
+'use client'
 
-import { useMutation, useQuery } from "convex/react";
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { api } from "../convex/_generated/api";
-import { Id } from "../convex/_generated/dataModel";
+import { api } from '@/convex/_generated/api'
+import type { Doc } from '@/convex/_generated/dataModel'
+import { useAuthActions } from '@convex-dev/auth/react'
+import { useConvexAuth, useMutation, useQuery } from 'convex/react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  type ReactNode
+} from 'react'
 
-interface User {
-  _id: Id<"users">;
-  cpf: string;
-  nome: string;
-  telefone: string;
-  endereco?: string;
-  numero?: string;
-  complemento?: string;
-  bairro?: string;
-  cidade?: string;
-  estado?: string;
-  role: "admin" | "beneficiary" | "ofertante" | "construtor";
-  status: "pending" | "verified" | "active" | "rejected" | "suspended" | "onboarding";
-  termoAceitoEm?: number;
-  propriedadesInteresse?: Id<"properties">[];
-  dadosValidados?: boolean;
-  dadosComErro?: boolean;
-  mensagemErroDados?: string;
-  // Ofertante fields
-  dataNascimento?: string;
-  onboardingCompleto?: boolean;
-  documentosPendentes?: string[];
+import { normalizePhone } from '@/lib/normalize-phone'
+
+export type LoginPersona = 'beneficiary' | 'ofertante' | 'admin'
+
+function providerIdForPersona(p: LoginPersona): string {
+  switch (p) {
+    case 'beneficiary':
+      return 'phone_beneficiary'
+    case 'ofertante':
+      return 'phone_ofertante'
+    case 'admin':
+      return 'phone_admin'
+    default:
+      return 'phone_ofertante'
+  }
 }
 
-interface AuthContextType {
-  user: User | null;
-  isLoading: boolean;
-  isAuthenticated: boolean;
-  // Beneficiary login methods
-  requestOTP: (cpf: string, telefone: string) => Promise<{ success: boolean; telefoneMascarado?: string; error?: string }>;
-  verifyOTP: (cpf: string, codigo: string) => Promise<{ success: boolean; userData?: any; error?: string }>;
-  acceptTerms: () => Promise<{ success: boolean; error?: string }>;
-  confirmData: () => Promise<{ success: boolean; error?: string }>;
-  reportDataError: (mensagem: string) => Promise<{ success: boolean; error?: string }>;
-  // Phone-based login methods (Ofertante & Admin)
-  requestOTPByPhone: (telefone: string, tipo: "ofertante" | "admin") => Promise<{ success: boolean; telefoneMascarado?: string; isNewUser?: boolean; error?: string }>;
-  registerOfertante: (telefone: string, nome: string) => Promise<{ success: boolean; userId?: string; error?: string }>;
-  verifyOTPByPhone: (telefone: string, codigo: string) => Promise<{ success: boolean; userData?: any; needsOnboarding?: boolean; error?: string }>;
-  completeOnboarding: (data: OnboardingData) => Promise<{ success: boolean; error?: string }>;
-  logout: () => void;
+function errorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message
+  if (typeof err === 'string') return err
+  return 'Erro inesperado'
 }
 
-interface OnboardingData {
-  userId: Id<"users">;
-  nome?: string;
-  cpf: string;
-  dataNascimento: string;
-  cep: string;
-  endereco: string;
-  numero: string;
-  complemento?: string;
-  bairro: string;
-  cidade: string;
-  estado: string;
+type AuthContextValue = {
+  user: Doc<'users'> | null | undefined
+  isLoading: boolean
+  isAuthenticated: boolean
+  logout: (redirectTo?: string) => Promise<void>
+  assertBeneficiaryAndPrepareOtp: (cpf: string, telefone: string) => Promise<{
+    success: boolean
+    telefoneMascarado?: string
+    phoneE164?: string
+    error?: string
+  }>
+  startPhoneSignIn: (
+    telefoneOrE164: string,
+    persona: LoginPersona
+  ) => Promise<{
+    success: boolean
+    telefoneMascarado?: string
+    error?: string
+  }>
+  completePhoneSignIn: (
+    telefoneOrE164: string,
+    code: string,
+    persona: LoginPersona
+  ) => Promise<{ success: boolean; error?: string }>
+  registerOfertante: (
+    telefone: string,
+    nome: string
+  ) => Promise<{ success: boolean; error?: string }>
+  acceptTerms: () => Promise<{ success: boolean; error?: string }>
+  confirmData: () => Promise<{ success: boolean; error?: string }>
+  reportDataError: (
+    mensagem: string
+  ) => Promise<{ success: boolean; error?: string }>
+  completeOnboarding: (args: {
+    nome: string
+    cpf: string
+    dataNascimento: string
+    cep: string
+    endereco: string
+    numero: string
+    complemento?: string
+    bairro: string
+    cidade: string
+    estado: string
+  }) => Promise<{ success: boolean; error?: string }>
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
-
-const STORAGE_KEY = "aquisicao-assistida-auth";
+const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { isLoading: authLoading, isAuthenticated } = useConvexAuth()
+  const { signIn, signOut } = useAuthActions()
+  const user = useQuery(api.users.getCurrentUserProfile)
 
-  // Mutations for beneficiary login
-  const requestOTPMutation = useMutation(api.users.requestOTP);
-  const verifyOTPMutation = useMutation(api.users.verifyOTP);
-  const acceptTermsMutation = useMutation(api.users.acceptTerms);
-  const confirmDataMutation = useMutation(api.users.confirmData);
-  const reportDataErrorMutation = useMutation(api.users.reportDataError);
+  const assertMutation = useMutation(api.users.assertBeneficiaryCpfTelefone)
+  const registerOfertanteMutation = useMutation(api.users.registerOfertante)
+  const acceptTermsMutation = useMutation(api.users.acceptTerms)
+  const confirmDataMutation = useMutation(api.users.confirmData)
+  const reportDataErrorMutation = useMutation(api.users.reportDataError)
+  const completeOfertanteOnboardingMutation = useMutation(
+    api.users.completeOfertanteOnboarding
+  )
 
-  // Mutations for phone-based login (ofertante & admin)
-  const requestOTPByPhoneMutation = useMutation(api.users.requestOTPByPhone);
-  const registerOfertanteMutation = useMutation(api.users.registerOfertante);
-  const verifyOTPByPhoneMutation = useMutation(api.users.verifyOTPByPhone);
-  const completeOnboardingMutation = useMutation(api.users.completeOfertanteOnboarding);
+  const isLoading = useMemo(() => {
+    if (authLoading) return true
+    if (isAuthenticated && user === undefined) return true
+    return false
+  }, [authLoading, isAuthenticated, user])
 
-  // Hydrate from localStorage on mount
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
+  const logout = useCallback(async (redirectTo = '/login') => {
+    await signOut()
+    if (typeof window !== 'undefined') {
+      window.location.assign(redirectTo)
+    }
+  }, [signOut])
+
+  const assertBeneficiaryAndPrepareOtp = useCallback(
+    async (cpf: string, telefone: string) => {
       try {
-        const parsed = JSON.parse(stored);
-        setUser(parsed);
-      } catch {
-        localStorage.removeItem(STORAGE_KEY);
+        return await assertMutation({ cpf, telefone })
+      } catch (e) {
+        return { success: false as const, error: errorMessage(e) }
       }
-    }
-    setIsLoading(false);
-  }, []);
+    },
+    [assertMutation]
+  )
 
-  // Persist to localStorage when user changes
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
-    }
-  }, [user]);
+  const startPhoneSignIn = useCallback(
+    async (telefoneOrE164: string, persona: LoginPersona) => {
+      const n = normalizePhone(telefoneOrE164)
+      if (!n.isValid()) {
+        return { success: false as const, error: 'Telefone inválido' }
+      }
+      const phone = n.save()
+      try {
+        await signIn(providerIdForPersona(persona), { phone })
+        return {
+          success: true as const,
+          telefoneMascarado: n.display()
+        }
+      } catch (e) {
+        return { success: false as const, error: errorMessage(e) }
+      }
+    },
+    [signIn]
+  )
 
-  // Beneficiary login methods
-  const requestOTP = async (cpf: string, telefone: string) => {
-    return await requestOTPMutation({ cpf, telefone });
-  };
+  const completePhoneSignIn = useCallback(
+    async (telefoneOrE164: string, code: string, persona: LoginPersona) => {
+      const n = normalizePhone(telefoneOrE164)
+      if (!n.isValid()) {
+        return { success: false as const, error: 'Telefone inválido' }
+      }
+      const phone = n.save()
+      try {
+        await signIn(providerIdForPersona(persona), { phone, code })
+        return { success: true as const }
+      } catch (e) {
+        return { success: false as const, error: errorMessage(e) }
+      }
+    },
+    [signIn]
+  )
 
-  const verifyOTP = async (cpf: string, codigo: string) => {
-    const result = await verifyOTPMutation({ cpf, codigo });
-    if (result.success && result.userId) {
-      setUser({
-        _id: result.userId,
-        cpf: result.userData.cpf,
-        nome: result.userData.nome,
-        telefone: result.userData.telefone,
-        endereco: result.userData.endereco,
-        numero: result.userData.numero,
-        bairro: result.userData.bairro,
-        cidade: result.userData.cidade,
-        estado: result.userData.estado,
-        role: "beneficiary",
-        status: result.userData.status,
-        dadosValidados: result.userData.dadosValidados,
-        dadosComErro: result.userData.dadosComErro,
-        mensagemErroDados: result.userData.mensagemErroDados,
-      });
-    }
-    return result;
-  };
+  const registerOfertante = useCallback(
+    async (telefone: string, nome: string) => {
+      try {
+        const res = await registerOfertanteMutation({ telefone, nome })
+        if (!res.success) {
+          return { success: false as const, error: res.error ?? 'Erro ao cadastrar' }
+        }
+        return { success: true as const }
+      } catch (e) {
+        return { success: false as const, error: errorMessage(e) }
+      }
+    },
+    [registerOfertanteMutation]
+  )
 
-  const acceptTerms = async () => {
-    if (!user) {
-      return { success: false, error: "Usuário não autenticado" };
-    }
-
+  const acceptTerms = useCallback(async () => {
     try {
-      await acceptTermsMutation({ userId: user._id });
-      setUser({ ...user, termoAceitoEm: Date.now(), status: "active" });
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: String(error) };
+      await acceptTermsMutation({})
+      return { success: true as const }
+    } catch (e) {
+      return { success: false as const, error: errorMessage(e) }
     }
-  };
+  }, [acceptTermsMutation])
 
-  const confirmData = async () => {
-    if (!user) {
-      return { success: false, error: "Usuário não autenticado" };
-    }
-
+  const confirmData = useCallback(async () => {
     try {
-      await confirmDataMutation({ userId: user._id });
-      setUser({ ...user, dadosValidados: true });
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: String(error) };
+      await confirmDataMutation({})
+      return { success: true as const }
+    } catch (e) {
+      return { success: false as const, error: errorMessage(e) }
     }
-  };
+  }, [confirmDataMutation])
 
-  const reportDataError = async (mensagem: string) => {
-    if (!user) {
-      return { success: false, error: "Usuário não autenticado" };
-    }
+  const reportDataError = useCallback(
+    async (mensagem: string) => {
+      try {
+        await reportDataErrorMutation({ mensagem })
+        return { success: true as const }
+      } catch (e) {
+        return { success: false as const, error: errorMessage(e) }
+      }
+    },
+    [reportDataErrorMutation]
+  )
 
-    try {
-      await reportDataErrorMutation({ userId: user._id, mensagem });
-      setUser({ ...user, dadosComErro: true, mensagemErroDados: mensagem });
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: String(error) };
-    }
-  };
+  const completeOnboarding = useCallback(
+    async (args: {
+      nome: string
+      cpf: string
+      dataNascimento: string
+      cep: string
+      endereco: string
+      numero: string
+      complemento?: string
+      bairro: string
+      cidade: string
+      estado: string
+    }) => {
+      try {
+        const res = await completeOfertanteOnboardingMutation(args)
+        if (!res.success) {
+          return {
+            success: false as const,
+            error: res.error ?? 'Erro ao completar cadastro'
+          }
+        }
+        return { success: true as const }
+      } catch (e) {
+        return { success: false as const, error: errorMessage(e) }
+      }
+    },
+    [completeOfertanteOnboardingMutation]
+  )
 
-  // Phone-based login methods (Ofertante & Admin)
-  const requestOTPByPhone = async (telefone: string, tipo: "ofertante" | "admin") => {
-    return await requestOTPByPhoneMutation({ telefone, tipo });
-  };
-
-  const registerOfertante = async (telefone: string, nome: string) => {
-    const result = await registerOfertanteMutation({ telefone, nome });
-    if (result.success && result.userId) {
-      setUser({
-        _id: result.userId,
-        cpf: "",
-        nome: nome,
-        telefone: telefone.replace(/\D/g, ""),
-        role: "ofertante",
-        status: "onboarding",
-        onboardingCompleto: false,
-      });
-    }
-    return result;
-  };
-
-  const verifyOTPByPhone = async (telefone: string, codigo: string) => {
-    const result = await verifyOTPByPhoneMutation({ telefone, codigo });
-    if (result.success && result.userId) {
-      setUser({
-        _id: result.userId,
-        cpf: result.userData.cpf || "",
-        nome: result.userData.nome,
-        telefone: result.userData.telefone,
-        endereco: result.userData.endereco,
-        numero: result.userData.numero,
-        complemento: result.userData.complemento,
-        bairro: result.userData.bairro,
-        cidade: result.userData.cidade,
-        estado: result.userData.estado,
-        role: result.userData.role,
-        status: result.userData.status,
-        dataNascimento: result.userData.dataNascimento,
-        onboardingCompleto: result.userData.onboardingCompleto,
-      });
-    }
-    return result;
-  };
-
-  const completeOnboarding = async (data: OnboardingData) => {
-    const result = await completeOnboardingMutation(data);
-    if (result.success && user) {
-      setUser({
-        ...user,
-        cpf: data.cpf,
-        nome: data.nome || user.nome,
-        endereco: data.endereco,
-        numero: data.numero,
-        complemento: data.complemento,
-        bairro: data.bairro,
-        cidade: data.cidade,
-        estado: data.estado,
-        dataNascimento: data.dataNascimento,
-        onboardingCompleto: true,
-        status: "active",
-      });
-    }
-    return result;
-  };
-
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem(STORAGE_KEY);
-  };
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      isLoading,
+      isAuthenticated,
+      logout,
+      assertBeneficiaryAndPrepareOtp,
+      startPhoneSignIn,
+      completePhoneSignIn,
+      registerOfertante,
+      acceptTerms,
+      confirmData,
+      reportDataError,
+      completeOnboarding
+    }),
+    [
+      user,
+      isLoading,
+      isAuthenticated,
+      logout,
+      assertBeneficiaryAndPrepareOtp,
+      startPhoneSignIn,
+      completePhoneSignIn,
+      registerOfertante,
+      acceptTerms,
+      confirmData,
+      reportDataError,
+      completeOnboarding
+    ]
+  )
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isLoading,
-        isAuthenticated: !!user,
-        requestOTP,
-        verifyOTP,
-        acceptTerms,
-        confirmData,
-        reportDataError,
-        requestOTPByPhone,
-        registerOfertante,
-        verifyOTPByPhone,
-        completeOnboarding,
-        logout,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+    <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  )
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
+export function useAuth(): AuthContextValue {
+  const ctx = useContext(AuthContext)
+  if (ctx === null) {
+    throw new Error('useAuth must be used within AuthProvider')
   }
-  return context;
+  return ctx
 }

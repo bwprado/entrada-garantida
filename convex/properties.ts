@@ -1,43 +1,16 @@
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 import { MAX_PROPERTY_PRICE } from "./schema";
 
-// Minimum property composition
-const MIN_COMPOSITION = {
-  salas: 1,
-  quartos: 1,
-  banheiros: 1,
-  cozinha: true,
-  areaServico: true,
-};
+const MIN_COMPARTIMENTOS = 1;
 
-// Validate property composition
-function validateComposition(composition: {
-  salas: number;
-  quartos: number;
-  banheiros: number;
-  cozinha: boolean;
-  areaServico: boolean;
-}): { valid: boolean; errors: string[] } {
+function validateCompartimentos(n: number): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
-  
-  if (composition.salas < MIN_COMPOSITION.salas) {
-    errors.push("Mínimo de 1 sala é obrigatório");
+  if (!Number.isInteger(n) || n < MIN_COMPARTIMENTOS) {
+    errors.push("Informe pelo menos 1 compartimento");
   }
-  if (composition.quartos < MIN_COMPOSITION.quartos) {
-    errors.push("Mínimo de 1 quarto é obrigatório");
-  }
-  if (composition.banheiros < MIN_COMPOSITION.banheiros) {
-    errors.push("Mínimo de 1 banheiro é obrigatório");
-  }
-  if (!composition.cozinha) {
-    errors.push("Cozinha é obrigatória");
-  }
-  if (!composition.areaServico) {
-    errors.push("Área de serviço é obrigatória");
-  }
-  
   return { valid: errors.length === 0, errors };
 }
 
@@ -62,50 +35,38 @@ export const getByIds = query({
 
 export const getValidated = query({
   args: {
-    cidade: v.optional(v.string()),
-    bairro: v.optional(v.string()),
-    tipoImovel: v.optional(v.union(
-      v.literal("apartamento"),
-      v.literal("casa"),
-      v.literal("sobrado"),
-      v.literal("terreno"),
-      v.literal("outro")
-    )),
+    search: v.optional(v.string()),
     precoMin: v.optional(v.number()),
     precoMax: v.optional(v.number()),
-    quartosMin: v.optional(v.number()),
+    compartimentosMin: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    let query = ctx.db
+    const q = ctx.db
       .query("properties")
       .withIndex("by_status", (q) => q.eq("status", "validated"));
-    
-    let results = await query.collect();
-    
-    // Apply filters
-    if (args.cidade) {
-      results = results.filter(p => 
-        p.cidade.toLowerCase().includes(args.cidade!.toLowerCase())
+
+    let results = await q.collect();
+
+    if (args.search) {
+      const s = args.search.toLowerCase();
+      results = results.filter(
+        (p) =>
+          p.titulo.toLowerCase().includes(s) ||
+          p.endereco.toLowerCase().includes(s)
       );
-    }
-    if (args.bairro) {
-      results = results.filter(p => 
-        p.bairro.toLowerCase().includes(args.bairro!.toLowerCase())
-      );
-    }
-    if (args.tipoImovel) {
-      results = results.filter(p => p.tipoImovel === args.tipoImovel);
     }
     if (args.precoMin !== undefined) {
-      results = results.filter(p => p.precoOfertado >= args.precoMin!);
+      results = results.filter((p) => p.valorVenda >= args.precoMin!);
     }
     if (args.precoMax !== undefined) {
-      results = results.filter(p => p.precoOfertado <= args.precoMax!);
+      results = results.filter((p) => p.valorVenda <= args.precoMax!);
     }
-    if (args.quartosMin !== undefined) {
-      results = results.filter(p => p.quartos >= args.quartosMin!);
+    if (args.compartimentosMin !== undefined) {
+      results = results.filter(
+        (p) => p.compartimentos >= args.compartimentosMin!
+      );
     }
-    
+
     return results;
   },
 });
@@ -142,14 +103,16 @@ export const getPendingValidation = query({
 
 export const getAllForAdmin = query({
   args: {
-    status: v.optional(v.union(
-      v.literal("draft"),
-      v.literal("pending"),
-      v.literal("validated"),
-      v.literal("selected"),
-      v.literal("rejected"),
-      v.literal("sold")
-    )),
+    status: v.optional(
+      v.union(
+        v.literal("draft"),
+        v.literal("pending"),
+        v.literal("validated"),
+        v.literal("selected"),
+        v.literal("rejected"),
+        v.literal("sold")
+      )
+    ),
   },
   handler: async (ctx, args) => {
     if (args.status) {
@@ -158,7 +121,7 @@ export const getAllForAdmin = query({
         .withIndex("by_status", (q) => q.eq("status", args.status!))
         .collect();
     }
-    
+
     return await ctx.db.query("properties").collect();
   },
 });
@@ -169,14 +132,14 @@ export const getSelectionsForProperty = query({
     const selections = await ctx.db
       .query("selectionsHistory")
       .withIndex("by_property", (q) => q.eq("propertyId", args.propertyId))
-      .filter(q => q.eq(q.field("removidoEm"), undefined))
+      .filter((q) => q.eq(q.field("removidoEm"), undefined))
       .collect();
-    
-    const beneficiaryIds = selections.map(s => s.beneficiarioId);
+
+    const beneficiaryIds = selections.map((s) => s.beneficiarioId);
     const beneficiaries = await Promise.all(
-      beneficiaryIds.map(id => ctx.db.get(id))
+      beneficiaryIds.map((id) => ctx.db.get(id))
     );
-    
+
     return selections.map((s, i) => ({
       selection: s,
       beneficiary: beneficiaries[i],
@@ -192,108 +155,85 @@ export const create = mutation({
     construtorId: v.optional(v.id("users")),
     titulo: v.string(),
     descricao: v.optional(v.string()),
-    tipoImovel: v.union(
-      v.literal("apartamento"),
-      v.literal("casa"),
-      v.literal("sobrado"),
-      v.literal("terreno"),
-      v.literal("outro")
-    ),
-    cep: v.string(),
     endereco: v.string(),
-    numero: v.string(),
-    complemento: v.optional(v.string()),
-    bairro: v.string(),
-    cidade: v.string(),
-    estado: v.string(),
-    precoOfertado: v.number(),
-    areaUtil: v.number(),
-    areaTotal: v.optional(v.number()),
-    anoConstrucao: v.number(),
-    quartos: v.number(),
-    suites: v.optional(v.number()),
-    salas: v.number(),
-    banheiros: v.number(),
-    cozinha: v.boolean(),
-    areaServico: v.boolean(),
-    varanda: v.optional(v.boolean()),
-    vagasGaragem: v.optional(v.number()),
-    possuiImpermeabilizacao: v.boolean(),
-    matriculaCartorio: v.string(),
-    habiteSe: v.optional(v.string()),
+    compartimentos: v.number(),
+    tamanho: v.number(),
+    dataConstrucao: v.number(),
+    matricula: v.string(),
+    inscricaoImobiliaria: v.string(),
+    valorVenda: v.number(),
   },
-  handler: async (ctx, args): Promise<{ success: boolean; propertyId?: Id<"properties">; errors?: string[] }> => {
-    // Validate price ceiling
-    if (args.precoOfertado > MAX_PROPERTY_PRICE) {
-      return { 
-        success: false, 
-        errors: [`Preço deve ser no máximo R$ ${MAX_PROPERTY_PRICE.toLocaleString("pt-BR")}`] 
+  handler: async (
+    ctx,
+    args
+  ): Promise<{
+    success: boolean;
+    propertyId?: Id<"properties">;
+    errors?: string[];
+  }> => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) {
+      return { success: false, errors: ["Não autorizado"] };
+    }
+    if (args.ofertanteId !== undefined && args.ofertanteId !== userId) {
+      return { success: false, errors: ["Não autorizado"] };
+    }
+    if (args.construtorId !== undefined && args.construtorId !== userId) {
+      return { success: false, errors: ["Não autorizado"] };
+    }
+
+    if (args.valorVenda > MAX_PROPERTY_PRICE) {
+      return {
+        success: false,
+        errors: [
+          `Preço deve ser no máximo R$ ${MAX_PROPERTY_PRICE.toLocaleString("pt-BR")}`,
+        ],
       };
     }
-    
-    // Validate composition
-    const compositionValidation = validateComposition({
-      salas: args.salas,
-      quartos: args.quartos,
-      banheiros: args.banheiros,
-      cozinha: args.cozinha,
-      areaServico: args.areaServico,
-    });
-    
-    if (!compositionValidation.valid) {
-      return { success: false, errors: compositionValidation.errors };
+
+    const comp = validateCompartimentos(args.compartimentos);
+    if (!comp.valid) {
+      return { success: false, errors: comp.errors };
     }
-    
-    // Validate ownership
+
+    if (args.tamanho <= 0) {
+      return { success: false, errors: ["Tamanho deve ser maior que zero"] };
+    }
+
     if (!args.ofertanteId && !args.construtorId) {
-      return { success: false, errors: ["Propriedade deve ter um ofertante ou construtor"] };
+      return {
+        success: false,
+        errors: ["Propriedade deve ter um ofertante ou construtor"],
+      };
     }
-    
+
     const now = Date.now();
-    
+
     const propertyId = await ctx.db.insert("properties", {
       ofertanteId: args.ofertanteId,
       construtorId: args.construtorId,
       titulo: args.titulo,
       descricao: args.descricao,
-      tipoImovel: args.tipoImovel,
-      cep: args.cep,
       endereco: args.endereco,
-      numero: args.numero,
-      complemento: args.complemento,
-      bairro: args.bairro,
-      cidade: args.cidade,
-      estado: args.estado,
-      precoOfertado: args.precoOfertado,
-      areaUtil: args.areaUtil,
-      areaTotal: args.areaTotal,
-      anoConstrucao: args.anoConstrucao,
-      quartos: args.quartos,
-      suites: args.suites,
-      salas: args.salas,
-      banheiros: args.banheiros,
-      cozinha: args.cozinha,
-      areaServico: args.areaServico,
-      varanda: args.varanda,
-      vagasGaragem: args.vagasGaragem,
-      possuiImpermeabilizacao: args.possuiImpermeabilizacao,
-      matriculaCartorio: args.matriculaCartorio,
-      habiteSe: args.habiteSe,
+      compartimentos: args.compartimentos,
+      tamanho: args.tamanho,
+      dataConstrucao: args.dataConstrucao,
+      matricula: args.matricula,
+      inscricaoImobiliaria: args.inscricaoImobiliaria,
+      valorVenda: args.valorVenda,
       status: "draft",
       checklistValidacao: {
         dadosPessoais: "pending",
         localizacao: "pending",
         construcao: "pending",
-        impermeabilizacao: "pending",
         cartorio: "pending",
-        habiteSe: "pending",
         preco: "pending",
         documentos: "pending",
       },
       criadoEm: now,
       atualizadoEm: now,
     });
-    
+
     return { success: true, propertyId };
   },
 });
@@ -305,34 +245,27 @@ export const submitForValidation = mutation({
     if (!property) {
       throw new Error("Propriedade não encontrada");
     }
-    
+
     if (property.status !== "draft") {
       throw new Error("Apenas propriedades em rascunho podem ser submetidas");
     }
-    
-    // Re-validate price
-    if (property.precoOfertado > MAX_PROPERTY_PRICE) {
-      throw new Error(`Preço deve ser no máximo R$ ${MAX_PROPERTY_PRICE.toLocaleString("pt-BR")}`);
+
+    if (property.valorVenda > MAX_PROPERTY_PRICE) {
+      throw new Error(
+        `Preço deve ser no máximo R$ ${MAX_PROPERTY_PRICE.toLocaleString("pt-BR")}`
+      );
     }
-    
-    // Re-validate composition
-    const compositionValidation = validateComposition({
-      salas: property.salas,
-      quartos: property.quartos,
-      banheiros: property.banheiros,
-      cozinha: property.cozinha,
-      areaServico: property.areaServico,
-    });
-    
-    if (!compositionValidation.valid) {
-      throw new Error(compositionValidation.errors.join("; "));
+
+    const comp = validateCompartimentos(property.compartimentos);
+    if (!comp.valid) {
+      throw new Error(comp.errors.join("; "));
     }
-    
+
     await ctx.db.patch(args.propertyId, {
       status: "pending",
       atualizadoEm: Date.now(),
     });
-    
+
     return { success: true };
   },
 });
@@ -344,9 +277,7 @@ export const updateChecklistItem = mutation({
       v.literal("dadosPessoais"),
       v.literal("localizacao"),
       v.literal("construcao"),
-      v.literal("impermeabilizacao"),
       v.literal("cartorio"),
-      v.literal("habiteSe"),
       v.literal("preco"),
       v.literal("documentos")
     ),
@@ -359,38 +290,36 @@ export const updateChecklistItem = mutation({
     adminId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    // Verify admin
     const admin = await ctx.db.get(args.adminId);
     if (!admin || admin.role !== "admin") {
       throw new Error("Apenas administradores podem validar propriedades");
     }
-    
+
     const property = await ctx.db.get(args.propertyId);
     if (!property) {
       throw new Error("Propriedade não encontrada");
     }
-    
+
     if (property.status !== "pending" && property.status !== "validated") {
       throw new Error("Propriedade não está pendente de validação");
     }
-    
+
     const checklist = { ...property.checklistValidacao };
     checklist[args.item] = args.status;
-    
+
     const notas = property.notasValidacao ? { ...property.notasValidacao } : {};
     if (args.nota) {
       notas[args.item] = args.nota;
     }
-    
+
     await ctx.db.patch(args.propertyId, {
       checklistValidacao: checklist,
       notasValidacao: notas,
       atualizadoEm: Date.now(),
     });
-    
-    // Check if all items are approved
-    const allApproved = Object.values(checklist).every(s => s === "approved");
-    
+
+    const allApproved = Object.values(checklist).every((s) => s === "approved");
+
     if (allApproved && property.status === "pending") {
       await ctx.db.patch(args.propertyId, {
         status: "validated",
@@ -398,7 +327,7 @@ export const updateChecklistItem = mutation({
         validadoPor: args.adminId,
       });
     }
-    
+
     return { success: true, allApproved };
   },
 });
@@ -413,24 +342,22 @@ export const approveAll = mutation({
     if (!admin || admin.role !== "admin") {
       throw new Error("Apenas administradores podem validar propriedades");
     }
-    
+
     const property = await ctx.db.get(args.propertyId);
     if (!property) {
       throw new Error("Propriedade não encontrada");
     }
-    
+
     const now = Date.now();
     const approvedChecklist = {
       dadosPessoais: "approved" as const,
       localizacao: "approved" as const,
       construcao: "approved" as const,
-      impermeabilizacao: "approved" as const,
       cartorio: "approved" as const,
-      habiteSe: "approved" as const,
       preco: "approved" as const,
       documentos: "approved" as const,
     };
-    
+
     await ctx.db.patch(args.propertyId, {
       status: "validated",
       checklistValidacao: approvedChecklist,
@@ -438,7 +365,7 @@ export const approveAll = mutation({
       validadoPor: args.adminId,
       atualizadoEm: now,
     });
-    
+
     return { success: true };
   },
 });
@@ -454,14 +381,14 @@ export const reject = mutation({
     if (!admin || admin.role !== "admin") {
       throw new Error("Apenas administradores podem rejeitar propriedades");
     }
-    
+
     const property = await ctx.db.get(args.propertyId);
     if (!property) {
       throw new Error("Propriedade não encontrada");
     }
-    
+
     const now = Date.now();
-    
+
     await ctx.db.patch(args.propertyId, {
       status: "rejected",
       notasValidacao: {
@@ -470,7 +397,7 @@ export const reject = mutation({
       },
       atualizadoEm: now,
     });
-    
+
     return { success: true };
   },
 });
@@ -480,100 +407,64 @@ export const update = mutation({
     propertyId: v.id("properties"),
     titulo: v.optional(v.string()),
     descricao: v.optional(v.string()),
-    tipoImovel: v.optional(v.union(
-      v.literal("apartamento"),
-      v.literal("casa"),
-      v.literal("sobrado"),
-      v.literal("terreno"),
-      v.literal("outro")
-    )),
-    cep: v.optional(v.string()),
     endereco: v.optional(v.string()),
-    numero: v.optional(v.string()),
-    complemento: v.optional(v.string()),
-    bairro: v.optional(v.string()),
-    cidade: v.optional(v.string()),
-    estado: v.optional(v.string()),
-    precoOfertado: v.optional(v.number()),
-    areaUtil: v.optional(v.number()),
-    areaTotal: v.optional(v.number()),
-    anoConstrucao: v.optional(v.number()),
-    quartos: v.optional(v.number()),
-    suites: v.optional(v.number()),
-    salas: v.optional(v.number()),
-    banheiros: v.optional(v.number()),
-    cozinha: v.optional(v.boolean()),
-    areaServico: v.optional(v.boolean()),
-    varanda: v.optional(v.boolean()),
-    vagasGaragem: v.optional(v.number()),
-    possuiImpermeabilizacao: v.optional(v.boolean()),
-    matriculaCartorio: v.optional(v.string()),
-    habiteSe: v.optional(v.string()),
+    compartimentos: v.optional(v.number()),
+    tamanho: v.optional(v.number()),
+    dataConstrucao: v.optional(v.number()),
+    matricula: v.optional(v.string()),
+    inscricaoImobiliaria: v.optional(v.string()),
+    valorVenda: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const property = await ctx.db.get(args.propertyId);
     if (!property) {
       throw new Error("Propriedade não encontrada");
     }
-    
+
     if (property.status !== "draft") {
       throw new Error("Apenas propriedades em rascunho podem ser editadas");
     }
-    
+
     const updates: Partial<Doc<"properties">> = {
       atualizadoEm: Date.now(),
     };
-    
-    // Validate price if provided
-    if (args.precoOfertado !== undefined) {
-      if (args.precoOfertado > MAX_PROPERTY_PRICE) {
-        throw new Error(`Preço deve ser no máximo R$ ${MAX_PROPERTY_PRICE.toLocaleString("pt-BR")}`);
+
+    if (args.valorVenda !== undefined) {
+      if (args.valorVenda > MAX_PROPERTY_PRICE) {
+        throw new Error(
+          `Preço deve ser no máximo R$ ${MAX_PROPERTY_PRICE.toLocaleString("pt-BR")}`
+        );
       }
-      updates.precoOfertado = args.precoOfertado;
+      updates.valorVenda = args.valorVenda;
     }
-    
-    // Copy all optional fields
+
     if (args.titulo !== undefined) updates.titulo = args.titulo;
     if (args.descricao !== undefined) updates.descricao = args.descricao;
-    if (args.tipoImovel !== undefined) updates.tipoImovel = args.tipoImovel;
-    if (args.cep !== undefined) updates.cep = args.cep;
     if (args.endereco !== undefined) updates.endereco = args.endereco;
-    if (args.numero !== undefined) updates.numero = args.numero;
-    if (args.complemento !== undefined) updates.complemento = args.complemento;
-    if (args.bairro !== undefined) updates.bairro = args.bairro;
-    if (args.cidade !== undefined) updates.cidade = args.cidade;
-    if (args.estado !== undefined) updates.estado = args.estado;
-    if (args.areaUtil !== undefined) updates.areaUtil = args.areaUtil;
-    if (args.areaTotal !== undefined) updates.areaTotal = args.areaTotal;
-    if (args.anoConstrucao !== undefined) updates.anoConstrucao = args.anoConstrucao;
-    if (args.quartos !== undefined) updates.quartos = args.quartos;
-    if (args.suites !== undefined) updates.suites = args.suites;
-    if (args.salas !== undefined) updates.salas = args.salas;
-    if (args.banheiros !== undefined) updates.banheiros = args.banheiros;
-    if (args.cozinha !== undefined) updates.cozinha = args.cozinha;
-    if (args.areaServico !== undefined) updates.areaServico = args.areaServico;
-    if (args.varanda !== undefined) updates.varanda = args.varanda;
-    if (args.vagasGaragem !== undefined) updates.vagasGaragem = args.vagasGaragem;
-    if (args.possuiImpermeabilizacao !== undefined) updates.possuiImpermeabilizacao = args.possuiImpermeabilizacao;
-    if (args.matriculaCartorio !== undefined) updates.matriculaCartorio = args.matriculaCartorio;
-    if (args.habiteSe !== undefined) updates.habiteSe = args.habiteSe;
-    
-    // Validate composition after updates
-    const finalComposition = {
-      salas: args.salas ?? property.salas,
-      quartos: args.quartos ?? property.quartos,
-      banheiros: args.banheiros ?? property.banheiros,
-      cozinha: args.cozinha ?? property.cozinha,
-      areaServico: args.areaServico ?? property.areaServico,
-    };
-    
-    const compositionValidation = validateComposition(finalComposition);
-    if (!compositionValidation.valid) {
-      throw new Error(compositionValidation.errors.join("; "));
+    if (args.tamanho !== undefined) updates.tamanho = args.tamanho;
+    if (args.dataConstrucao !== undefined)
+      updates.dataConstrucao = args.dataConstrucao;
+    if (args.matricula !== undefined) updates.matricula = args.matricula;
+    if (args.inscricaoImobiliaria !== undefined)
+      updates.inscricaoImobiliaria = args.inscricaoImobiliaria;
+
+    if (args.compartimentos !== undefined) {
+      const comp = validateCompartimentos(args.compartimentos);
+      if (!comp.valid) {
+        throw new Error(comp.errors.join("; "));
+      }
+      updates.compartimentos = args.compartimentos;
     }
-    
+
+    const finalComp =
+      args.compartimentos ?? property.compartimentos;
+    const compCheck = validateCompartimentos(finalComp);
+    if (!compCheck.valid) {
+      throw new Error(compCheck.errors.join("; "));
+    }
+
     await ctx.db.patch(args.propertyId, updates);
-    
+
     return { success: true };
   },
 });
@@ -589,21 +480,21 @@ export const markAsSold = mutation({
     if (!admin || admin.role !== "admin") {
       throw new Error("Apenas administradores podem marcar como vendido");
     }
-    
+
     const property = await ctx.db.get(args.propertyId);
     if (!property) {
       throw new Error("Propriedade não encontrada");
     }
-    
+
     if (property.status !== "selected") {
       throw new Error("Propriedade deve estar no status 'selected'");
     }
-    
+
     await ctx.db.patch(args.propertyId, {
       status: "sold",
       atualizadoEm: Date.now(),
     });
-    
+
     return { success: true };
   },
 });
@@ -615,12 +506,10 @@ export const softDelete = mutation({
     if (!property) {
       throw new Error("Propriedade não encontrada");
     }
-    
-    // For draft properties, actually delete
+
     if (property.status === "draft") {
       await ctx.db.delete(args.propertyId);
     } else {
-      // For others, just mark as rejected with note
       await ctx.db.patch(args.propertyId, {
         status: "rejected",
         notasValidacao: {
@@ -630,7 +519,7 @@ export const softDelete = mutation({
         atualizadoEm: Date.now(),
       });
     }
-    
+
     return { success: true };
   },
 });

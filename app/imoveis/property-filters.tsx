@@ -42,93 +42,26 @@ export default function PropertyFilters() {
           </CollapsibleTrigger>
 
           <CollapsibleContent className="mt-6">
-            <div className="grid grid-cols-3 grid-rows-2 gap-4">
-              {/* Tipo de Imóvel */}
-              <div className="flex-1 min-w-[200px] space-y-2">
-                <Label>Tipo de Imóvel</Label>
-                <Select>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos</SelectItem>
-                    <SelectItem value="apartamento">Apartamento</SelectItem>
-                    <SelectItem value="casa">Casa</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Cidade */}
-              <div className="flex-1 min-w-[200px] space-y-2">
-                <Label>Cidade</Label>
-                <Select>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Todas" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todas">Todas</SelectItem>
-                    <SelectItem value="sao-luis">São Luís</SelectItem>
-                    <SelectItem value="imperatriz">Imperatriz</SelectItem>
-                    <SelectItem value="caxias">Caxias</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Bairro */}
-              <div className="flex-1 min-w-[200px] space-y-2">
-                <Label>Bairro</Label>
-                <Select>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos</SelectItem>
-                    <SelectItem value="cohama">Cohama</SelectItem>
-                    <SelectItem value="turu">Turu</SelectItem>
-                    <SelectItem value="renascenca">Renascença</SelectItem>
-                    <SelectItem value="vinhais">Vinhais</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Quartos */}
-              <div className="flex-1 min-w-[200px] space-y-2">
-                <Label>Quartos</Label>
-                <Select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Compartimentos (mín.)</Label>
+                <Select disabled>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Qualquer" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="qualquer">Qualquer</SelectItem>
-                    <SelectItem value="1">1 quarto</SelectItem>
-                    <SelectItem value="2">2 quartos</SelectItem>
-                    <SelectItem value="3">3 quartos</SelectItem>
-                    <SelectItem value="4">4+ quartos</SelectItem>
+                    <SelectItem value="1">1+</SelectItem>
+                    <SelectItem value="2">2+</SelectItem>
+                    <SelectItem value="3">3+</SelectItem>
+                    <SelectItem value="4">4+</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* Vagas */}
-              <div className="flex-1 min-w-[200px] space-y-2">
-                <Label>Vagas de Garagem</Label>
-                <Select>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Qualquer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="qualquer">Qualquer</SelectItem>
-                    <SelectItem value="0">Sem vaga</SelectItem>
-                    <SelectItem value="1">1 vaga</SelectItem>
-                    <SelectItem value="2">2 vagas</SelectItem>
-                    <SelectItem value="3">3+ vagas</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Faixa de Preço */}
-              <div className="flex-1 min-w-[200px] space-y-2">
-                <Label>Faixa de Preço</Label>
-                <Select>
+              <div className="space-y-2">
+                <Label>Faixa de preço</Label>
+                <Select disabled>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Qualquer" />
                   </SelectTrigger>
@@ -145,6 +78,10 @@ export default function PropertyFilters() {
                 </Select>
               </div>
             </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Use a busca acima para filtrar por título ou endereço. Filtros
+              avançados em breve.
+            </p>
 
             <div className="flex gap-3 mt-6">
               <Button variant="outline" className="flex-1 bg-transparent">

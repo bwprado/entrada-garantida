@@ -1,3 +1,4 @@
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
@@ -353,9 +354,22 @@ export const addPropertyImage = mutation({
     ordem: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) {
+      throw new Error("Não autorizado");
+    }
     const property = await ctx.db.get(args.propertyId);
     if (!property) {
       throw new Error("Propriedade não encontrada");
+    }
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new Error("Não autorizado");
+    }
+    const ownsAsOfertante = property.ofertanteId === userId;
+    const ownsAsConstrutor = property.construtorId === userId;
+    if (!ownsAsOfertante && !ownsAsConstrutor && user.role !== "admin") {
+      throw new Error("Não autorizado");
     }
     
     const existingImages = await ctx.db

@@ -28,7 +28,6 @@ import {
   Loader2,
   MapPin,
   Bed,
-  Car,
   ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -200,22 +199,19 @@ export default function BeneficiarioDashboardPage() {
                                 )}
                               </Button>
                             </div>
-                            <p className="text-sm text-muted-foreground mb-2">
-                              <MapPin className="w-3 h-3 inline mr-1" />
-                              {property.bairro}, {property.cidade}
+                            <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+                              <MapPin className="w-3 h-3 inline mr-1 shrink-0" />
+                              {property.endereco}
                             </p>
                             <div className="flex items-center gap-3 text-sm text-muted-foreground">
                               <span className="flex items-center gap-1">
                                 <Bed className="w-3 h-3" />
-                                {property.quartos}
+                                {property.compartimentos} compart.
                               </span>
-                              <span className="flex items-center gap-1">
-                                <Car className="w-3 h-3" />
-                                {property.vagasGaragem || 0}
-                              </span>
+                              <span>{property.tamanho} m²</span>
                             </div>
                             <p className="text-lg font-bold text-primary mt-2">
-                              {formatCurrency(property.precoOfertado)}
+                              {formatCurrency(property.valorVenda)}
                             </p>
                           </div>
                         </div>
@@ -470,5 +466,3 @@ export default function BeneficiarioDashboardPage() {
     </div>
   );
 }
-
-import { useState } from "react";

@@ -1,0 +1,649 @@
+"use client"
+
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
+import { Controller, useForm, type DefaultValues } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useMutation } from "convex/react"
+import { useUploadFile } from "@convex-dev/r2/react"
+import { useMaskito } from "@maskito/react"
+import { toast } from "sonner"
+import { format, isValid } from "date-fns"
+import { ptBR } from "date-fns/locale"
+import {
+  ArrowLeft,
+  Calendar as CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+  X
+} from "lucide-react"
+
+import { api } from "@/convex/_generated/api"
+import { Button } from "@/components/ui/button"
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel
+} from "@/components/ui/field"
+import {
+  FormFooter,
+  FormHeader,
+  MultiStepFormContent,
+  NextButton,
+  PreviousButton,
+  StepFields,
+  SubmitButton
+} from "@/components/multi-step-viewer"
+import { MultiStepFormProvider } from "@/hooks/use-multi-step-viewer"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
+import {
+  brlCurrencyMaskOptions,
+  formatBrlCurrency,
+  parseBrlCurrency
+} from "@/lib/masks"
+import { cn, mergeRefs } from "@/lib/utils"
+import {
+  FileUpload,
+  FileUploadClear,
+  FileUploadDropzone,
+  FileUploadItem,
+  FileUploadList,
+  FileUploadTrigger
+} from "@/components/ui/file-upload"
+import { useAuth } from "@/lib/auth-context"
+import { uploadPropertyGallery } from "@/lib/property-upload"
+import {
+  propertyOfertanteFormSchema,
+  type PropertyOfertanteFormValues
+} from "@/lib/schemas/property-ofertante"
+
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024
+const MAX_PHOTOS = 5
+
+function toValidDate(value: unknown): Date | undefined {
+  if (value == null || value === "") return undefined
+  if (value instanceof Date) return isValid(value) ? value : undefined
+  if (typeof value === "string" || typeof value === "number") {
+    const d = new Date(value)
+    return isValid(d) ? d : undefined
+  }
+  return undefined
+}
+
+function dateToUtcStartMs(d: Date): number {
+  return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())
+}
+
+export default function NovoImovelPage() {
+  const router = useRouter()
+  const { user, isAuthenticated, isLoading } = useAuth()
+  const [submitting, setSubmitting] = useState(false)
+
+  const createProperty = useMutation(api.properties.create)
+  const addPropertyImage = useMutation(api.documents.addPropertyImage)
+  const uploadFile = useUploadFile(api.r2)
+  const valorVendaMaskRef = useMaskito({ options: brlCurrencyMaskOptions })
+
+  const form = useForm<PropertyOfertanteFormValues>({
+    resolver: zodResolver(propertyOfertanteFormSchema),
+    defaultValues: {
+      titulo: "",
+      descricao: "",
+      endereco: "",
+      compartimentos: 1,
+      fotos: []
+    } as DefaultValues<PropertyOfertanteFormValues>
+  })
+
+  const { handleSubmit, control, reset } = form
+
+  useEffect(() => {
+    if (!isLoading) {
+      if (!isAuthenticated) {
+        router.push("/login/ofertante")
+      } else if (user?.role !== "ofertante") {
+        router.push("/")
+      } else if (!user.onboardingCompleto) {
+        router.push("/ofertante/onboarding")
+      }
+    }
+  }, [isAuthenticated, isLoading, user, router])
+
+  async function onSubmit(data: PropertyOfertanteFormValues) {
+    if (!user) {
+      toast.error("Sessão inválida. Faça login novamente.")
+      return
+    }
+
+    setSubmitting(true)
+    const { fotos, ...rest } = data
+
+    try {
+      const result = await createProperty({
+        ofertanteId: user._id,
+        titulo: rest.titulo,
+        descricao: rest.descricao?.trim() ? rest.descricao : undefined,
+        endereco: rest.endereco,
+        compartimentos: rest.compartimentos,
+        tamanho: rest.tamanho,
+        dataConstrucao: dateToUtcStartMs(rest.data_construcao),
+        matricula: rest.matricula,
+        inscricaoImobiliaria: rest.inscricao_imobiliaria,
+        valorVenda: rest.valor_venda
+      })
+
+      if (!result.success || !result.propertyId) {
+        toast.error(result.errors?.join(" ") ?? "Não foi possível criar o imóvel")
+        return
+      }
+
+      try {
+        await uploadPropertyGallery(
+          uploadFile,
+          fotos,
+          addPropertyImage,
+          result.propertyId
+        )
+      } catch (uploadErr) {
+        console.error(uploadErr)
+        toast.error(
+          "Imóvel salvo como rascunho, mas houve falha ao enviar algumas fotos. Tente adicionar imagens depois."
+        )
+        router.push("/ofertante/dashboard")
+        return
+      }
+
+      toast.success("Imóvel cadastrado com sucesso")
+      reset()
+      router.push("/ofertante/dashboard")
+    } catch (e) {
+      console.error(e)
+      toast.error(e instanceof Error ? e.message : "Erro ao salvar")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const stepsFields = [
+    {
+      fields: ["titulo", "descricao", "endereco"] as const,
+      component: (
+        <>
+          <Controller
+            name="titulo"
+            control={control}
+            render={({ field, fieldState }) => (
+              <Field
+                data-invalid={fieldState.invalid}
+                className="gap-1 col-span-full"
+              >
+                <FieldLabel htmlFor="titulo">Título do imóvel *</FieldLabel>
+                <Input
+                  ref={field.ref}
+                  name={field.name}
+                  onBlur={field.onBlur}
+                  id="titulo"
+                  type="text"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  aria-invalid={fieldState.invalid}
+                  placeholder="Ex.: Apartamento 2 quartos — Centro"
+                />
+                {fieldState.invalid && (
+                  <FieldError errors={[fieldState.error]} />
+                )}
+              </Field>
+            )}
+          />
+          <Controller
+            name="descricao"
+            control={control}
+            render={({ field, fieldState }) => (
+              <Field
+                data-invalid={fieldState.invalid}
+                className="gap-1 col-span-full"
+              >
+                <FieldLabel htmlFor="descricao">Descrição</FieldLabel>
+                <Textarea
+                  ref={field.ref}
+                  name={field.name}
+                  onBlur={field.onBlur}
+                  id="descricao"
+                  rows={3}
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  aria-invalid={fieldState.invalid}
+                  placeholder="Destaques do imóvel..."
+                />
+                {fieldState.invalid && (
+                  <FieldError errors={[fieldState.error]} />
+                )}
+              </Field>
+            )}
+          />
+          <Controller
+            name="endereco"
+            control={control}
+            render={({ field, fieldState }) => (
+              <Field
+                data-invalid={fieldState.invalid}
+                className="gap-1 col-span-full"
+              >
+                <FieldLabel htmlFor="endereco">Endereço completo *</FieldLabel>
+                <Input
+                  ref={field.ref}
+                  name={field.name}
+                  onBlur={field.onBlur}
+                  id="endereco"
+                  type="text"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  aria-invalid={fieldState.invalid}
+                  placeholder="Rua, número, bairro, cidade — UF"
+                />
+                {fieldState.invalid && (
+                  <FieldError errors={[fieldState.error]} />
+                )}
+              </Field>
+            )}
+          />
+        </>
+      )
+    },
+    {
+      fields: ["compartimentos", "tamanho", "data_construcao"] as const,
+      component: (
+        <>
+          <Controller
+            name="compartimentos"
+            control={control}
+            render={({ field, fieldState }) => (
+              <Field
+                data-invalid={fieldState.invalid}
+                className="gap-1 col-span-full"
+              >
+                <FieldLabel htmlFor="compartimentos">
+                  Quantidade de compartimentos *
+                </FieldLabel>
+                <Input
+                  ref={field.ref}
+                  name={field.name}
+                  onBlur={field.onBlur}
+                  id="compartimentos"
+                  type="number"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  min={1}
+                  step={1}
+                  value={
+                    field.value === undefined || field.value === null
+                      ? ""
+                      : field.value
+                  }
+                  onChange={(e) => {
+                    const v = e.target.value
+                    field.onChange(v === "" ? undefined : Number(v))
+                  }}
+                  aria-invalid={fieldState.invalid}
+                  placeholder="Total de ambientes (quartos, salas, cozinha...)"
+                />
+                <FieldDescription>
+                  Soma de todos os compartimentos do imóvel (quartos, salas,
+                  cozinhas, etc.).
+                </FieldDescription>
+                {fieldState.invalid && (
+                  <FieldError errors={[fieldState.error]} />
+                )}
+              </Field>
+            )}
+          />
+          <Controller
+            name="tamanho"
+            control={control}
+            render={({ field, fieldState }) => (
+              <Field
+                data-invalid={fieldState.invalid}
+                className="gap-1 col-span-full"
+              >
+                <FieldLabel htmlFor="tamanho">Tamanho (m²) *</FieldLabel>
+                <Input
+                  ref={field.ref}
+                  name={field.name}
+                  onBlur={field.onBlur}
+                  id="tamanho"
+                  type="number"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  min={0}
+                  step={0.01}
+                  value={
+                    field.value === undefined || field.value === null
+                      ? ""
+                      : field.value
+                  }
+                  onChange={(e) => {
+                    const v = e.target.value
+                    field.onChange(v === "" ? undefined : Number(v))
+                  }}
+                  aria-invalid={fieldState.invalid}
+                  placeholder="Área em metros quadrados"
+                />
+                {fieldState.invalid && (
+                  <FieldError errors={[fieldState.error]} />
+                )}
+              </Field>
+            )}
+          />
+          <Controller
+            name="data_construcao"
+            control={control}
+            render={({ field, fieldState }) => {
+              const selectedDate = toValidDate(field.value)
+              return (
+                <Field
+                  data-invalid={fieldState.invalid}
+                  className="col-span-full"
+                >
+                  <FieldLabel>Data da construção *</FieldLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <div className="relative w-full">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          id="data_construcao"
+                          className={cn(
+                            "w-full justify-start text-start font-normal active:scale-none",
+                            !selectedDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="size-4 shrink-0" />
+                          {selectedDate ? (
+                            <span>
+                              {format(selectedDate, "dd/MM/yyyy", {
+                                locale: ptBR
+                              })}
+                            </span>
+                          ) : (
+                            <span>Selecione a data</span>
+                          )}
+                        </Button>
+                        {selectedDate && fieldState.isDirty && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            className="absolute end-1 top-1/2 -translate-y-1/2 rounded-full"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              form.resetField("data_construcao", {
+                                defaultValue: undefined
+                              })
+                            }}
+                          >
+                            <X className="size-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={(d) => {
+                          if (d && isValid(d)) {
+                            form.setValue("data_construcao", d, {
+                              shouldDirty: true,
+                              shouldValidate: true
+                            })
+                          }
+                        }}
+                        locale={ptBR}
+                        defaultMonth={selectedDate ?? new Date()}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )
+            }}
+          />
+        </>
+      )
+    },
+    {
+      fields: ["matricula", "inscricao_imobiliaria", "valor_venda"] as const,
+      component: (
+        <>
+          <Controller
+            name="matricula"
+            control={control}
+            render={({ field, fieldState }) => (
+              <Field
+                data-invalid={fieldState.invalid}
+                className="gap-1 col-span-full"
+              >
+                <FieldLabel htmlFor="matricula">Matrícula do imóvel *</FieldLabel>
+                <Input
+                  ref={field.ref}
+                  name={field.name}
+                  onBlur={field.onBlur}
+                  id="matricula"
+                  type="text"
+                  inputMode="text"
+                  autoComplete="off"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  aria-invalid={fieldState.invalid}
+                  placeholder="Número da matrícula"
+                />
+                {fieldState.invalid && (
+                  <FieldError errors={[fieldState.error]} />
+                )}
+              </Field>
+            )}
+          />
+          <Controller
+            name="inscricao_imobiliaria"
+            control={control}
+            render={({ field, fieldState }) => (
+              <Field
+                data-invalid={fieldState.invalid}
+                className="gap-1 col-span-full"
+              >
+                <FieldLabel htmlFor="inscricao_imobiliaria">
+                  Inscrição imobiliária *
+                </FieldLabel>
+                <Input
+                  ref={field.ref}
+                  name={field.name}
+                  onBlur={field.onBlur}
+                  id="inscricao_imobiliaria"
+                  type="text"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  aria-invalid={fieldState.invalid}
+                  placeholder="Número da inscrição"
+                />
+                {fieldState.invalid && (
+                  <FieldError errors={[fieldState.error]} />
+                )}
+              </Field>
+            )}
+          />
+          <Controller
+            name="valor_venda"
+            control={control}
+            render={({ field, fieldState }) => (
+              <Field
+                data-invalid={fieldState.invalid}
+                className="gap-1 col-span-full"
+              >
+                <FieldLabel htmlFor="valor_venda">Valor de venda *</FieldLabel>
+                <Input
+                  ref={mergeRefs(field.ref, valorVendaMaskRef)}
+                  name={field.name}
+                  onBlur={field.onBlur}
+                  id="valor_venda"
+                  type="text"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  value={
+                    field.value !== undefined &&
+                    field.value !== null &&
+                    !Number.isNaN(field.value)
+                      ? formatBrlCurrency(field.value)
+                      : ""
+                  }
+                  onChange={(e) => {
+                    const n = parseBrlCurrency(e.target.value)
+                    field.onChange(
+                      n === undefined || Number.isNaN(n) ? undefined : n
+                    )
+                  }}
+                  aria-invalid={fieldState.invalid}
+                  placeholder="R$ 0,00"
+                />
+                {fieldState.invalid && (
+                  <FieldError errors={[fieldState.error]} />
+                )}
+              </Field>
+            )}
+          />
+        </>
+      )
+    },
+    {
+      fields: ["fotos"] as const,
+      component: (
+        <Controller
+          name="fotos"
+          control={control}
+          render={({ field, fieldState }) => (
+            <Field
+              data-invalid={fieldState.invalid}
+              className="gap-1 col-span-full"
+            >
+              <FieldLabel>Fotos do imóvel *</FieldLabel>
+              <FieldDescription>
+                PNG, JPEG ou GIF. Até {MAX_PHOTOS} imagens, máx.{" "}
+                {MAX_PHOTO_BYTES / (1024 * 1024)} MB cada.
+              </FieldDescription>
+              <FileUpload
+                value={field.value}
+                onValueChange={field.onChange}
+                accept="image/png,image/jpeg,image/gif"
+                maxFiles={MAX_PHOTOS}
+                maxSize={MAX_PHOTO_BYTES}
+                onFileValidate={(file) => {
+                  if (!file.type.startsWith("image/")) {
+                    return "Apenas imagens"
+                  }
+                  return null
+                }}
+              >
+                <FileUploadDropzone />
+                <div className="flex flex-wrap gap-2">
+                  <FileUploadTrigger />
+                  <FileUploadClear />
+                </div>
+                <FileUploadList>
+                  {field.value.map((file) => (
+                    <FileUploadItem
+                      key={`${file.name}-${file.size}-${file.lastModified}`}
+                      value={file}
+                    />
+                  ))}
+                </FileUploadList>
+              </FileUpload>
+              {fieldState.invalid && (
+                <FieldError errors={[fieldState.error]} />
+              )}
+            </Field>
+          )}
+        />
+      )
+    }
+  ]
+
+  if (isLoading || !isAuthenticated || !user?.onboardingCompleto) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+      <div className="flex-1 py-6 px-4 sm:py-10">
+        <div className="container mx-auto max-w-lg sm:max-w-xl">
+          <Button variant="ghost" asChild className="mb-4 -ms-2">
+            <Link href="/ofertante/dashboard">
+              <ArrowLeft className="mr-2 size-4" />
+              Voltar ao painel
+            </Link>
+          </Button>
+
+          <div className="mb-6">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+              Novo imóvel
+            </h1>
+            <p className="mt-2 text-sm sm:text-base text-muted-foreground leading-relaxed">
+              Preencha em etapas. Campos marcados com * são obrigatórios.
+            </p>
+          </div>
+
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="flex flex-col rounded-lg border bg-card p-4 sm:p-6 shadow-sm gap-4"
+          >
+            <MultiStepFormProvider
+              stepsFields={stepsFields}
+              onStepValidation={async (step) =>
+                form.trigger(step.fields as never)
+              }
+            >
+              <MultiStepFormContent>
+                <FormHeader />
+                <StepFields />
+                <FormFooter className="border-t pt-4 mt-2">
+                  <div className="flex flex-col gap-3 w-full sm:flex-row sm:justify-between sm:items-center">
+                    <PreviousButton>
+                      <ChevronLeft className="size-4" />
+                      Anterior
+                    </PreviousButton>
+                    <div className="flex flex-col gap-3 w-full sm:flex-row sm:ms-auto sm:w-auto">
+                      <NextButton>
+                        Próximo
+                        <ChevronRight className="size-4" />
+                      </NextButton>
+                      <SubmitButton
+                        type="submit"
+                        disabled={submitting}
+                        className="bg-primary"
+                      >
+                        {submitting ? "Salvando…" : "Salvar imóvel"}
+                      </SubmitButton>
+                    </div>
+                  </div>
+                </FormFooter>
+              </MultiStepFormContent>
+            </MultiStepFormProvider>
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+}

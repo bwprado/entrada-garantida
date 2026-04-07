@@ -449,7 +449,9 @@ export default function BeneficiarioCadastroPage() {
                     />
                   </div>
                   <div>
-                    <FormLabel>Deficiências</FormLabel>
+                    <p className="text-sm font-medium leading-none mb-2">
+                      Deficiências
+                    </p>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
                       {deficienciaEnum.options.map((opt) => (
                         <label

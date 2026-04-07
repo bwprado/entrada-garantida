@@ -101,9 +101,9 @@ export default function AdminDashboardClient() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex w-full flex-1 flex-col">
       {/* Main Content */}
-      <div className="flex-1 bg-muted/30 py-8 px-4">
+      <div className="flex-1 bg-muted/30 px-4 py-8">
         <div className="container mx-auto max-w-7xl">
           {/* Welcome Section */}
           <div className="mb-8">
@@ -618,17 +618,17 @@ export default function AdminDashboardClient() {
                             <div>
                               <h4 className="font-semibold mb-1">{p.titulo}</h4>
                               <p className="text-sm text-muted-foreground">
-                                {p.tipoImovel} • {p.quartos} quartos • {p.vagasGaragem || 0} vaga(s)
+                                {p.compartimentos} compart. • {p.tamanho} m²
                               </p>
                             </div>
                             <Badge>{p.status}</Badge>
                           </div>
-                          <p className="text-sm text-muted-foreground mb-2">
-                            {p.bairro}, {p.cidade} - {p.estado}
+                          <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+                            {p.endereco}
                           </p>
                           <div className="flex items-center justify-between">
                             <p className="text-lg font-bold text-primary">
-                              {formatCurrency(p.precoOfertado)}
+                              {formatCurrency(p.valorVenda)}
                             </p>
                             <div className="flex gap-2">
                               <Button size="sm" variant="outline" className="bg-transparent">

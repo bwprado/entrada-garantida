@@ -5,7 +5,7 @@
  * @returns true if the CPF is valid, false otherwise
  */
 export function validaCPF(cpf: string): boolean {
-  const digits = String(cpf).replace(/\D/g, "")
+  const digits = String(cpf).replace(/\D/g, '')
 
   if (digits.length !== 11) return false
 
