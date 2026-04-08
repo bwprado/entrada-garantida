@@ -1,190 +1,157 @@
 import {
   convexAuth,
   type GenericActionCtxWithAuthConfig,
-  type PhoneConfig,
-} from "@convex-dev/auth/server";
-import type { AnyDataModel } from "convex/server";
-import { ConvexError } from "convex/values";
-import type { GenericId } from "convex/values";
-import type { MutationCtx } from "./_generated/server";
-import { internal } from "./_generated/api";
-import { normalizePhone } from "../lib/normalize-phone";
+  type PhoneConfig
+} from '@convex-dev/auth/server'
+import { ConvexError } from 'convex/values'
+import { normalizePhone } from '../lib/normalize-phone'
+import { internal } from './_generated/api'
 
-const PHONE_OTP_MAX_AGE_SEC = 60 * 5;
+import type { AnyDataModel } from 'convex/server'
+import type { GenericId } from 'convex/values'
+import type { QueryCtx } from './_generated/server'
 
-async function findAppUserByTelefone(ctx: MutationCtx, e164: string) {
-  const variants = Array.from(
-    new Set([
-      e164,
-      e164.replace(/^\+/, ""),
-      e164.replace(/^\+55/, ""),
-    ]),
-  );
-  for (const v of variants) {
-    const byTelefone = await ctx.db
-      .query("users")
-      .withIndex("by_telefone", (q) => q.eq("telefone", v))
-      .first();
-    if (byTelefone) return byTelefone;
+const PHONE_OTP_MAX_AGE_SEC = 60 * 5
+
+// Role configuration for phone authentication providers
+const ROLE_CONFIG = {
+  phone_admin: {
+    requiredRole: 'admin' as const,
+    notFoundMessage: 'Número de telefone não encontrado',
+    wrongRoleMessage: 'Este número não está cadastrado como administrador'
+  },
+  phone_ofertante: {
+    requiredRole: 'ofertante' as const,
+    notFoundMessage:
+      'Cadastre-se antes: informe seu nome na etapa de cadastro.',
+    wrongRoleMessage:
+      'Este telefone já está cadastrado para outro tipo de usuário'
+  },
+  phone_beneficiary: {
+    requiredRole: 'beneficiary' as const,
+    notFoundMessage: 'Número não encontrado na base de beneficiários.',
+    wrongRoleMessage: 'Este telefone não está cadastrado como beneficiário'
   }
+} as const
+
+type PhoneProviderId = keyof typeof ROLE_CONFIG
+
+async function findUserByPhone(
+  ctx: QueryCtx,
+  phone: string
+): Promise<{ _id: GenericId<'users'>; role: string } | null> {
+  // Query by telefone field (app field)
+  const user = await ctx.db
+    .query('users')
+    .withIndex('by_telefone', (q) => q.eq('telefone', phone))
+    .first()
+
+  if (user) return user
+
+  // Fallback: check phone field (Convex Auth)
   return await ctx.db
-    .query("users")
-    .withIndex("phone", (q) => q.eq("phone", e164))
-    .first();
+    .query('users')
+    .withIndex('phone', (q) => q.eq('phone', phone))
+    .first()
 }
 
-function phoneOtpMessage(code: string): string {
-  return `Código de verificação Aquisição Assistida: ${code}. Válido por 5 minutos. Não compartilhe este código.`;
+function validateUserRole(
+  user: { role: string } | null,
+  config: (typeof ROLE_CONFIG)[PhoneProviderId]
+): asserts user is { _id: GenericId<'users'>; role: string } {
+  if (!user) {
+    throw new ConvexError(config.notFoundMessage)
+  }
+
+  if (user.role !== config.requiredRole) {
+    throw new ConvexError(config.wrongRoleMessage)
+  }
 }
 
-function makePhoneProvider(
-  id: "phone_admin" | "phone_ofertante" | "phone_beneficiary",
-): PhoneConfig {
+function createPhoneProvider(id: PhoneProviderId): PhoneConfig<AnyDataModel> {
   return {
     id,
-    type: "phone",
+    type: 'phone',
     maxAge: PHONE_OTP_MAX_AGE_SEC,
     generateVerificationToken: async () =>
       Math.floor(100000 + Math.random() * 900000).toString(),
     normalizeIdentifier: (identifier: string) => {
-      const n = normalizePhone(identifier);
+      const n = normalizePhone(identifier)
       if (!n.isValid()) {
-        throw new ConvexError("Telefone inválido");
+        throw new ConvexError('Telefone inválido')
       }
-      return n.sms();
+      return n.sms()
     },
     authorize: async (params, account) => {
-      if (typeof params.phone !== "string") {
-        throw new Error("Informe o telefone em signIn.");
+      if (typeof params.phone !== 'string') {
+        throw new Error('Informe o telefone em signIn.')
       }
       if (account.providerAccountId !== params.phone) {
-        throw new Error(
-          "O telefone deve ser o mesmo da solicitação do código.",
-        );
+        throw new Error('O telefone deve ser o mesmo da solicitação do código.')
       }
     },
     sendVerificationRequest: async (
       params,
-      ctx: GenericActionCtxWithAuthConfig<AnyDataModel>,
+      ctx: GenericActionCtxWithAuthConfig<AnyDataModel>
     ) => {
-      const message = phoneOtpMessage(params.token);
+      const message = `Código de verificação Aquisição Assistida: ${params.token}. Válido por 5 minutos. Não compartilhe este código.`
       await ctx.runAction(internal.twilio.sendVerificationSms, {
         to: params.identifier,
-        body: message,
-      });
+        body: message
+      })
     },
-    options: {},
-  };
+    options: {}
+  }
 }
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
-    makePhoneProvider("phone_admin"),
-    makePhoneProvider("phone_ofertante"),
-    makePhoneProvider("phone_beneficiary"),
+    createPhoneProvider('phone_admin'),
+    createPhoneProvider('phone_ofertante'),
+    createPhoneProvider('phone_beneficiary')
   ],
   callbacks: {
     async createOrUpdateUser(ctx, args) {
-      const { type, provider, profile, existingUserId } = args;
+      const { type, provider, profile, existingUserId } = args
 
-      if (type === "phone" && typeof profile.phone === "string") {
-        const e164 = profile.phone;
-        const appUser = await findAppUserByTelefone(ctx, e164);
-        if (provider.id === "phone_admin") {
-          if (!appUser) {
-            throw new ConvexError("Número de telefone não encontrado");
-          }
-          if (appUser.role !== "admin") {
-            throw new ConvexError(
-              "Este número não está cadastrado como administrador",
-            );
-          }
-        } else if (provider.id === "phone_ofertante") {
-          if (!appUser) {
-            throw new ConvexError(
-              "Cadastre-se antes: informe seu nome na etapa de cadastro.",
-            );
-          }
-          if (appUser.role !== "ofertante") {
-            throw new ConvexError(
-              "Este telefone já está cadastrado para outro tipo de usuário",
-            );
-          }
-        } else if (provider.id === "phone_beneficiary") {
-          if (!appUser) {
-            throw new ConvexError(
-              "Número não encontrado na base de beneficiários.",
-            );
-          }
-          if (appUser.role !== "beneficiary") {
-            throw new ConvexError(
-              "Este telefone não está cadastrado como beneficiário",
-            );
-          }
-        }
-        if (!appUser) {
-          throw new ConvexError("Usuário não encontrado");
-        }
-        await ctx.db.patch(appUser._id, {
-          phone: e164,
-          atualizadoEm: Date.now(),
-        });
-        return appUser._id as GenericId<"users">;
-      }
+      if (type === 'phone' && typeof profile.phone === 'string') {
+        const user = await findUserByPhone(ctx, profile.phone)
+        validateUserRole(user, ROLE_CONFIG[provider.id as PhoneProviderId])
 
-      if (
-        type === "verification" &&
-        profile.phoneVerified === true &&
-        typeof profile.phone === "string"
-      ) {
-        const uid = existingUserId;
-        if (uid === null) {
-          throw new Error("Falha na verificação: usuário não encontrado");
-        }
-        await ctx.db.patch(uid, {
+        // Update phone field and timestamp
+        await ctx.db.patch(user._id, {
           phone: profile.phone,
-          phoneVerificationTime: Date.now(),
-        });
-        return uid;
+          atualizadoEm: Date.now()
+        })
+
+        return user._id
       }
 
-      throw new Error(`Fluxo de auth não suportado: ${type}`);
-    },
-    async beforeSessionCreation(ctx, { userId }) {
-      const db = (ctx as MutationCtx).db;
-      const accounts = await db
-        .query("authAccounts")
-        .withIndex("userIdAndProvider", (q) => q.eq("userId", userId))
-        .collect();
-      const phoneAcc = accounts.find(
-        (a) =>
-          a.provider === "phone_admin" ||
-          a.provider === "phone_ofertante" ||
-          a.provider === "phone_beneficiary",
-      );
-      if (!phoneAcc) return;
-      const user = await ctx.db.get(userId);
-      if (!user) {
-        throw new ConvexError("Usuário não encontrado");
+      if (type === 'verification') {
+        if (
+          profile.phoneVerified === true &&
+          typeof profile.phone === 'string'
+        ) {
+          if (existingUserId === null) {
+            throw new Error(
+              'Falha na verificação: usuário não encontrado (existingUserId is null)'
+            )
+          }
+
+          await ctx.db.patch(existingUserId, {
+            phone: profile.phone,
+            phoneVerificationTime: Date.now()
+          })
+
+          return existingUserId
+        }
+
+        throw new Error(
+          `Verification failed: no existing user found for ${profile.phone}`
+        )
       }
-      if (phoneAcc.provider === "phone_admin" && user.role !== "admin") {
-        throw new ConvexError(
-          "Este número não está cadastrado como administrador",
-        );
-      }
-      if (phoneAcc.provider === "phone_ofertante" && user.role !== "ofertante") {
-        throw new ConvexError(
-          "Este telefone não está cadastrado como ofertante",
-        );
-      }
-      if (
-        phoneAcc.provider === "phone_beneficiary" &&
-        user.role !== "beneficiary"
-      ) {
-        throw new ConvexError(
-          "Este telefone não está cadastrado como beneficiário",
-        );
-      }
-    },
-  },
-});
+
+      throw new Error(`Fluxo de auth não suportado: ${type}`)
+    }
+  }
+})

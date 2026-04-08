@@ -3,7 +3,16 @@ import { v } from 'convex/values'
 import { normalizePhone } from '../lib/normalize-phone'
 import { Doc, Id } from './_generated/dataModel'
 import { internalMutation, mutation, query } from './_generated/server'
-import { estadoCivilEnum } from './schema'
+import {
+  estadoCivilEnum,
+  sexoEnum,
+  racaEnum,
+  deficienciaEnum,
+  tipoRendaEnum,
+  rendaFamiliarFaixaEnum,
+  identidadeGeneroEnum,
+  adminNivelAcessoEnum
+} from './schema'
 
 // Clean CPF (remove non-digits)
 function cleanCPF(cpf: string): string {
@@ -24,7 +33,68 @@ function sameBrazilMobile(stored: string, input: string): boolean {
   return a.digits() === b.digits()
 }
 
-// ============ QUERIES ============
+// ============ PROFILE QUERIES ============
+
+/** Get current user with their profile data */
+export const getCurrentUserWithProfile = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx)
+    if (userId === null) return null
+
+    const user = await ctx.db.get(userId)
+    if (!user) return null
+
+    let profile = null
+    if (user.role === 'beneficiary' && user.beneficiaryProfileId) {
+      profile = await ctx.db.get(user.beneficiaryProfileId)
+    } else if (user.role === 'ofertante' && user.ofertanteProfileId) {
+      profile = await ctx.db.get(user.ofertanteProfileId)
+    } else if (user.role === 'admin' && user.adminProfileId) {
+      profile = await ctx.db.get(user.adminProfileId)
+    }
+
+    return { user, profile }
+  }
+})
+
+/** Get beneficiary profile by user ID */
+export const getBeneficiaryProfile = query({
+  args: { userId: v.id('users') },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId)
+    if (!user || user.role !== 'beneficiary' || !user.beneficiaryProfileId) {
+      return null
+    }
+    return await ctx.db.get(user.beneficiaryProfileId)
+  }
+})
+
+/** Get ofertante profile by user ID */
+export const getOfertanteProfile = query({
+  args: { userId: v.id('users') },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId)
+    if (!user || user.role !== 'ofertante' || !user.ofertanteProfileId) {
+      return null
+    }
+    return await ctx.db.get(user.ofertanteProfileId)
+  }
+})
+
+/** Get admin profile by user ID */
+export const getAdminProfile = query({
+  args: { userId: v.id('users') },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId)
+    if (!user || user.role !== 'admin' || !user.adminProfileId) {
+      return null
+    }
+    return await ctx.db.get(user.adminProfileId)
+  }
+})
+
+// ============ USER QUERIES ============
 
 export const getByCPF = query({
   args: { cpf: v.string() },
@@ -75,38 +145,90 @@ export const getBeneficiaries = query({
   }
 })
 
+export const getBeneficiariesWithProfiles = query({
+  args: {
+    status: v.optional(
+      v.union(
+        v.literal('pending'),
+        v.literal('verified'),
+        v.literal('active'),
+        v.literal('rejected'),
+        v.literal('suspended')
+      )
+    )
+  },
+  handler: async (ctx, args) => {
+    let users
+    if (args.status) {
+      users = await ctx.db
+        .query('users')
+        .withIndex('by_role_and_status', (q) =>
+          q.eq('role', 'beneficiary').eq('status', args.status!)
+        )
+        .collect()
+    } else {
+      users = await ctx.db
+        .query('users')
+        .withIndex('by_role', (q) => q.eq('role', 'beneficiary'))
+        .collect()
+    }
+
+    const usersWithProfiles = await Promise.all(
+      users.map(async (user) => {
+        let profile = null
+        if (user.beneficiaryProfileId) {
+          profile = await ctx.db.get(user.beneficiaryProfileId)
+        }
+        return { user, profile }
+      })
+    )
+
+    return usersWithProfiles
+  }
+})
+
 export const getBeneficiariesForRanking = query({
   args: {},
   handler: async (ctx) => {
-    const beneficiaries = await ctx.db
+    const users = await ctx.db
       .query('users')
       .withIndex('by_role_and_status', (q) =>
         q.eq('role', 'beneficiary').eq('status', 'active')
       )
       .collect()
 
-    // Sort by ranking priority:
-    // 1. mesesAluguelSocial (higher = higher priority)
-    // 2. possuiIdosoFamilia (true first)
-    // 3. chefiaFeminina (true first)
-    return beneficiaries.sort((a, b) => {
+    const beneficiariesWithProfiles = await Promise.all(
+      users.map(async (user) => {
+        let profile = null
+        if (user.beneficiaryProfileId) {
+          profile = await ctx.db.get(user.beneficiaryProfileId)
+        }
+        return { user, profile }
+      })
+    )
+
+    // Sort by ranking priority using profile data
+    return beneficiariesWithProfiles.sort((a, b) => {
+      const aProfile = a.profile
+      const bProfile = b.profile
+
       // Primary: time in social rent (descending)
-      const aMeses = a.mesesAluguelSocial ?? 0
-      const bMeses = b.mesesAluguelSocial ?? 0
+      const aMeses = aProfile?.mesesAluguelSocial ?? 0
+      const bMeses = bProfile?.mesesAluguelSocial ?? 0
       if (aMeses !== bMeses) return bMeses - aMeses
 
       // Secondary: has elderly (true first)
-      const aIdoso = a.possuiIdosoFamilia ?? false
-      const bIdoso = b.possuiIdosoFamilia ?? false
+      const aIdoso = aProfile?.possuiIdosoFamilia ?? false
+      const bIdoso = bProfile?.possuiIdosoFamilia ?? false
       if (aIdoso !== bIdoso) return bIdoso ? 1 : -1
 
       // Tertiary: female head of household (true first)
-      const aChefia = a.chefiaFeminina ?? false
-      const bChefia = b.chefiaFeminina ?? false
+      const aChefia = aProfile?.chefiaFeminina ?? false
+      const bChefia = bProfile?.chefiaFeminina ?? false
       if (aChefia !== bChefia) return bChefia ? 1 : -1
 
       // Final tiebreaker: earlier creation date first
-      return a.criadoEm - b.criadoEm
+      return a.user.criadoEm - b.user.criadoEm
     })
   }
 })
@@ -128,6 +250,26 @@ export const getOfertantes = query({
       .query('users')
       .withIndex('by_role', (q) => q.eq('role', 'ofertante'))
       .collect()
+  }
+})
+
+export const getOfertantesWithProfiles = query({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db
+      .query('users')
+      .withIndex('by_role', (q) => q.eq('role', 'ofertante'))
+      .collect()
+
+    return await Promise.all(
+      users.map(async (user) => {
+        let profile = null
+        if (user.ofertanteProfileId) {
+          profile = await ctx.db.get(user.ofertanteProfileId)
+        }
+        return { user, profile }
+      })
+    )
   }
 })
 
@@ -176,7 +318,315 @@ export const getLoginInfoByTelefone = query({
   }
 })
 
-// ============ MUTATIONS ============
+// ============ PROFILE MUTATIONS ============
+
+/** Update beneficiary profile */
+export const updateBeneficiaryProfile = mutation({
+  args: {
+    userId: v.id('users'),
+    // Address
+    cep: v.optional(v.string()),
+    endereco: v.optional(v.string()),
+    numero: v.optional(v.string()),
+    complemento: v.optional(v.string()),
+    bairro: v.optional(v.string()),
+    cidade: v.optional(v.string()),
+    estado: v.optional(v.string()),
+    empreendimento: v.optional(v.string()),
+    // Contact
+    email: v.optional(v.string()),
+    telefoneFixo: v.optional(v.string()),
+    dddTelefoneFixo: v.optional(v.string()),
+    telefoneRecado: v.optional(v.string()),
+    dddTelefoneRecado: v.optional(v.string()),
+    falarCom: v.optional(v.string()),
+    aceitaComunicacoes: v.optional(v.boolean()),
+    // Personal (admin only)
+    rg: v.optional(v.string()),
+    nomeResponsavelFamiliar: v.optional(v.string()),
+    nomeMae: v.optional(v.string()),
+    nomePai: v.optional(v.string()),
+    sexo: v.optional(sexoEnum),
+    identidadeGenero: v.optional(identidadeGeneroEnum),
+    raca: v.optional(racaEnum),
+    deficiencias: v.optional(v.array(deficienciaEnum)),
+    profissao: v.optional(v.string()),
+    empregador: v.optional(v.string()),
+    ramoAtividade: v.optional(v.string()),
+    tipoRenda: v.optional(tipoRendaEnum),
+    rendaFamiliarFaixa: v.optional(rendaFamiliarFaixaEnum),
+    pessoasFamilia: v.optional(v.number()),
+    mesesAluguelSocial: v.optional(v.number()),
+    possuiIdosoFamilia: v.optional(v.boolean()),
+    chefiaFeminina: v.optional(v.boolean())
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId)
+    if (!user) {
+      throw new Error('Usuário não encontrado')
+    }
+
+    if (user.role !== 'beneficiary') {
+      throw new Error('Apenas beneficiários podem atualizar este perfil')
+    }
+
+    if (!user.beneficiaryProfileId) {
+      throw new Error('Perfil de beneficiário não encontrado')
+    }
+
+    const profile = await ctx.db.get(user.beneficiaryProfileId)
+    if (!profile) {
+      throw new Error('Perfil de beneficiário não encontrado')
+    }
+
+    const updates: Partial<Doc<'beneficiaryProfiles'>> = {
+      atualizadoEm: Date.now()
+    }
+
+    // Address fields
+    if (args.cep !== undefined) updates.cep = args.cep
+    if (args.endereco !== undefined) updates.endereco = args.endereco
+    if (args.numero !== undefined) updates.numero = args.numero
+    if (args.complemento !== undefined) updates.complemento = args.complemento
+    if (args.bairro !== undefined) updates.bairro = args.bairro
+    if (args.cidade !== undefined) updates.cidade = args.cidade
+    if (args.estado !== undefined) updates.estado = args.estado
+    if (args.empreendimento !== undefined)
+      updates.empreendimento = args.empreendimento
+
+    // Contact fields
+    if (args.telefoneFixo !== undefined)
+      updates.telefoneFixo = args.telefoneFixo
+    if (args.dddTelefoneFixo !== undefined)
+      updates.dddTelefoneFixo = args.dddTelefoneFixo
+    if (args.telefoneRecado !== undefined)
+      updates.telefoneRecado = args.telefoneRecado
+    if (args.dddTelefoneRecado !== undefined)
+      updates.dddTelefoneRecado = args.dddTelefoneRecado
+    if (args.falarCom !== undefined) updates.falarCom = args.falarCom
+    if (args.aceitaComunicacoes !== undefined)
+      updates.aceitaComunicacoes = args.aceitaComunicacoes
+
+    // Personal fields (only admin can update these)
+    const currentUserId = await getAuthUserId(ctx)
+    const currentUser = currentUserId ? await ctx.db.get(currentUserId) : null
+    const isAdmin = currentUser?.role === 'admin'
+
+    if (isAdmin) {
+      if (args.rg !== undefined) updates.rg = args.rg
+      if (args.nomeResponsavelFamiliar !== undefined)
+        updates.nomeResponsavelFamiliar = args.nomeResponsavelFamiliar
+      if (args.nomeMae !== undefined) updates.nomeMae = args.nomeMae
+      if (args.nomePai !== undefined) updates.nomePai = args.nomePai
+      if (args.sexo !== undefined) updates.sexo = args.sexo
+      if (args.identidadeGenero !== undefined)
+        updates.identidadeGenero = args.identidadeGenero
+      if (args.raca !== undefined) updates.raca = args.raca
+      if (args.deficiencias !== undefined)
+        updates.deficiencias = args.deficiencias
+      if (args.profissao !== undefined) updates.profissao = args.profissao
+      if (args.empregador !== undefined) updates.empregador = args.empregador
+      if (args.ramoAtividade !== undefined)
+        updates.ramoAtividade = args.ramoAtividade
+      if (args.tipoRenda !== undefined) updates.tipoRenda = args.tipoRenda
+      if (args.rendaFamiliarFaixa !== undefined)
+        updates.rendaFamiliarFaixa = args.rendaFamiliarFaixa
+      if (args.pessoasFamilia !== undefined)
+        updates.pessoasFamilia = args.pessoasFamilia
+      if (args.mesesAluguelSocial !== undefined)
+        updates.mesesAluguelSocial = args.mesesAluguelSocial
+      if (args.possuiIdosoFamilia !== undefined)
+        updates.possuiIdosoFamilia = args.possuiIdosoFamilia
+      if (args.chefiaFeminina !== undefined)
+        updates.chefiaFeminina = args.chefiaFeminina
+    }
+
+    // Update user email if provided
+    if (args.email !== undefined) {
+      await ctx.db.patch(args.userId, {
+        email: args.email,
+        atualizadoEm: Date.now()
+      })
+    }
+
+    await ctx.db.patch(user.beneficiaryProfileId, updates)
+
+    return { success: true }
+  }
+})
+
+/** Update ofertante profile */
+export const updateOfertanteProfile = mutation({
+  args: {
+    userId: v.id('users'),
+    // Address
+    cep: v.optional(v.string()),
+    endereco: v.optional(v.string()),
+    numero: v.optional(v.string()),
+    complemento: v.optional(v.string()),
+    bairro: v.optional(v.string()),
+    cidade: v.optional(v.string()),
+    estado: v.optional(v.string()),
+    // Contact
+    email: v.optional(v.string()),
+    // Personal (admin only or during onboarding)
+    rg: v.optional(v.string()),
+    dataNascimento: v.optional(v.string()),
+    estadoCivil: v.optional(estadoCivilEnum),
+    profissao: v.optional(v.string())
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId)
+    if (!user) {
+      throw new Error('Usuário não encontrado')
+    }
+
+    if (user.role !== 'ofertante') {
+      throw new Error('Apenas ofertantes podem atualizar este perfil')
+    }
+
+    if (!user.ofertanteProfileId) {
+      throw new Error('Perfil de ofertante não encontrado')
+    }
+
+    const profile = await ctx.db.get(user.ofertanteProfileId)
+    if (!profile) {
+      throw new Error('Perfil de ofertante não encontrado')
+    }
+
+    const currentUserId = await getAuthUserId(ctx)
+    const currentUser = currentUserId ? await ctx.db.get(currentUserId) : null
+    const isAdmin = currentUser?.role === 'admin'
+    const isSelf = currentUserId === args.userId
+
+    if (!isAdmin && !isSelf) {
+      throw new Error('Permissão negada')
+    }
+
+    const updates: Partial<Doc<'ofertanteProfiles'>> = {
+      atualizadoEm: Date.now()
+    }
+
+    // Address fields
+    if (args.cep !== undefined) updates.cep = args.cep
+    if (args.endereco !== undefined) updates.endereco = args.endereco
+    if (args.numero !== undefined) updates.numero = args.numero
+    if (args.complemento !== undefined) updates.complemento = args.complemento
+    if (args.bairro !== undefined) updates.bairro = args.bairro
+    if (args.cidade !== undefined) updates.cidade = args.cidade
+    if (args.estado !== undefined) updates.estado = args.estado
+
+    // Personal fields
+    if (args.rg !== undefined) updates.rg = args.rg
+    if (args.dataNascimento !== undefined)
+      updates.dataNascimento = args.dataNascimento
+    if (args.estadoCivil !== undefined) updates.estadoCivil = args.estadoCivil
+    if (args.profissao !== undefined) updates.profissao = args.profissao
+
+    // Update user email if provided
+    if (args.email !== undefined) {
+      await ctx.db.patch(args.userId, {
+        email: args.email,
+        atualizadoEm: Date.now()
+      })
+    }
+
+    await ctx.db.patch(user.ofertanteProfileId, updates)
+
+    return { success: true }
+  }
+})
+
+/** Update admin profile */
+export const updateAdminProfile = mutation({
+  args: {
+    userId: v.id('users'),
+    email: v.optional(v.string()),
+    nivelAcesso: v.optional(adminNivelAcessoEnum),
+    departamento: v.optional(v.string()),
+    cargo: v.optional(v.string())
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId)
+    if (!user) {
+      throw new Error('Usuário não encontrado')
+    }
+
+    if (user.role !== 'admin') {
+      throw new Error('Apenas administradores podem atualizar este perfil')
+    }
+
+    const currentUserId = await getAuthUserId(ctx)
+    const currentUser = currentUserId ? await ctx.db.get(currentUserId) : null
+    const isSuperAdmin = currentUser?.role === 'admin' // TODO: Check for super admin level
+    const isSelf = currentUserId === args.userId
+
+    if (!isSuperAdmin && !isSelf) {
+      throw new Error('Permissão negada')
+    }
+
+    // Update basic user info
+    const userUpdates: Partial<Doc<'users'>> = {
+      atualizadoEm: Date.now()
+    }
+    if (args.email !== undefined) userUpdates.email = args.email
+    await ctx.db.patch(args.userId, userUpdates)
+
+    // Update profile if it exists
+    if (user.adminProfileId) {
+      const profileUpdates: Partial<Doc<'adminProfiles'>> = {
+        atualizadoEm: Date.now()
+      }
+      if (args.nivelAcesso !== undefined)
+        profileUpdates.nivelAcesso = args.nivelAcesso
+      if (args.departamento !== undefined)
+        profileUpdates.departamento = args.departamento
+      if (args.cargo !== undefined) profileUpdates.cargo = args.cargo
+      await ctx.db.patch(user.adminProfileId, profileUpdates)
+    }
+
+    return { success: true }
+  }
+})
+
+/** Update basic user info (common fields) */
+export const updateUserBasicInfo = mutation({
+  args: {
+    userId: v.id('users'),
+    nome: v.optional(v.string()),
+    nomeSocial: v.optional(v.string()),
+    email: v.optional(v.string()),
+    telefone: v.optional(v.string())
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId)
+    if (!user) {
+      throw new Error('Usuário não encontrado')
+    }
+
+    const currentUserId = await getAuthUserId(ctx)
+    if (currentUserId !== args.userId) {
+      const currentUser = currentUserId ? await ctx.db.get(currentUserId) : null
+      if (currentUser?.role !== 'admin') {
+        throw new Error('Permissão negada')
+      }
+    }
+
+    const updates: Partial<Doc<'users'>> = {
+      atualizadoEm: Date.now()
+    }
+
+    if (args.nome !== undefined) updates.nome = args.nome
+    if (args.email !== undefined) updates.email = args.email
+    if (args.telefone !== undefined) updates.telefone = args.telefone
+
+    await ctx.db.patch(args.userId, updates)
+
+    return { success: true }
+  }
+})
+
+// ============ AUTH & LEGACY MUTATIONS ============
 
 /**
  * Validates CPF + phone against the beneficiário row before Convex Auth sends SMS.
@@ -375,7 +825,16 @@ export const selectProperty = mutation({
       throw new Error('Beneficiário precisa aceitar os termos primeiro')
     }
 
-    const currentSelections = user.propriedadesInteresse ?? []
+    if (!user.beneficiaryProfileId) {
+      throw new Error('Perfil de beneficiário não encontrado')
+    }
+
+    const profile = await ctx.db.get(user.beneficiaryProfileId)
+    if (!profile) {
+      throw new Error('Perfil de beneficiário não encontrado')
+    }
+
+    const currentSelections = profile.propriedadesInteresse ?? []
 
     if (currentSelections.length >= 3) {
       throw new Error('Máximo de 3 propriedades pode ser selecionado')
@@ -393,7 +852,7 @@ export const selectProperty = mutation({
 
     const newSelections = [...currentSelections, args.propertyId]
 
-    await ctx.db.patch(args.userId, {
+    await ctx.db.patch(user.beneficiaryProfileId, {
       propriedadesInteresse: newSelections,
       atualizadoEm: Date.now()
     })
@@ -420,12 +879,21 @@ export const removePropertySelection = mutation({
       throw new Error('Usuário não encontrado')
     }
 
-    const currentSelections = user.propriedadesInteresse ?? []
+    if (!user.beneficiaryProfileId) {
+      throw new Error('Perfil de beneficiário não encontrado')
+    }
+
+    const profile = await ctx.db.get(user.beneficiaryProfileId)
+    if (!profile) {
+      throw new Error('Perfil de beneficiário não encontrado')
+    }
+
+    const currentSelections = profile.propriedadesInteresse ?? []
     const newSelections = currentSelections.filter(
       (id) => id !== args.propertyId
     )
 
-    await ctx.db.patch(args.userId, {
+    await ctx.db.patch(user.beneficiaryProfileId, {
       propriedadesInteresse: newSelections,
       atualizadoEm: Date.now()
     })
@@ -450,6 +918,7 @@ export const removePropertySelection = mutation({
   }
 })
 
+// Legacy updateProfile - kept for backwards compatibility
 export const updateProfile = mutation({
   args: {
     userId: v.id('users'),
@@ -469,24 +938,45 @@ export const updateProfile = mutation({
       throw new Error('Usuário não encontrado')
     }
 
-    // Beneficiaries cannot modify nome or cpf
-    // Admin can modify any field
-
     const updates: Partial<Doc<'users'>> = {
       atualizadoEm: Date.now()
     }
 
     if (args.email !== undefined) updates.email = args.email
     if (args.telefone !== undefined) updates.telefone = args.telefone
-    if (args.cep !== undefined) updates.cep = args.cep
-    if (args.endereco !== undefined) updates.endereco = args.endereco
-    if (args.numero !== undefined) updates.numero = args.numero
-    if (args.complemento !== undefined) updates.complemento = args.complemento
-    if (args.bairro !== undefined) updates.bairro = args.bairro
-    if (args.cidade !== undefined) updates.cidade = args.cidade
-    if (args.estado !== undefined) updates.estado = args.estado
 
     await ctx.db.patch(args.userId, updates)
+
+    // Also update profile if it exists
+    if (user.beneficiaryProfileId) {
+      const profileUpdates: Partial<Doc<'beneficiaryProfiles'>> = {
+        atualizadoEm: Date.now()
+      }
+      if (args.cep !== undefined) profileUpdates.cep = args.cep
+      if (args.endereco !== undefined) profileUpdates.endereco = args.endereco
+      if (args.numero !== undefined) profileUpdates.numero = args.numero
+      if (args.complemento !== undefined)
+        profileUpdates.complemento = args.complemento
+      if (args.bairro !== undefined) profileUpdates.bairro = args.bairro
+      if (args.cidade !== undefined) profileUpdates.cidade = args.cidade
+      if (args.estado !== undefined) profileUpdates.estado = args.estado
+      await ctx.db.patch(user.beneficiaryProfileId, profileUpdates)
+    }
+
+    if (user.ofertanteProfileId) {
+      const profileUpdates: Partial<Doc<'ofertanteProfiles'>> = {
+        atualizadoEm: Date.now()
+      }
+      if (args.cep !== undefined) profileUpdates.cep = args.cep
+      if (args.endereco !== undefined) profileUpdates.endereco = args.endereco
+      if (args.numero !== undefined) profileUpdates.numero = args.numero
+      if (args.complemento !== undefined)
+        profileUpdates.complemento = args.complemento
+      if (args.bairro !== undefined) profileUpdates.bairro = args.bairro
+      if (args.cidade !== undefined) profileUpdates.cidade = args.cidade
+      if (args.estado !== undefined) profileUpdates.estado = args.estado
+      await ctx.db.patch(user.ofertanteProfileId, profileUpdates)
+    }
 
     return { success: true }
   }
@@ -500,7 +990,10 @@ export const createAdmin = mutation({
     nome: v.string(),
     email: v.string(),
     telefone: v.string(),
-    senha: v.string()
+    senha: v.string(),
+    nivelAcesso: v.optional(adminNivelAcessoEnum),
+    departamento: v.optional(v.string()),
+    cargo: v.optional(v.string())
   },
   handler: async (ctx, args) => {
     const cleaned = cleanCPF(args.cpf)
@@ -514,22 +1007,38 @@ export const createAdmin = mutation({
       throw new Error('CPF já cadastrado')
     }
 
-    // TODO: Hash password properly
-    const senhaHash = args.senha // Should be hashed
-
     const now = Date.now()
 
-    return await ctx.db.insert('users', {
+    const userId = await ctx.db.insert('users', {
       role: 'admin',
       cpf: cleaned,
       nome: args.nome,
       email: args.email,
       telefone: args.telefone,
-      senhaHash,
       status: 'active',
       criadoEm: now,
       atualizadoEm: now
     })
+
+    // Create admin profile
+    await ctx.db.insert('adminProfiles', {
+      userId,
+      nivelAcesso: args.nivelAcesso ?? 'leitor',
+      departamento: args.departamento,
+      cargo: args.cargo,
+      criadoEm: now,
+      atualizadoEm: now
+    })
+
+    // Update user with profile reference
+    await ctx.db.patch(userId, {
+      adminProfileId: (await ctx.db
+        .query('adminProfiles')
+        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .first())!._id
+    })
+
+    return userId
   }
 })
 
@@ -541,13 +1050,28 @@ export const bulkUploadBeneficiaries = mutation({
         cpf: v.string(),
         nome: v.string(),
         telefone: v.string(),
-        mesesAluguelSocial: v.number(),
-        possuiIdosoFamilia: v.boolean(),
-        chefiaFeminina: v.boolean(),
-        pessoasFamilia: v.optional(v.number()),
+        email: v.optional(v.string()),
+        // Profile fields
+        rg: v.string(),
+        nomeMae: v.optional(v.string()),
+        nomePai: v.optional(v.string()),
         sexo: v.optional(v.string()),
         raca: v.optional(v.string()),
-        deficiencias: v.optional(v.array(v.string()))
+        deficiencias: v.optional(v.array(v.string())),
+        profissao: v.string(),
+        tipoRenda: v.optional(v.string()),
+        rendaFamiliarFaixa: v.optional(v.string()),
+        pessoasFamilia: v.optional(v.number()),
+        mesesAluguelSocial: v.optional(v.number()),
+        possuiIdosoFamilia: v.optional(v.boolean()),
+        chefiaFeminina: v.optional(v.boolean()),
+        // Address
+        cep: v.optional(v.string()),
+        endereco: v.optional(v.string()),
+        numero: v.optional(v.string()),
+        bairro: v.optional(v.string()),
+        cidade: v.optional(v.string()),
+        estado: v.optional(v.string())
       })
     )
   },
@@ -592,21 +1116,59 @@ export const bulkUploadBeneficiaries = mutation({
           continue
         }
 
-        await ctx.db.insert('users', {
+        // Create user
+        const userId = await ctx.db.insert('users', {
           role: 'beneficiary',
           cpf: cleaned,
           nome: b.nome,
           telefone: b.telefone,
-          mesesAluguelSocial: b.mesesAluguelSocial,
-          possuiIdosoFamilia: b.possuiIdosoFamilia,
-          chefiaFeminina: b.chefiaFeminina,
-          pessoasFamilia: b.pessoasFamilia,
-          sexo: b.sexo as any,
-          raca: b.raca as any,
-          deficiencias: b.deficiencias as any,
+          email: b.email,
           status: 'pending',
           criadoEm: now,
           atualizadoEm: now
+        })
+
+        // Create beneficiary profile
+        const profileId = await ctx.db.insert('beneficiaryProfiles', {
+          userId,
+          rg: b.rg,
+          nomeMae: b.nomeMae,
+          nomePai: b.nomePai,
+          sexo: (b.sexo as any) ?? 'nao_informado',
+          identidadeGenero: 'nao_informado',
+          raca: (b.raca as any) ?? 'nao_informado',
+          deficiencias: (b.deficiencias as any) ?? ['nao_possui'],
+          profissao: b.profissao,
+          tipoRenda: (b.tipoRenda as any) ?? 'nao_informado',
+          rendaFamiliarFaixa: (b.rendaFamiliarFaixa as any) ?? 'ate_2',
+          pessoasFamilia: b.pessoasFamilia ?? 1,
+          mesesAluguelSocial: b.mesesAluguelSocial ?? 0,
+          possuiIdosoFamilia: b.possuiIdosoFamilia ?? false,
+          chefiaFeminina: b.chefiaFeminina ?? false,
+          // Address
+          cep: b.cep ?? '',
+          endereco: b.endereco ?? '',
+          numero: b.numero ?? '',
+          bairro: b.bairro ?? '',
+          cidade: b.cidade ?? '',
+          estado: b.estado ?? 'MA',
+          complemento: '',
+          // Contact defaults
+          dddTelefoneFixo: '',
+          telefoneFixo: '',
+          dddTelefoneRecado: '',
+          telefoneRecado: '',
+          falarCom: '',
+          aceitaComunicacoes: false,
+          // Timestamps
+          criadoEm: now,
+          atualizadoEm: now,
+          propriedadesInteresse: []
+        })
+
+        // Update user with profile reference
+        await ctx.db.patch(userId, {
+          beneficiaryProfileId: profileId
         })
 
         sucessos++
@@ -682,10 +1244,33 @@ export const registerOfertante = mutation({
       nome: args.nome,
       telefone: telefoneE164,
       status: 'onboarding',
+      criadoEm: now,
+      atualizadoEm: now
+    })
+
+    // Create empty ofertante profile
+    const profileId = await ctx.db.insert('ofertanteProfiles', {
+      userId,
+      rg: '',
+      dataNascimento: '',
+      estadoCivil: 'solteiro',
+      profissao: '',
+      cep: '',
+      endereco: '',
+      numero: '',
+      complemento: '',
+      bairro: '',
+      cidade: '',
+      estado: '',
       onboardingCompleto: false,
       documentosPendentes: ['rg', 'comp_residencia'],
       criadoEm: now,
       atualizadoEm: now
+    })
+
+    // Update user with profile reference
+    await ctx.db.patch(userId, {
+      ofertanteProfileId: profileId
     })
 
     return { success: true, userId }
@@ -726,6 +1311,10 @@ export const completeOfertanteOnboarding = mutation({
       }
     }
 
+    if (!user.ofertanteProfileId) {
+      return { success: false, error: 'Perfil de ofertante não encontrado' }
+    }
+
     // Validate CPF
     const cleanedCPF = cleanCPF(args.cpf)
     if (!isValidCPFLength(cleanedCPF)) {
@@ -745,13 +1334,20 @@ export const completeOfertanteOnboarding = mutation({
     const rgTrim = args.rg?.trim()
     const profTrim = args.profissao?.trim()
 
+    // Update user
     await ctx.db.patch(userId, {
       nome: args.nome || user.nome,
       cpf: cleanedCPF,
+      status: 'active',
+      atualizadoEm: Date.now()
+    })
+
+    // Update profile
+    await ctx.db.patch(user.ofertanteProfileId, {
+      rg: rgTrim ?? '',
       dataNascimento: args.dataNascimento,
-      ...(rgTrim !== undefined && rgTrim !== '' ? { rg: rgTrim } : {}),
-      ...(profTrim ? { profissao: profTrim } : {}),
-      ...(args.estadoCivil !== undefined ? { estadoCivil: args.estadoCivil } : {}),
+      estadoCivil: args.estadoCivil ?? 'solteiro',
+      profissao: profTrim ?? '',
       cep: args.cep,
       endereco: args.endereco,
       numero: args.numero,
@@ -760,7 +1356,6 @@ export const completeOfertanteOnboarding = mutation({
       cidade: args.cidade,
       estado: args.estado,
       onboardingCompleto: true,
-      status: 'active',
       atualizadoEm: Date.now()
     })
 

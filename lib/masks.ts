@@ -98,3 +98,22 @@ export const dataNascimentoBrMaskOptions: MaskitoOptions = {
   ],
   plugins: [...reactIntegrationPlugins]
 }
+
+/** RG: flexible format for Brazilian states (varies by state, up to 9 digits + letters in some states). */
+export const rgMaskOptions: MaskitoOptions = {
+  mask: [
+    /[0-9a-zA-Z]/,
+    /[0-9a-zA-Z]/,
+    '.',
+    /[0-9a-zA-Z]/,
+    /[0-9a-zA-Z]/,
+    /[0-9a-zA-Z]/,
+    '.',
+    /[0-9a-zA-Z]/,
+    /[0-9a-zA-Z]/,
+    /[0-9a-zA-Z]/,
+    '-',
+    /[0-9a-zA-Z]/
+  ],
+  plugins: [...reactIntegrationPlugins]
+}

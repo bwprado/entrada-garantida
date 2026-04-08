@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -18,18 +18,24 @@ import { ArrowLeft, Loader2, CheckCircle2, User, MapPin, CreditCard, Calendar } 
 import { useAuth } from "@/lib/auth-context";
 import { cpfMaskOptions, phoneMaskOptions, cepMaskOptions } from "@/lib/masks";
 import { useMaskito } from "@maskito/react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 type Step = 1 | 2 | 3;
 
 export default function OfertanteOnboardingPage() {
   const router = useRouter();
-  const { user, completeOnboarding, logout } = useAuth();
+  const { user, completeOnboarding, logout, isLoading: isAuthLoading } = useAuth();
+  const userWithProfile = useQuery(api.users.getCurrentUserWithProfile);
+  const profile = userWithProfile?.profile;
+  
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isInitializing, setIsInitializing] = useState(true);
 
   // Step 1: Personal Info
-  const [nome, setNome] = useState(user?.nome || "");
+  const [nome, setNome] = useState("");
   const [cpf, setCpf] = useState("");
   const [dataNascimento, setDataNascimento] = useState("");
 
@@ -42,10 +48,52 @@ export default function OfertanteOnboardingPage() {
   const [cidade, setCidade] = useState("");
   const [estado, setEstado] = useState("MA");
 
+  // Pre-fill form data from profile when it loads
+  useEffect(() => {
+    if (userWithProfile === undefined) return; // Still loading
+    
+    const { user: userData, profile: profileData } = userWithProfile;
+    
+    if (userData) {
+      setNome(userData.nome || "");
+      // CPF might be on user or profile
+      if (userData.cpf) {
+        setCpf(userData.cpf);
+      }
+    }
+    
+    if (profileData) {
+      // Pre-fill from profile data
+      if (profileData.cpf) setCpf(profileData.cpf);
+      if (profileData.dataNascimento) setDataNascimento(profileData.dataNascimento);
+      if (profileData.cep) setCep(profileData.cep);
+      if (profileData.endereco) setEndereco(profileData.endereco);
+      if (profileData.numero) setNumero(profileData.numero);
+      if (profileData.complemento) setComplemento(profileData.complemento);
+      if (profileData.bairro) setBairro(profileData.bairro);
+      if (profileData.cidade) setCidade(profileData.cidade);
+      if (profileData.estado) setEstado(profileData.estado);
+    }
+    
+    setIsInitializing(false);
+  }, [userWithProfile]);
+
   const cpfInputRef = useMaskito({ options: cpfMaskOptions });
   const cepInputRef = useMaskito({ options: cepMaskOptions });
 
   const progress = ((currentStep - 1) / 2) * 100;
+
+  // Show loading while auth or profile data is loading
+  if (isAuthLoading || isInitializing || userWithProfile === undefined) {
+    return (
+      <div className="min-h-[calc(100vh-80px)] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Carregando dados do cadastro...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleNextStep = () => {
     setError("");
@@ -107,10 +155,17 @@ export default function OfertanteOnboardingPage() {
     setIsLoading(true);
     setError("");
 
+    // Include all fields from profile if they were already saved during cadastro
+    const profileData = userWithProfile?.profile;
+    
     const result = await completeOnboarding({
       nome,
       cpf: cpf.replace(/\D/g, ""),
       dataNascimento,
+      // Include fields from profile that were saved during cadastro
+      rg: profileData?.rg || undefined,
+      profissao: profileData?.profissao || undefined,
+      estadoCivil: profileData?.estadoCivil || undefined,
       cep: cep.replace(/\D/g, ""),
       endereco,
       numero,
@@ -134,6 +189,11 @@ export default function OfertanteOnboardingPage() {
     const [year, month, day] = dateString.split("-");
     return `${day}/${month}/${year}`;
   };
+
+  // Check if profile data exists from cadastro
+  const hasProfileData = !!profile && (
+    profile.cpf || profile.dataNascimento || profile.cep || profile.endereco
+  );
 
   return (
     <div className="min-h-[calc(100vh-80px)] flex flex-col bg-gradient-to-br from-primary/5 via-background to-secondary/5">
@@ -168,6 +228,15 @@ export default function OfertanteOnboardingPage() {
             </div>
             <Progress value={progress} className="h-2" />
           </div>
+
+          {/* Info: Data pre-filled from cadastro */}
+          {hasProfileData && (
+            <div className="mb-6 p-4 border border-primary/50 bg-primary/10 rounded-lg">
+              <p className="text-sm text-primary">
+                <strong>Dados preenchidos automaticamente:</strong> Alguns campos já foram preenchidos com as informações do seu cadastro inicial. Verifique se estão corretos antes de continuar.
+              </p>
+            </div>
+          )}
 
           {/* Error Message */}
           {error && (

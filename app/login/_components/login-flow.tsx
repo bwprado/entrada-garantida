@@ -20,6 +20,11 @@ import {
   FormMessage
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot
+} from '@/components/ui/input-otp'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth, type LoginPersona } from '@/lib/auth-context'
 import { cpfMaskOptions, phoneMaskOptions } from '@/lib/masks'
@@ -840,24 +845,24 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
                       control={form.control}
                       name="otp"
                       render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Código de 6 dígitos</FormLabel>
+                        <FormItem className="flex flex-col items-center">
+                          <FormLabel className="self-start">Código de 6 dígitos</FormLabel>
                           <FormControl>
-                            <Input
-                              type="text"
-                              inputMode="numeric"
-                              pattern="[0-9]{6}"
+                            <InputOTP
                               maxLength={6}
-                              placeholder="000000"
+                              value={field.value}
+                              onChange={field.onChange}
                               disabled={isLoading}
-                              className="text-center text-2xl tracking-widest"
-                              {...field}
-                              onChange={(e) =>
-                                field.onChange(
-                                  e.target.value.replace(/\D/g, '')
-                                )
-                              }
-                            />
+                            >
+                              <InputOTPGroup>
+                                <InputOTPSlot index={0} />
+                                <InputOTPSlot index={1} />
+                                <InputOTPSlot index={2} />
+                                <InputOTPSlot index={3} />
+                                <InputOTPSlot index={4} />
+                                <InputOTPSlot index={5} />
+                              </InputOTPGroup>
+                            </InputOTP>
                           </FormControl>
                           <FormMessage />
                         </FormItem>

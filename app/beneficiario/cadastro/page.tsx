@@ -30,14 +30,14 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cpfMaskOptions, phoneMaskOptions } from "@/lib/masks"
 import {
-  beneficiarioSchema,
+  beneficiarioCompleteSchema,
   deficienciaEnum,
   identidadeGeneroEnum,
   racaEnum,
   rendaFamiliarFaixaEnum,
   sexoEnum,
   tipoRendaEnum,
-  type BeneficiarioFormData
+  type BeneficiarioCompleteFormData
 } from "@/lib/schemas/beneficiario"
 import {
   deficienciaLabels,
@@ -93,7 +93,6 @@ const PLACEHOLDERS = {
   nome: "João Silva",
   cpf: "123.456.789-09",
   rg: "123456789",
-  senha: "123456",
   sexo: "nao-informado",
   identidadeGenero: "nao-informado",
   raca: "nao-informado",
@@ -102,7 +101,6 @@ const PLACEHOLDERS = {
   profissao: "Desenvolvedor",
   rendaFaixa: "2-4",
   pessoasFamilia: 3,
-  celular: "(98) 99115-0154",
   email: "teste@email.com",
   aceitaComunicacoes: false,
   cep: "65000000",
@@ -116,14 +114,13 @@ const PLACEHOLDERS = {
 export default function BeneficiarioCadastroPage() {
   const [selectedStep, setSelectedStep] = useState<StepId>("pessoais")
 
-  const form = useForm<BeneficiarioFormData>({
-    resolver: zodResolver(beneficiarioSchema),
+  const form = useForm<BeneficiarioCompleteFormData>({
+    resolver: zodResolver(beneficiarioCompleteSchema),
     mode: "onBlur",
     defaultValues: {
       nome: "",
       cpf: "",
       rg: "",
-      senha: "",
       sexo: undefined,
       identidadeGenero: undefined,
       raca: undefined,
@@ -131,7 +128,6 @@ export default function BeneficiarioCadastroPage() {
       profissao: "",
       rendaFaixa: "2-4",
       pessoasFamilia: 1,
-      celular: "",
       email: "",
       aceitaComunicacoes: false,
       cep: "",
@@ -143,11 +139,10 @@ export default function BeneficiarioCadastroPage() {
     }
   })
 
-  const celularInputRef = useMaskito({ options: phoneMaskOptions })
   const cpfInputRef = useMaskito({ options: cpfMaskOptions })
 
   const { watch, setValue, handleSubmit, trigger } = form
-  const [draft, setDraft] = useLocalStorage<Partial<BeneficiarioFormData>>(
+  const [draft, setDraft] = useLocalStorage<Partial<BeneficiarioCompleteFormData>>(
     STORAGE_KEY,
     {}
   )
@@ -156,7 +151,7 @@ export default function BeneficiarioCadastroPage() {
   useEffect(() => {
     if (draft && Object.keys(draft).length > 0) {
       for (const [key, value] of Object.entries(draft)) {
-        setValue(key as keyof BeneficiarioFormData, value as any, {
+        setValue(key as keyof BeneficiarioCompleteFormData, value as any, {
           shouldValidate: false
         })
       }
@@ -167,18 +162,17 @@ export default function BeneficiarioCadastroPage() {
   // Persist changes to localStorage
   useEffect(() => {
     const subscription = watch((values) => {
-      setDraft(values as Partial<BeneficiarioFormData>)
+      setDraft(values as Partial<BeneficiarioCompleteFormData>)
     })
     return () => subscription.unsubscribe()
   }, [watch, setDraft])
 
-  const stepFields: Record<StepId, (keyof BeneficiarioFormData)[]> = useMemo(
+  const stepFields: Record<StepId, (keyof BeneficiarioCompleteFormData)[]> = useMemo(
     () => ({
       pessoais: [
         "nome",
         "cpf",
         "rg",
-        "senha",
         "sexo",
         "identidadeGenero",
         "raca",
@@ -191,7 +185,6 @@ export default function BeneficiarioCadastroPage() {
         "tipoRenda",
         "rendaFaixa",
         "pessoasFamilia",
-        "celular",
         "dddTelefoneFixo",
         "telefoneFixo",
         "dddTelefoneRecado",
@@ -240,7 +233,7 @@ export default function BeneficiarioCadastroPage() {
     if (prev) setSelectedStep(prev as StepId)
   }
 
-  const onSubmit = (data: BeneficiarioFormData) => {
+  const onSubmit = (data: BeneficiarioCompleteFormData) => {
     if (STEPS.find((step) => step.id === selectedStep)?.isLast) {
       console.log(data)
     } else {
@@ -343,23 +336,6 @@ export default function BeneficiarioCadastroPage() {
                           <FormLabel>RG</FormLabel>
                           <FormControl>
                             <Input placeholder={PLACEHOLDERS.rg} {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="senha"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Senha</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="password"
-                              placeholder={PLACEHOLDERS.senha}
-                              {...field}
-                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -494,26 +470,6 @@ export default function BeneficiarioCadastroPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="celular"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Celular</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder={PLACEHOLDERS.celular}
-                              {...field}
-                              ref={celularInputRef}
-                              onInput={(e) => {
-                                field.onChange(e)
-                              }}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                     <FormField
                       control={form.control}
                       name="email"

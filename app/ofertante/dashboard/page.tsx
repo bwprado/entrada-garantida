@@ -2,6 +2,9 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -32,6 +35,9 @@ import { useAuth } from "@/lib/auth-context";
 export default function OfertanteDashboardPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading } = useAuth();
+  const userWithProfile = useQuery(api.users.getCurrentUserWithProfile);
+  
+  const profile = userWithProfile?.profile;
 
   // Check authentication and onboarding
   useEffect(() => {
@@ -40,13 +46,15 @@ export default function OfertanteDashboardPage() {
         router.push("/login/ofertante");
       } else if (user?.role !== "ofertante") {
         router.push("/");
-      } else if (!user.onboardingCompleto) {
+      } else if (!profile?.onboardingCompleto) {
         router.push("/ofertante/onboarding");
       }
     }
-  }, [isAuthenticated, isLoading, user, router]);
+  }, [isAuthenticated, isLoading, user, router, profile]);
 
-  if (isLoading || !isAuthenticated || !user?.onboardingCompleto) {
+  // Show loading while auth is loading or profile data is not yet available
+  const isProfileLoading = userWithProfile === undefined;
+  if (isLoading || isProfileLoading || !isAuthenticated || !user?.onboardingCompleto) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -293,7 +301,7 @@ export default function OfertanteDashboardPage() {
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm text-muted-foreground">Data de Nascimento</p>
-                      <p className="font-medium">{user?.dataNascimento || "Não informado"}</p>
+                      <p className="font-medium">{profile?.dataNascimento || "Não informado"}</p>
                     </div>
                   </div>
 
@@ -301,20 +309,22 @@ export default function OfertanteDashboardPage() {
                     <h3 className="font-semibold mb-3">Endereço</h3>
                     <div className="space-y-1">
                       <p className="font-medium">
-                        {user?.endereco || "Não informado"}
-                        {user?.numero ? `, ${user.numero}` : ""}
-                        {user?.complemento ? ` - ${user.complemento}` : ""}
+                        {profile?.endereco || "Não informado"}
+                        {profile?.numero ? `, ${profile.numero}` : ""}
+                        {profile?.complemento ? ` - ${profile.complemento}` : ""}
                       </p>
                       <p className="text-muted-foreground">
-                        {user?.bairro || ""} {user?.cidade ? `- ${user.cidade}/${user.estado}` : ""}
+                        {profile?.bairro || ""} {profile?.cidade ? `- ${profile.cidade}/${profile.estado}` : ""}
                       </p>
                     </div>
                   </div>
 
                   <div className="pt-4">
-                    <Button variant="outline">
-                      <Edit className="w-4 h-4 mr-2" />
-                      Editar Dados
+                    <Button variant="outline" asChild>
+                      <Link href="/ofertante/perfil">
+                        <Edit className="w-4 h-4 mr-2" />
+                        Editar Dados
+                      </Link>
                     </Button>
                   </div>
                 </CardContent>

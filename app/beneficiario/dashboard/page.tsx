@@ -29,6 +29,7 @@ import {
   MapPin,
   Bed,
   ArrowRight,
+  Edit,
 } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
@@ -37,15 +38,18 @@ export default function BeneficiarioDashboardPage() {
   const { user, isAuthenticated, logout } = useAuth();
   const [removingId, setRemovingId] = useState<string | null>(null);
   
-  const userData = useQuery(
-    api.users.getById,
-    user ? { id: user._id } : "skip"
+  const userWithProfile = useQuery(
+    api.users.getCurrentUserWithProfile,
+    user ? {} : "skip"
   );
+  
+  const userData = userWithProfile?.user;
+  const profile = userWithProfile?.profile;
 
   const selectedProperties = useQuery(
     api.properties.getByIds,
-    userData?.propriedadesInteresse?.length 
-      ? { ids: userData.propriedadesInteresse }
+    profile?.propriedadesInteresse?.length 
+      ? { ids: profile.propriedadesInteresse }
       : "skip"
   );
 
@@ -68,7 +72,7 @@ export default function BeneficiarioDashboardPage() {
     }
   };
 
-  const selectionCount = userData?.propriedadesInteresse?.length || 0;
+  const selectionCount = profile?.propriedadesInteresse?.length || 0;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -358,9 +362,17 @@ export default function BeneficiarioDashboardPage() {
               {/* Dados do Beneficiário */}
               <Card>
                 <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <User className="w-5 h-5 text-primary" />
-                    <CardTitle className="text-lg">Seus Dados</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <User className="w-5 h-5 text-primary" />
+                      <CardTitle className="text-lg">Seus Dados</CardTitle>
+                    </div>
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link href="/beneficiario/perfil">
+                        <Edit className="w-4 h-4 mr-1" />
+                        Editar
+                      </Link>
+                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
@@ -383,14 +395,14 @@ export default function BeneficiarioDashboardPage() {
                   <div>
                     <p className="text-muted-foreground">Endereço</p>
                     <p className="font-medium">
-                      {userData?.endereco 
-                        ? `${userData.endereco}${userData.numero ? `, ${userData.numero}` : ""}`
+                      {profile?.endereco 
+                        ? `${profile.endereco}${profile.numero ? `, ${profile.numero}` : ""}`
                         : "N/A"
                       }
                     </p>
-                    {userData?.bairro && (
+                    {profile?.bairro && (
                       <p className="text-muted-foreground">
-                        {userData.bairro}, {userData.cidade} - {userData.estado}
+                        {profile.bairro}, {profile.cidade} - {profile.estado}
                       </p>
                     )}
                   </div>

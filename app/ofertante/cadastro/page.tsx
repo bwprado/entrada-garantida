@@ -1,50 +1,63 @@
-"use client"
+'use client'
 
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useEffect, useMemo, useState } from "react"
-import { Controller, useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useMaskito } from "@maskito/react"
-import { ChevronLeft, ChevronRight, Loader2, Phone, ShieldCheck, User } from "lucide-react"
-import { toast } from "sonner"
-
-import { Button } from "@/components/ui/button"
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useMaskito } from '@maskito/react'
 import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldLabel
-} from "@/components/ui/field"
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Phone,
+  ShieldCheck,
+  User
+} from 'lucide-react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Controller, useForm } from 'react-hook-form'
+import { toast } from 'sonner'
+
 import {
   FormFooter,
   FormHeader,
   MultiStepFormContent,
   NextButton,
   PreviousButton
-} from "@/components/multi-step-viewer"
+} from '@/components/multi-step-viewer'
+import { Button } from '@/components/ui/button'
 import {
-  MultiStepFormProvider,
-  useMultiStepForm,
-  type StepFieldConfig
-} from "@/hooks/use-multi-step-viewer"
-import { Input } from "@/components/ui/input"
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel
+} from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot
+} from '@/components/ui/input-otp'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue
-} from "@/components/ui/select"
-import { useAuth } from "@/lib/auth-context"
-import { parseDataNascimentoBrParaIso } from "@/lib/date-br"
+} from '@/components/ui/select'
+import {
+  MultiStepFormProvider,
+  useMultiStepForm,
+  type StepFieldConfig
+} from '@/hooks/use-multi-step-viewer'
+import { useConvexAuth } from 'convex/react'
+
+import { useAuth } from '@/lib/auth-context'
+import { parseDataNascimentoBrParaIso } from '@/lib/date-br'
 import {
   cepMaskOptions,
   cpfMaskOptions,
   dataNascimentoBrMaskOptions,
   phoneMaskOptions
-} from "@/lib/masks"
-import { mergeRefs } from "@/lib/utils"
+} from '@/lib/masks'
 import {
   estadoCivilLabels,
   ofertanteCadastroSchema,
@@ -53,7 +66,8 @@ import {
   onlyDigits,
   otpVerifySchema,
   type OfertanteCadastroFormValues
-} from "@/lib/schemas/ofertante-cadastro"
+} from '@/lib/schemas/ofertante-cadastro'
+import { mergeRefs } from '@/lib/utils'
 
 function CadastroFooter({
   otpSent,
@@ -99,14 +113,15 @@ function CadastroFooter({
             type="button"
             className="w-full sm:ms-auto sm:w-auto"
             disabled={submitting}
-            onClick={() => void onSendCode()}>
+            onClick={() => void onSendCode()}
+          >
             {submitting ? (
               <>
                 <Loader2 className="mr-2 size-4 animate-spin" />
                 Enviando…
               </>
             ) : (
-              "Criar cadastro e enviar código"
+              'Criar cadastro e enviar código'
             )}
           </Button>
         ) : (
@@ -114,14 +129,15 @@ function CadastroFooter({
             type="button"
             className="w-full sm:ms-auto sm:w-auto"
             disabled={submitting}
-            onClick={() => void onVerify()}>
+            onClick={() => void onVerify()}
+          >
             {submitting ? (
               <>
                 <Loader2 className="mr-2 size-4 animate-spin" />
                 Verificando…
               </>
             ) : (
-              "Verificar e concluir"
+              'Verificar e concluir'
             )}
           </Button>
         )}
@@ -130,11 +146,7 @@ function CadastroFooter({
   )
 }
 
-function OtpSentReset({
-  setOtpSent
-}: {
-  setOtpSent: (v: boolean) => void
-}) {
+function OtpSentReset({ setOtpSent }: { setOtpSent: (v: boolean) => void }) {
   const { currentStep, totalSteps } = useMultiStepForm()
   useEffect(() => {
     if (currentStep < totalSteps - 1) setOtpSent(false)
@@ -144,6 +156,7 @@ function OtpSentReset({
 
 export default function OfertanteCadastroPage() {
   const router = useRouter()
+  const { isAuthenticated } = useConvexAuth()
   const {
     registerOfertante,
     startPhoneSignIn,
@@ -153,26 +166,47 @@ export default function OfertanteCadastroPage() {
 
   const [otpSent, setOtpSent] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [otpValue, setOtpValue] = useState('')
+
+  // Ref to track current auth state for async operations
+  const isAuthenticatedRef = useRef(isAuthenticated)
+  useEffect(() => {
+    isAuthenticatedRef.current = isAuthenticated
+  }, [isAuthenticated])
+
+  // Wait for auth state to propagate after signIn
+  const waitForAuth = useCallback(async (maxWaitMs = 3000): Promise<boolean> => {
+    if (isAuthenticatedRef.current) return true
+    
+    const start = Date.now()
+    const checkInterval = 100
+    
+    while (Date.now() - start < maxWaitMs) {
+      await new Promise(resolve => setTimeout(resolve, checkInterval))
+      if (isAuthenticatedRef.current) return true
+    }
+    
+    return false
+  }, [])
 
   const form = useForm<OfertanteCadastroFormValues>({
     resolver: zodResolver(ofertanteCadastroSchema),
-    mode: "onBlur",
+    mode: 'onBlur',
     defaultValues: {
-      nome: "",
-      telefone: "",
-      cpf: "",
-      rg: "",
-      dataNascimento: "",
-      profissao: "",
+      nome: '',
+      telefone: '',
+      cpf: '',
+      rg: '',
+      dataNascimento: '',
+      profissao: '',
       estadoCivil: undefined,
-      cep: "",
-      endereco: "",
-      numero: "",
-      complemento: "",
-      bairro: "",
-      cidade: "",
-      estado: "MA",
-      otp: ""
+      cep: '',
+      endereco: '',
+      numero: '',
+      complemento: '',
+      bairro: '',
+      cidade: '',
+      estado: 'MA'
     }
   })
 
@@ -232,7 +266,7 @@ export default function OfertanteCadastroPage() {
                     aria-invalid={fieldState.invalid}
                     name={field.name}
                     onBlur={field.onBlur}
-                    value={field.value ?? ""}
+                    value={field.value ?? ''}
                     onChange={field.onChange}
                   />
                   {fieldState.invalid && (
@@ -269,7 +303,7 @@ export default function OfertanteCadastroPage() {
                     aria-invalid={fieldState.invalid}
                     name={field.name}
                     onBlur={field.onBlur}
-                    value={field.value ?? ""}
+                    value={field.value ?? ''}
                     onChange={field.onChange}
                   />
                   {fieldState.invalid && (
@@ -321,10 +355,12 @@ export default function OfertanteCadastroPage() {
                     aria-invalid={fieldState.invalid}
                     name={field.name}
                     onBlur={field.onBlur}
-                    value={field.value ?? ""}
+                    value={field.value ?? ''}
                     onChange={field.onChange}
                   />
-                  <FieldDescription>Formato DD-MM-AAAA (dia-mês-ano).</FieldDescription>
+                  <FieldDescription>
+                    Formato DD-MM-AAAA (dia-mês-ano).
+                  </FieldDescription>
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />
                   )}
@@ -362,10 +398,7 @@ export default function OfertanteCadastroPage() {
                   className="gap-1 col-span-full"
                 >
                   <FieldLabel>Estado civil *</FieldLabel>
-                  <Select
-                    value={field.value}
-                    onValueChange={field.onChange}
-                  >
+                  <Select value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger
                       id="estadoCivil"
                       aria-invalid={fieldState.invalid}
@@ -410,7 +443,7 @@ export default function OfertanteCadastroPage() {
                     aria-invalid={fieldState.invalid}
                     name={field.name}
                     onBlur={field.onBlur}
-                    value={field.value ?? ""}
+                    value={field.value ?? ''}
                     onChange={field.onChange}
                   />
                   {fieldState.invalid && (
@@ -446,10 +479,7 @@ export default function OfertanteCadastroPage() {
                 name="numero"
                 control={control}
                 render={({ field, fieldState }) => (
-                  <Field
-                    data-invalid={fieldState.invalid}
-                    className="gap-1"
-                  >
+                  <Field data-invalid={fieldState.invalid} className="gap-1">
                     <FieldLabel htmlFor="numero">Número *</FieldLabel>
                     <Input
                       id="numero"
@@ -468,10 +498,7 @@ export default function OfertanteCadastroPage() {
                 name="complemento"
                 control={control}
                 render={({ field, fieldState }) => (
-                  <Field
-                    data-invalid={fieldState.invalid}
-                    className="gap-1"
-                  >
+                  <Field data-invalid={fieldState.invalid} className="gap-1">
                     <FieldLabel htmlFor="complemento">Complemento</FieldLabel>
                     <Input
                       id="complemento"
@@ -514,10 +541,7 @@ export default function OfertanteCadastroPage() {
                 name="cidade"
                 control={control}
                 render={({ field, fieldState }) => (
-                  <Field
-                    data-invalid={fieldState.invalid}
-                    className="gap-1"
-                  >
+                  <Field data-invalid={fieldState.invalid} className="gap-1">
                     <FieldLabel htmlFor="cidade">Cidade *</FieldLabel>
                     <Input
                       id="cidade"
@@ -536,10 +560,7 @@ export default function OfertanteCadastroPage() {
                 name="estado"
                 control={control}
                 render={({ field, fieldState }) => (
-                  <Field
-                    data-invalid={fieldState.invalid}
-                    className="gap-1"
-                  >
+                  <Field data-invalid={fieldState.invalid} className="gap-1">
                     <FieldLabel htmlFor="estado">UF *</FieldLabel>
                     <Input
                       id="estado"
@@ -571,35 +592,32 @@ export default function OfertanteCadastroPage() {
               <FieldLabel>Verificação por SMS</FieldLabel>
               <FieldDescription>
                 {otpSent
-                  ? "Digite o código de 6 dígitos enviado ao seu celular."
-                  : "Na próxima etapa, criaremos seu cadastro e enviaremos um código por SMS para confirmar o número."}
+                  ? 'Digite o código de 6 dígitos enviado ao seu celular.'
+                  : 'Na próxima etapa, criaremos seu cadastro e enviaremos um código por SMS para confirmar o número.'}
               </FieldDescription>
             </Field>
             {otpSent && (
-              <Controller
-                name="otp"
-                control={control}
-                render={({ field, fieldState }) => (
-                  <Field
-                    data-invalid={fieldState.invalid}
-                    className="gap-1"
-                  >
-                    <FieldLabel htmlFor="otp">Código SMS *</FieldLabel>
-                    <Input
-                      id="otp"
-                      inputMode="numeric"
-                      autoComplete="one-time-code"
-                      maxLength={6}
-                      placeholder="000000"
-                      aria-invalid={fieldState.invalid}
-                      {...field}
-                    />
-                    {fieldState.invalid && (
-                      <FieldError errors={[fieldState.error]} />
-                    )}
-                  </Field>
+              <Field className="gap-1 items-center">
+                <FieldLabel htmlFor="otp">Código SMS *</FieldLabel>
+                <InputOTP
+                  id="otp"
+                  maxLength={6}
+                  value={otpValue}
+                  onChange={setOtpValue}
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
+                {otpValue.length !== 6 && otpValue.length > 0 && (
+                  <FieldError errors={['O código deve ter 6 dígitos']} />
                 )}
-              />
+              </Field>
             )}
           </div>
         )
@@ -611,62 +629,72 @@ export default function OfertanteCadastroPage() {
       cpfInputRef,
       phoneInputRef,
       dataNascimentoInputRef,
-      otpSent
+      otpSent,
+      otpValue
     ]
   )
 
   async function handleSendCode() {
     const ok = await trigger([...ofertanteCadastroStep1Fields])
     if (!ok) {
-      toast.error("Corrija os dados da primeira etapa.")
+      toast.error('Corrija os dados da primeira etapa.')
       return
     }
     const ok2 = await trigger([...ofertanteCadastroStep2Fields])
     if (!ok2) {
-      toast.error("Corrija os dados da segunda etapa.")
+      toast.error('Corrija os dados da segunda etapa.')
       return
     }
 
     setSubmitting(true)
-    const nome = getValues("nome")
-    const telefone = getValues("telefone")
+    const nome = getValues('nome')
+    const telefone = getValues('telefone')
 
     const reg = await registerOfertante(telefone, nome)
     if (!reg.success) {
-      toast.error(reg.error ?? "Não foi possível cadastrar")
+      toast.error(reg.error ?? 'Não foi possível cadastrar')
       setSubmitting(false)
       return
     }
 
-    const otpResult = await startPhoneSignIn(telefone, "ofertante")
+    const otpResult = await startPhoneSignIn(telefone, 'ofertante')
     if (!otpResult.success) {
-      toast.error(otpResult.error ?? "Erro ao enviar código")
+      toast.error(otpResult.error ?? 'Erro ao enviar código')
       setSubmitting(false)
       return
     }
 
     setOtpSent(true)
-    toast.success("Código enviado por SMS.")
+    toast.success('Código enviado por SMS.')
     setSubmitting(false)
   }
 
   async function handleVerify() {
-    const parsed = otpVerifySchema.safeParse({ otp: getValues("otp") })
+    const parsed = otpVerifySchema.safeParse({ otp: otpValue })
     if (!parsed.success) {
       const first = parsed.error.flatten().fieldErrors.otp?.[0]
-      toast.error(first ?? "Código inválido")
+      toast.error(first ?? 'Código inválido')
       return
     }
 
     setSubmitting(true)
-    const telefone = getValues("telefone")
+    const telefone = getValues('telefone')
     const signInResult = await completePhoneSignIn(
       telefone,
       parsed.data.otp,
-      "ofertante"
+      'ofertante'
     )
     if (!signInResult.success) {
-      toast.error(signInResult.error ?? "Código inválido")
+      console.log('meu erro é aqui 2', signInResult.error)
+      toast.error(signInResult.error ?? 'Código inválido')
+      setSubmitting(false)
+      return
+    }
+
+    // Wait for auth state to propagate before calling mutations
+    const authReady = await waitForAuth()
+    if (!authReady) {
+      toast.error('Erro de autenticação. Por favor, tente novamente.')
       setSubmitting(false)
       return
     }
@@ -674,14 +702,14 @@ export default function OfertanteCadastroPage() {
     const v = getValues()
     const ec = v.estadoCivil
     if (ec === undefined) {
-      toast.error("Estado civil inválido")
+      toast.error('Estado civil inválido')
       setSubmitting(false)
       return
     }
 
     const dataIso = parseDataNascimentoBrParaIso(v.dataNascimento)
     if (!dataIso) {
-      toast.error("Data de nascimento inválida")
+      toast.error('Data de nascimento inválida')
       setSubmitting(false)
       return
     }
@@ -703,13 +731,13 @@ export default function OfertanteCadastroPage() {
     })
 
     if (!ob.success) {
-      toast.error(ob.error ?? "Erro ao salvar dados")
+      toast.error(ob.error ?? 'Erro ao salvar dados')
       setSubmitting(false)
       return
     }
 
-    toast.success("Cadastro concluído")
-    router.replace("/ofertante/dashboard")
+    toast.success('Cadastro concluído')
+    router.replace('/ofertante/dashboard')
     setSubmitting(false)
   }
 
@@ -776,13 +804,13 @@ function StepFieldsWithIcon() {
     <Phone key="p" className="size-5 text-primary shrink-0" />
   ]
 
-  const titles = ["Nome e celular", "Dados pessoais e endereço", "Verificação"]
+  const titles = ['Nome e celular', 'Dados pessoais e endereço', 'Verificação']
 
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         {icons[currentStep] ?? icons[0]}
-        <span className="font-medium">{titles[currentStep] ?? "Etapa"}</span>
+        <span className="font-medium">{titles[currentStep] ?? 'Etapa'}</span>
       </div>
       <div key={currentStep} className="grid grid-cols-1 gap-4">
         {step.component}

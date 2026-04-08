@@ -1,9 +1,8 @@
 import './globals.css'
 
-import { ConditionalHeader } from '@/components/conditional-header'
 import { ConvexClientProvider } from '@/lib/convex-provider'
-import { Analytics } from '@vercel/analytics/next'
 import { ConvexAuthNextjsServerProvider } from '@convex-dev/auth/nextjs/server'
+import { Analytics } from '@vercel/analytics/next'
 import { Geist } from 'next/font/google'
 import { Toaster } from 'sonner'
 
@@ -27,29 +26,20 @@ export const metadata: Metadata = {
 export default async function RootLayout({
   children
 }: Readonly<{ children: React.ReactNode }>) {
-  const content = (
-    <ConvexClientProvider>
-      <ConditionalHeader>{children}</ConditionalHeader>
-      <Analytics />
-      <Toaster position="top-right" richColors />
-    </ConvexClientProvider>
-  )
-
   return (
-    <html lang="pt-BR">
-      <body
-        className={`${geist.className} antialiased min-h-screen flex flex-col`}
-      >
-        {process.env.NEXT_PUBLIC_CONVEX_URL ? (
-          // Async server component (React 19); @types/react 18 typings are incomplete
-          // @ts-expect-error -- ConvexAuthNextjsServerProvider is Promise<JSX.Element>
-          <ConvexAuthNextjsServerProvider>
-            {content}
-          </ConvexAuthNextjsServerProvider>
-        ) : (
-          content
-        )}
-      </body>
-    </html>
+    <ConvexAuthNextjsServerProvider>
+      <html lang="pt-BR">
+        <body
+          className={`${geist.className} antialiased min-h-screen flex flex-col`}
+        >
+          <ConvexClientProvider>
+            {children}
+            <Analytics />
+
+            <Toaster position="top-right" richColors />
+          </ConvexClientProvider>
+        </body>
+      </html>
+    </ConvexAuthNextjsServerProvider>
   )
 }

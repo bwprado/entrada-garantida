@@ -1,11 +1,11 @@
-"use client"
+'use client'
 
-import type { ReactNode } from "react"
-import { usePathname } from "next/navigation"
-import { useConvexAuth } from "convex/react"
+import type { ReactNode } from 'react'
+import { usePathname } from 'next/navigation'
+import { useConvexAuth } from 'convex/react'
 
-import { Header } from "@/components/header"
-import { OfertanteHeaderActions } from "@/components/ofertante-header-actions"
+import { Header } from '@/components/header'
+import { OfertanteHeaderActions } from '@/components/ofertante-header-actions'
 
 type Props = { children: ReactNode }
 
@@ -15,17 +15,6 @@ type Props = { children: ReactNode }
  * construtor registration at /ofertante/cadastro.
  */
 export default function OfertanteLayout({ children }: Props) {
-  const pathname = usePathname()
-  const { isAuthenticated } = useConvexAuth()
-
-  if (pathname === "/ofertante/cadastro") {
-    return <>{children}</>
-  }
-
-  if (!isAuthenticated) {
-    return <>{children}</>
-  }
-
   return (
     <>
       <Header showLoginButton={false} actions={<OfertanteHeaderActions />} />

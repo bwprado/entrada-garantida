@@ -1,0 +1,5 @@
+export { ProfileLayout } from "./ProfileLayout"
+export { CommonFields } from "./CommonFields"
+export { AddressFields } from "./AddressFields"
+export { BeneficiaryFields } from "./BeneficiaryFields"
+export { OfertanteFields } from "./OfertanteFields"

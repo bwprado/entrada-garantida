@@ -122,7 +122,23 @@ export const estadoCivilEnum = v.union(
   v.literal('separado')
 )
 
-// Users table (merged with @convex-dev/auth user fields + app fields)
+// Admin access levels
+export const adminNivelAcessoEnum = v.union(
+  v.literal('super'),
+  v.literal('moderador'),
+  v.literal('leitor')
+)
+
+// Gender identity options
+export const identidadeGeneroEnum = v.union(
+  v.literal('cisgenero'),
+  v.literal('transgenero'),
+  v.literal('nao_binario'),
+  v.literal('outro'),
+  v.literal('nao_informado')
+)
+
+// Users table - lean table for auth + identification only
 export const users = defineTable({
   // Convex Auth profile fields
   name: v.optional(v.string()),
@@ -135,44 +151,8 @@ export const users = defineTable({
   role: userRoleEnum,
   cpf: v.string(),
   nome: v.string(),
-  nomeSocial: v.optional(v.string()),
   telefone: v.string(),
   email: v.optional(v.string()),
-  senhaHash: v.optional(v.string()),
-
-  // Beneficiary-specific fields
-  mesesAluguelSocial: v.optional(v.number()),
-  possuiIdosoFamilia: v.optional(v.boolean()),
-  chefiaFeminina: v.optional(v.boolean()),
-  pessoasFamilia: v.optional(v.number()),
-  sexo: v.optional(sexoEnum),
-  raca: v.optional(racaEnum),
-  deficiencias: v.optional(v.array(deficienciaEnum)),
-  tipoRenda: v.optional(tipoRendaEnum),
-  rendaFamiliarFaixa: v.optional(rendaFamiliarFaixaEnum),
-  profissao: v.optional(v.string()),
-
-  // Address
-  cep: v.optional(v.string()),
-  endereco: v.optional(v.string()),
-  numero: v.optional(v.string()),
-  complemento: v.optional(v.string()),
-  bairro: v.optional(v.string()),
-  cidade: v.optional(v.string()),
-  estado: v.optional(v.string()),
-
-  // Term acceptance
-  termoAceitoEm: v.optional(v.number()),
-
-  // Ofertante specific fields
-  dataNascimento: v.optional(v.string()),
-  rg: v.optional(v.string()),
-  estadoCivil: v.optional(estadoCivilEnum),
-  onboardingCompleto: v.optional(v.boolean()),
-  documentosPendentes: v.optional(v.array(v.string())),
-
-  // Property selections (max 3)
-  propriedadesInteresse: v.optional(v.array(v.id('properties'))),
 
   // Status and timestamps
   status: userStatusEnum,
@@ -181,20 +161,19 @@ export const users = defineTable({
   criadoEm: v.number(),
   atualizadoEm: v.number(),
 
+  // Term acceptance
+  termoAceitoEm: v.optional(v.number()),
+
   // Data validation flags for SECID
   dadosValidados: v.optional(v.boolean()),
   dadosComErro: v.optional(v.boolean()),
   mensagemErroDados: v.optional(v.string()),
   erroReportadoEm: v.optional(v.number()),
 
-  // Phone uniqueness index support
-  loginType: v.optional(
-    v.union(
-      v.literal('beneficiary'),
-      v.literal('ofertante'),
-      v.literal('admin')
-    )
-  )
+  // Profile references (role-specific profile table IDs)
+  beneficiaryProfileId: v.optional(v.id('beneficiaryProfiles')),
+  ofertanteProfileId: v.optional(v.id('ofertanteProfiles')),
+  adminProfileId: v.optional(v.id('adminProfiles')),
 })
   .index('by_cpf', ['cpf'])
   .index('by_role', ['role'])
@@ -202,6 +181,109 @@ export const users = defineTable({
   .index('email', ['email'])
   .index('phone', ['phone'])
   .index('by_telefone', ['telefone'])
+  .index('by_beneficiary_profile', ['beneficiaryProfileId'])
+  .index('by_ofertante_profile', ['ofertanteProfileId'])
+  .index('by_admin_profile', ['adminProfileId'])
+
+// Beneficiary Profiles table - all beneficiary-specific data
+export const beneficiaryProfiles = defineTable({
+  userId: v.id('users'),
+  
+  // Personal details
+  rg: v.string(),
+  nomeResponsavelFamiliar: v.optional(v.string()),
+  nomeMae: v.optional(v.string()),
+  nomePai: v.optional(v.string()),
+  sexo: sexoEnum,
+  identidadeGenero: identidadeGeneroEnum,
+  raca: racaEnum,
+  deficiencias: v.array(deficienciaEnum),
+  
+  // Professional and income
+  profissao: v.string(),
+  empregador: v.optional(v.string()),
+  ramoAtividade: v.optional(v.string()),
+  tipoRenda: tipoRendaEnum,
+  rendaFamiliarFaixa: rendaFamiliarFaixaEnum,
+  
+  // Family composition
+  pessoasFamilia: v.number(),
+  mesesAluguelSocial: v.optional(v.number()),
+  possuiIdosoFamilia: v.boolean(),
+  chefiaFeminina: v.boolean(),
+  
+  // Address
+  cep: v.string(),
+  endereco: v.string(),
+  numero: v.string(),
+  complemento: v.optional(v.string()),
+  bairro: v.string(),
+  cidade: v.string(),
+  estado: v.string(),
+  empreendimento: v.optional(v.string()),
+  
+  // Contact
+  dddTelefoneFixo: v.optional(v.string()),
+  telefoneFixo: v.optional(v.string()),
+  dddTelefoneRecado: v.optional(v.string()),
+  telefoneRecado: v.optional(v.string()),
+  falarCom: v.optional(v.string()),
+  aceitaComunicacoes: v.boolean(),
+  
+  // Property selections (max 3)
+  propriedadesInteresse: v.optional(v.array(v.id('properties'))),
+  
+  // Timestamps
+  criadoEm: v.number(),
+  atualizadoEm: v.number(),
+})
+  .index('by_user', ['userId'])
+
+// Ofertante Profiles table - all ofertante-specific data
+export const ofertanteProfiles = defineTable({
+  userId: v.id('users'),
+  
+  // Personal details
+  rg: v.string(),
+  dataNascimento: v.string(),
+  estadoCivil: estadoCivilEnum,
+  
+  // Professional
+  profissao: v.string(),
+  
+  // Address
+  cep: v.string(),
+  endereco: v.string(),
+  numero: v.string(),
+  complemento: v.optional(v.string()),
+  bairro: v.string(),
+  cidade: v.string(),
+  estado: v.string(),
+  
+  // Onboarding status
+  onboardingCompleto: v.boolean(),
+  documentosPendentes: v.optional(v.array(v.string())),
+  
+  // Timestamps
+  criadoEm: v.number(),
+  atualizadoEm: v.number(),
+})
+  .index('by_user', ['userId'])
+
+// Admin Profiles table - minimal admin-specific data
+export const adminProfiles = defineTable({
+  userId: v.id('users'),
+  
+  // Admin-specific
+  nivelAcesso: adminNivelAcessoEnum,
+  departamento: v.optional(v.string()),
+  cargo: v.optional(v.string()),
+  
+  // Timestamps
+  criadoEm: v.number(),
+  atualizadoEm: v.number(),
+})
+  .index('by_user', ['userId'])
 
 // Properties table (simplified cadastro: endereço em linha única)
 export const properties = defineTable({
@@ -291,6 +373,9 @@ export const selectionsHistory = defineTable({
 export default defineSchema({
   ...authTablesWithoutUsers,
   users,
+  beneficiaryProfiles,
+  ofertanteProfiles,
+  adminProfiles,
   properties,
   documents,
   propertyImages,

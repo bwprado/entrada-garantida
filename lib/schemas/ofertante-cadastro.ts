@@ -25,7 +25,8 @@ export const estadoCivilLabels: Record<EstadoCivilOfertante, string> = {
   separado: "Separado(a)"
 }
 
-export const ofertanteCadastroSchema = z.object({
+// Base user schema (stored in users table)
+export const ofertanteUserBaseSchema = z.object({
   nome: z
     .string({ required_error: "Nome é obrigatório" })
     .trim()
@@ -42,7 +43,13 @@ export const ofertanteCadastroSchema = z.object({
   cpf: z
     .string({ required_error: "CPF é obrigatório" })
     .refine((v) => onlyDigits(v).length === 11, "CPF deve ter 11 dígitos")
-    .refine((v) => validaCPF(onlyDigits(v)), "CPF inválido"),
+    .refine((v) => validaCPF(onlyDigits(v)), "CPF inválido")
+})
+
+export type OfertanteUserBaseFormValues = z.infer<typeof ofertanteUserBaseSchema>
+
+// Profile schema (stored in ofertanteProfiles table)
+export const ofertanteProfileSchema = z.object({
   rg: z
     .string({ required_error: "RG é obrigatório" })
     .trim()
@@ -84,9 +91,13 @@ export const ofertanteCadastroSchema = z.object({
   estado: z
     .string({ required_error: "Estado é obrigatório" })
     .trim()
-    .length(2, "Use a sigla da UF"),
-  otp: z.string().optional().default("")
+    .length(2, "Use a sigla da UF")
 })
+
+export type OfertanteProfileFormValues = z.infer<typeof ofertanteProfileSchema>
+
+// Combined schema for form convenience
+export const ofertanteCadastroSchema = ofertanteUserBaseSchema.merge(ofertanteProfileSchema)
 
 export type OfertanteCadastroFormValues = z.infer<typeof ofertanteCadastroSchema>
 
@@ -112,6 +123,7 @@ export const ofertanteCadastroStep2Fields = [
   "estado"
 ] as const satisfies readonly (keyof OfertanteCadastroFormValues)[]
 
+// Note: OTP is now handled by Convex Auth, not stored in profile
 export const otpVerifySchema = z.object({
   otp: z
     .string()

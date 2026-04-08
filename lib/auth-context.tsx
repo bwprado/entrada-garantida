@@ -36,11 +36,14 @@ function errorMessage(err: unknown): string {
 }
 
 type AuthContextValue = {
-  user: Doc<'users'> | null | undefined
+  user: UserWithProfile | null | undefined
   isLoading: boolean
   isAuthenticated: boolean
   logout: (redirectTo?: string) => Promise<void>
-  assertBeneficiaryAndPrepareOtp: (cpf: string, telefone: string) => Promise<{
+  assertBeneficiaryAndPrepareOtp: (
+    cpf: string,
+    telefone: string
+  ) => Promise<{
     success: boolean
     telefoneMascarado?: string
     phoneE164?: string
@@ -93,10 +96,16 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+// Extended user type that includes profile fields
+export type UserWithProfile = Doc<'users'> & {
+  onboardingCompleto?: boolean
+  profile?: Doc<'ofertanteProfiles'> | Doc<'beneficiaryProfiles'> | Doc<'adminProfiles'> | null
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { isLoading: authLoading, isAuthenticated } = useConvexAuth()
   const { signIn, signOut } = useAuthActions()
-  const user = useQuery(api.users.getCurrentUserProfile)
+  const userWithProfile = useQuery(api.users.getCurrentUserWithProfile)
 
   const assertMutation = useMutation(api.users.assertBeneficiaryCpfTelefone)
   const registerOfertanteMutation = useMutation(api.users.registerOfertante)
@@ -107,18 +116,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     api.users.completeOfertanteOnboarding
   )
 
+  // Merge user and profile data, including onboardingCompleto from profile
+  const user = useMemo((): UserWithProfile | null | undefined => {
+    if (userWithProfile === undefined) return undefined
+    if (userWithProfile === null) return null
+    
+    const { user: userData, profile } = userWithProfile
+    
+    // Merge onboardingCompleto from profile into user object
+    const onboardingCompleto = profile?.onboardingCompleto ?? false
+    
+    return {
+      ...userData,
+      onboardingCompleto,
+      profile: profile || undefined
+    }
+  }, [userWithProfile])
+
   const isLoading = useMemo(() => {
     if (authLoading) return true
     if (isAuthenticated && user === undefined) return true
     return false
   }, [authLoading, isAuthenticated, user])
 
-  const logout = useCallback(async (redirectTo = '/login') => {
-    await signOut()
-    if (typeof window !== 'undefined') {
-      window.location.assign(redirectTo)
-    }
-  }, [signOut])
+  const logout = useCallback(
+    async (redirectTo = '/login') => {
+      await signOut()
+      if (typeof window !== 'undefined') {
+        window.location.assign(redirectTo)
+      }
+    },
+    [signOut]
+  )
 
   const assertBeneficiaryAndPrepareOtp = useCallback(
     async (cpf: string, telefone: string) => {
@@ -173,7 +202,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const res = await registerOfertanteMutation({ telefone, nome })
         if (!res.success) {
-          return { success: false as const, error: res.error ?? 'Erro ao cadastrar' }
+          return {
+            success: false as const,
+            error: res.error ?? 'Erro ao cadastrar'
+          }
         }
         return { success: true as const }
       } catch (e) {
@@ -237,6 +269,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }) => {
       try {
         const res = await completeOfertanteOnboardingMutation(args)
+        
         if (!res.success) {
           return {
             success: false as const,
@@ -282,9 +315,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ]
   )
 
-  return (
-    <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-  )
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export function useAuth(): AuthContextValue {
