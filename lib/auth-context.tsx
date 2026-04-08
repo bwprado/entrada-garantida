@@ -124,7 +124,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { user: userData, profile } = userWithProfile
     
     // Merge onboardingCompleto from profile into user object
-    const onboardingCompleto = profile?.onboardingCompleto ?? false
+    // Only ofertanteProfiles has onboardingCompleto field
+    let onboardingCompleto: boolean | undefined = undefined
+    if (userData.role === 'ofertante' && profile) {
+      // Type guard: profile is ofertanteProfiles which has onboardingCompleto
+      onboardingCompleto = (profile as Doc<'ofertanteProfiles'>).onboardingCompleto ?? false
+    }
     
     return {
       ...userData,
