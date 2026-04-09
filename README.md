@@ -1,6 +1,6 @@
 # Aquisição Assistida
 
-Sistema de Oferta de Imóveis para Aquisição Assistida - Governo do Maranhão / SEMAG
+Sistema de Oferta de Imóveis para Aquisição Assistida - Governo do Maranhão / SECID
 
 ## Configuração do Ambiente
 
@@ -269,4 +269,4 @@ Adicione as variáveis de ambiente no dashboard do Vercel.
 
 ## Licença
 
-Governo do Estado do Maranhão - SEMAG
+Governo do Estado do Maranhão - SECID

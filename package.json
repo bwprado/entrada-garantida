@@ -1,6 +1,6 @@
 {
   "name": "aquisicao-assistida",
-  "author": "Bruno Prado by SEMAG",
+  "author": "Bruno Prado by SECID",
   "version": "0.2.0",
   "private": true,
   "packageManager": "bun@1.3.7",

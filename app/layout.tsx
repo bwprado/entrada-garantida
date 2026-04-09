@@ -12,9 +12,9 @@ import type React from 'react'
 const geist = Geist({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Aquisição Assistida - Governo do Maranhão - SEMAG',
+  title: 'Aquisição Assistida - Governo do Maranhão - SECID',
   description:
-    'Programa estadual de subsídio para aquisição de imóveis - Governo do Estado do Maranhão - SEMAG',
+    'Programa estadual de subsídio para aquisição de imóveis - Governo do Estado do Maranhão - SECID',
   generator: 'Aquisição Assistida',
   icons: {
     icon: '/favicon.ico',
