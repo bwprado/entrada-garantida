@@ -11,16 +11,34 @@ import type React from 'react'
 
 const geist = Geist({ subsets: ['latin'] })
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: 'Aquisição Assistida - Governo do Maranhão - SECID',
   description:
     'Programa estadual de subsídio para aquisição de imóveis - Governo do Estado do Maranhão - SECID',
   generator: 'Aquisição Assistida',
+  openGraph: {
+    title: 'Aquisição Assistida - Governo do Maranhão - SECID',
+    description:
+      'Programa estadual de subsídio para aquisição de imóveis - Governo do Estado do Maranhão - SECID',
+    locale: 'pt_BR',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Aquisição Assistida - Governo do Maranhão - SECID',
+    description:
+      'Programa estadual de subsídio para aquisição de imóveis - Governo do Estado do Maranhão - SECID',
+  },
   icons: {
     icon: '/favicon.ico',
     shortcut: '/favicon.ico',
-    apple: '/favicon.ico'
-  }
+    apple: '/favicon.ico',
+  },
 }
 
 export default async function RootLayout({
