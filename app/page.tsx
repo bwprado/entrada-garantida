@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 
+import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -17,6 +18,7 @@ import {
 export default function LandingPage() {
   return (
     <div className="min-h-screen flex flex-col">
+      <Header />
       <section className="relative py-20 md:py-32 overflow-hidden h-[calc(100vh-80px)]">
         <div className="absolute inset-0 z-0">
           <Image
