@@ -31,12 +31,21 @@ export default function LandingPage() {
           <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/60" />
         </div>
         <div className="container mx-auto px-4 relative z-10 flex items-center justify-center h-full">
-          <div className="max-w-4xl mx-auto text-center">
+          <div className="max-w-4xl mx-auto text-center flex flex-col items-center gap-4">
+            <Image
+              src="/logo-secid-white.png"
+              alt="Governo do Maranhão e SECID"
+              width={500}
+              height={200}
+              className="object-contain"
+              priority
+            />
             <div className="inline-flex items-center gap-2 bg-white/95 text-program-blue-dark px-4 py-2 rounded-full text-sm font-medium mb-6 shadow-lg">
               <Shield className="w-4 h-4" />
               Iniciativa oficial do Governo do Maranhão
             </div>
-            <h2 className="text-4xl md:text-6xl font-bold mb-6 text-balance text-white drop-shadow-lg">
+
+            <h2 className="text-2xl md:text-6xl font-bold mb-6 text-balance text-white drop-shadow-lg">
               Aquisição Assistida para Sua Casa Própria
             </h2>
             <p className="text-xl text-white/95 mb-8 text-pretty leading-relaxed max-w-2xl mx-auto drop-shadow-md">

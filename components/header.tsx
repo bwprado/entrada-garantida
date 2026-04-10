@@ -34,10 +34,10 @@ export function Header({
           href="/"
           className="flex min-w-0 items-center gap-3 transition-opacity hover:opacity-80"
         >
-          <div className="relative w-[min(100%,260px)] max-w-[240px] shrink-0 h-12">
+          <div className="relative shrink-0 size-12 aspect-square">
             <Image
-              src="/secid-horizontal.png"
-              alt="Governo do Maranhão e SECID"
+              src="/icon.png"
+              alt="Icone do Aquisição Assistida"
               fill
               className="object-contain object-left"
               priority
