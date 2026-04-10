@@ -565,7 +565,9 @@ export function BeneficiaryFields({ control, isAdmin = false }: BeneficiaryField
                 />
               </FormControl>
               <div className="space-y-1 leading-none">
-                <FormLabel>Aceito receber comunicações sobre o programa</FormLabel>
+                <FormLabel>
+                  Aceito receber comunicações sobre a Aquisição Assistida
+                </FormLabel>
               </div>
             </FormItem>
           )}

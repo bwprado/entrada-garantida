@@ -35,7 +35,7 @@ export default function LoginHubPage() {
                 <User className="w-8 h-8 text-primary mb-2" />
                 <CardTitle className="text-lg">Beneficiário</CardTitle>
                 <CardDescription>
-                  CPF e celular cadastrados no programa
+                  CPF e celular cadastrados na Aquisição Assistida
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -50,7 +50,7 @@ export default function LoginHubPage() {
                 <Home className="w-8 h-8 text-primary mb-2" />
                 <CardTitle className="text-lg">Ofertante</CardTitle>
                 <CardDescription>
-                  Proprietários que ofertam imóveis no programa
+                  Proprietários que ofertam imóveis na Aquisição Assistida
                 </CardDescription>
               </CardHeader>
               <CardContent>

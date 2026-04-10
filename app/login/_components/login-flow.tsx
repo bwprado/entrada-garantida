@@ -533,7 +533,7 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
                   </CardTitle>
                   <CardDescription>
                     {variant === 'beneficiary' &&
-                      'Informe CPF e celular cadastrados no programa'}
+                      'Informe CPF e celular cadastrados na Aquisição Assistida'}
                     {variant === 'ofertante' &&
                       'Entre com seu celular ou cadastre-se para ofertar um imóvel'}
                     {variant === 'admin' &&
@@ -589,7 +589,8 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
                                 />
                               </FormControl>
                               <FormDescription>
-                                Digite o mesmo celular cadastrado no programa
+                                Digite o mesmo celular cadastrado na Aquisição
+                                Assistida
                               </FormDescription>
                               <FormMessage />
                             </FormItem>
@@ -636,7 +637,7 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
                         <p className="text-sm text-muted-foreground">
                           <Home className="w-4 h-4 inline mr-1" />
                           É proprietário de um imóvel? Cadastre-se para ofertar
-                          sua propriedade no programa.
+                          sua propriedade na Aquisição Assistida.
                         </p>
                       </div>
                       <form
@@ -1135,7 +1136,7 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
                 <CardHeader className="text-center">
                   <CardTitle className="text-2xl">Termo de Ciência</CardTitle>
                   <CardDescription>
-                    Leia atentamente as regras do programa
+                    Leia atentamente as regras da Aquisição Assistida
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -1144,7 +1145,7 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
                       TERMO DE CIÊNCIA E MANIFESTAÇÃO DE INTERESSE
                     </h3>
                     <p className="mb-3">
-                      Ao participar do programa Aquisição Assistida, você
+                      Ao participar da Aquisição Assistida, você
                       declara estar ciente de que:
                     </p>
                     <ul className="list-disc pl-5 space-y-2">
@@ -1184,7 +1185,8 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
                     </ul>
                     <p className="mt-4 font-bold">
                       Ao aceitar este termo, você manifesta seu interesse em
-                      participar do programa e declara estar ciente de todas as
+                      participar da Aquisição Assistida e declara estar ciente
+                      de todas as
                       regras acima.
                     </p>
                   </div>

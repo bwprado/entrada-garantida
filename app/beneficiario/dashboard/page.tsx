@@ -113,7 +113,7 @@ export default function BeneficiarioDashboardPage() {
               Bem-vindo, {userData?.nome || user?.nome || "Beneficiário"}
             </h2>
             <p className="text-muted-foreground">
-              Acompanhe o status da sua solicitação no programa
+              Acompanhe o status da sua solicitação na Aquisição Assistida
             </p>
           </div>
 

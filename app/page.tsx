@@ -7,7 +7,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import {
   ArrowRight,
   Building2,
-  CheckCircle2,
   FileText,
   Handshake,
   Home,
@@ -23,7 +22,7 @@ export default function LandingPage() {
         <div className="absolute inset-0 z-0">
           <Image
             src="/casas.png"
-            alt="Conjunto habitacional do Programa Aquisição Assistida"
+            alt="Conjunto habitacional da Aquisição Assistida"
             fill
             sizes="(max-width: 768px) 100vw, 50vw"
             className="object-cover antialiased brightness-70"
@@ -35,15 +34,15 @@ export default function LandingPage() {
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 bg-white/95 text-program-blue-dark px-4 py-2 rounded-full text-sm font-medium mb-6 shadow-lg">
               <Shield className="w-4 h-4" />
-              Programa Oficial do Governo do Maranhão
+              Iniciativa oficial do Governo do Maranhão
             </div>
             <h2 className="text-4xl md:text-6xl font-bold mb-6 text-balance text-white drop-shadow-lg">
               Aquisição Assistida para Sua Casa Própria
             </h2>
             <p className="text-xl text-white/95 mb-8 text-pretty leading-relaxed max-w-2xl mx-auto drop-shadow-md">
-              Programa de Aquisição Assistida para famílias desalojadas pelas
-              obras do PAC Rio Anil. Teto de R$ 200 mil para aquisição do
-              imóvel.
+              Iniciativa Aquisição Assistida para famílias desalojadas pelas
+              obras do PAC Rio Anil, em parceria com o Ministério das Cidades e
+              Caixa Econômica Federal.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
@@ -112,7 +111,7 @@ export default function LandingPage() {
               </div>
               <div>
                 <h3 className="text-3xl md:text-4xl font-bold mb-6 text-program-blue-dark">
-                  O Programa em Foco: Moradia Digna e Acesso ao Crédito
+                  Aquisição Assistida em foco: moradia digna e acesso ao crédito
                 </h3>
                 <div className="space-y-6">
                   <div className="flex gap-4">
@@ -124,7 +123,7 @@ export default function LandingPage() {
                         Conceito
                       </h4>
                       <p className="text-muted-foreground leading-relaxed">
-                        Programa de aquisição assistida para{' '}
+                        Aquisição assistida para{' '}
                         <strong>famílias desalojadas</strong> pelas obras do PAC
                         Rio Anil, garantindo acesso à moradia digna por meio de
                         subsidição na compra de imóveis.
@@ -176,8 +175,8 @@ export default function LandingPage() {
               Fluxograma: Estruturação e Operacionalização
             </h3>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              O programa é executado, coordenado e monitorado pela Secretaria de
-              Estado de Cidades e Desenvolvimento Urbano (SECID)
+              A iniciativa é executada, coordenada e monitorada pela Secretaria
+              de Estado de Cidades e Desenvolvimento Urbano (SECID)
             </p>
           </div>
           <div className="max-w-4xl mx-auto">
@@ -241,7 +240,7 @@ export default function LandingPage() {
               Tem um Imóvel para Vender?
             </h3>
             <p className="text-lg mb-8 opacity-95 leading-relaxed">
-              Cadastre seu imóvel e faça parte deste programa que vai
+              Cadastre seu imóvel e faça parte desta iniciativa que vai
               transformar a vida de famílias maranhenses desalojadas
             </p>
             <Button
@@ -263,12 +262,22 @@ export default function LandingPage() {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
             <div>
+              <div className="relative mb-4 h-28 w-28">
+                <Image
+                  src="/secid-squared.png"
+                  alt="Governo do Maranhão e SECID"
+                  fill
+                  className="object-contain object-left"
+                />
+              </div>
               <h4 className="font-bold mb-4 text-program-yellow-accent">
-                Programa Aquisição Assistida
+                Aquisição Assistida
               </h4>
               <p className="text-sm text-white/80 leading-relaxed">
-                Iniciativa do Governo do Estado do Maranhão para facilitar o
-                acesso à moradia digna para famílias maranhenses de baixa renda.
+                Iniciativa do Governo do Estado do Maranhão, em parceria com o
+                Ministério das Cidades e Caixa Econômica Federal no âmbito do
+                PAC Rio Anil, para facilitar o acesso à moradia digna para
+                famílias maranhenses de baixa renda beneficiárias do PAC.
               </p>
             </div>
             <div>
@@ -315,7 +324,7 @@ export default function LandingPage() {
                 Contato
               </h4>
               <p className="text-sm text-white/80 leading-relaxed">
-                Dúvidas sobre o programa?
+                Dúvidas sobre a Aquisição Assistida?
                 <br />
                 Entre em contato com a SECID - Secretaria de Estado de Cidades e
                 Desenvolvimento Urbano.

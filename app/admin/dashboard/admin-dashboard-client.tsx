@@ -109,7 +109,7 @@ export default function AdminDashboardClient() {
           <div className="mb-8">
             <h2 className="text-3xl font-bold mb-2">Painel Administrativo</h2>
             <p className="text-muted-foreground">
-              Gestão completa do Programa Habitacional do Maranhão
+              Gestão completa da Aquisição Assistida no Maranhão
             </p>
           </div>
 

@@ -74,7 +74,7 @@ export default function OfertanteDashboardPage() {
           <div className="mb-8">
             <h2 className="mb-2 text-2xl font-bold md:text-3xl">Meus Imóveis</h2>
             <p className="text-muted-foreground">
-              Gerencie suas propriedades disponibilizadas no programa
+              Gerencie suas propriedades disponibilizadas na Aquisição Assistida
             </p>
           </div>
 
@@ -170,7 +170,7 @@ export default function OfertanteDashboardPage() {
                     <div>
                       <CardTitle>Imóveis Cadastrados</CardTitle>
                       <CardDescription>
-                        Gerencie suas propriedades no programa
+                        Gerencie suas propriedades na Aquisição Assistida
                       </CardDescription>
                     </div>
                     <Button variant="outline" size="sm">
@@ -184,7 +184,8 @@ export default function OfertanteDashboardPage() {
                     <Home className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-semibold mb-2">Nenhum imóvel cadastrado</h3>
                     <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                      Cadastre seu primeiro imóvel para começar a participar do programa Aquisição Assistida.
+                      Cadastre seu primeiro imóvel para começar a participar da
+                      Aquisição Assistida.
                     </p>
                     <Button>
                       <Plus className="w-4 h-4 mr-2" />
@@ -339,7 +340,8 @@ export default function OfertanteDashboardPage() {
               Precisa de ajuda?
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Entre em contato com a SECID para dúvidas sobre o programa ou problemas com seu cadastro.
+              Entre em contato com a SECID para dúvidas sobre a Aquisição
+              Assistida ou problemas com seu cadastro.
             </p>
             <div className="text-sm space-y-1">
               <p><strong>Telefone:</strong> (98) 3198-5300</p>

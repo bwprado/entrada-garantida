@@ -130,7 +130,8 @@ export default function ImoveisClient() {
               Encontre Seu Imóvel
             </h2>
             <p className="text-muted-foreground text-lg">
-              Navegue pelos imóveis disponíveis no programa e escolha até 3 opções
+              Navegue pelos imóveis disponíveis na Aquisição Assistida e escolha
+              até 3 opções
             </p>
             
             {/* Selection Counter */}

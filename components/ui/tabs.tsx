@@ -2,13 +2,19 @@
 
 import * as React from 'react'
 import * as TabsPrimitive from '@radix-ui/react-tabs'
+import type {
+  TabsContentProps,
+  TabsListProps,
+  TabsProps,
+  TabsTriggerProps,
+} from '@radix-ui/react-tabs'
 
 import { cn } from '@/lib/utils'
 
 function Tabs({
   className,
   ...props
-}: React.ComponentProps<typeof TabsPrimitive.Root>) {
+}: TabsProps) {
   return (
     <TabsPrimitive.Root
       data-slot="tabs"
@@ -21,7 +27,7 @@ function Tabs({
 function TabsList({
   className,
   ...props
-}: React.ComponentProps<typeof TabsPrimitive.List>) {
+}: TabsListProps) {
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"
@@ -37,7 +43,7 @@ function TabsList({
 function TabsTrigger({
   className,
   ...props
-}: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
+}: TabsTriggerProps) {
   return (
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
@@ -53,7 +59,7 @@ function TabsTrigger({
 function TabsContent({
   className,
   ...props
-}: React.ComponentProps<typeof TabsPrimitive.Content>) {
+}: TabsContentProps) {
   return (
     <TabsPrimitive.Content
       data-slot="tabs-content"

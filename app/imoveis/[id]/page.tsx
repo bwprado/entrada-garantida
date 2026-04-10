@@ -296,7 +296,7 @@ export default async function ImovelDetalhesPage({
                           <p className="text-muted-foreground">
                             Empreendimentos
                           </p>
-                          <p className="font-medium">12 no programa</p>
+                          <p className="font-medium">12 na iniciativa</p>
                         </div>
                       </div>
                     </div>
@@ -312,7 +312,8 @@ export default async function ImovelDetalhesPage({
                 <CardHeader>
                   <CardTitle>Solicitar Este Imóvel</CardTitle>
                   <CardDescription>
-                    Faça sua solicitação para este imóvel através do programa
+                    Faça sua solicitação para este imóvel pela Aquisição
+                    Assistida
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -345,8 +346,8 @@ export default async function ImovelDetalhesPage({
                   </Button>
 
                   <p className="text-xs text-muted-foreground text-center leading-relaxed">
-                    Você precisa estar cadastrado e aprovado no programa para
-                    solicitar este imóvel
+                    Você precisa estar cadastrado e aprovado na Aquisição
+                    Assistida para solicitar este imóvel
                   </p>
                 </CardContent>
               </Card>
@@ -376,7 +377,7 @@ export default async function ImovelDetalhesPage({
                     <div>
                       <p className="font-medium text-sm mb-1">Financiamento</p>
                       <p className="text-sm text-muted-foreground">
-                        Disponível através do programa
+                        Disponível pela Aquisição Assistida
                       </p>
                     </div>
                   </div>
@@ -386,7 +387,7 @@ export default async function ImovelDetalhesPage({
                     <div>
                       <p className="font-medium text-sm mb-1">Status</p>
                       <p className="text-sm text-muted-foreground">
-                        Aprovado pelo programa
+                        Aprovado pela Aquisição Assistida
                       </p>
                     </div>
                   </div>
@@ -401,7 +402,7 @@ export default async function ImovelDetalhesPage({
                 <CardContent className="space-y-3">
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     Entre em contato com nossa equipe para mais informações
-                    sobre este imóvel ou sobre o programa.
+                    sobre este imóvel ou sobre a Aquisição Assistida.
                   </p>
                   <Button variant="outline" className="w-full bg-transparent">
                     Falar com Atendimento

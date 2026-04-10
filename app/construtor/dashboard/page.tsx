@@ -33,7 +33,7 @@ export default function ConstrutorDashboardPage() {
             <div>
               <h2 className="text-3xl font-bold mb-2">Construtora ABC Ltda</h2>
               <p className="text-muted-foreground">
-                Gerencie seus empreendimentos no programa
+                Gerencie seus empreendimentos na Aquisição Assistida
               </p>
             </div>
             <Button size="lg">
@@ -116,7 +116,7 @@ export default function ConstrutorDashboardPage() {
                 <div>
                   <CardTitle>Imóveis Cadastrados</CardTitle>
                   <CardDescription>
-                    Gerencie seus empreendimentos no programa
+                    Gerencie seus empreendimentos na Aquisição Assistida
                   </CardDescription>
                 </div>
                 <Button variant="outline" size="sm" className="bg-transparent">

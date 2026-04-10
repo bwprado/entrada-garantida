@@ -15,7 +15,9 @@ export function Header({
 }) {
   const right =
     actions != null ? (
-      <div className="flex flex-wrap items-center justify-end gap-2">{actions}</div>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {actions}
+      </div>
     ) : showLoginButton ? (
       <Button
         asChild
@@ -32,17 +34,18 @@ export function Header({
           href="/"
           className="flex min-w-0 items-center gap-3 transition-opacity hover:opacity-80"
         >
-          <div className="relative aspect-square size-14 shrink-0">
+          <div className="relative w-[min(100%,260px)] max-w-[240px] shrink-0 h-12">
             <Image
-              src="/icon.png"
-              alt="Programa Aquisição Assistida"
+              src="/secid-horizontal.png"
+              alt="Governo do Maranhão e SECID"
               fill
-              className="object-contain"
+              className="object-contain object-left"
+              priority
             />
           </div>
           <div className="min-w-0">
             <h1 className="text-xl font-bold leading-tight text-program-blue-dark">
-              Programa Aquisição Assistida
+              Aquisição Assistida
             </h1>
             <p className="text-xs text-muted-foreground">
               Governo do Estado do Maranhão

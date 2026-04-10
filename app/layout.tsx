@@ -19,12 +19,12 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: 'Aquisição Assistida - Governo do Maranhão - SECID',
   description:
-    'Programa estadual de subsídio para aquisição de imóveis - Governo do Estado do Maranhão - SECID',
+    'Iniciativa estadual de subsídio para aquisição de imóveis - Governo do Estado do Maranhão - SECID',
   generator: 'Aquisição Assistida',
   openGraph: {
     title: 'Aquisição Assistida - Governo do Maranhão - SECID',
     description:
-      'Programa estadual de subsídio para aquisição de imóveis - Governo do Estado do Maranhão - SECID',
+      'Iniciativa estadual de subsídio para aquisição de imóveis - Governo do Estado do Maranhão - SECID',
     locale: 'pt_BR',
     type: 'website',
   },
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Aquisição Assistida - Governo do Maranhão - SECID',
     description:
-      'Programa estadual de subsídio para aquisição de imóveis - Governo do Estado do Maranhão - SECID',
+      'Iniciativa estadual de subsídio para aquisição de imóveis - Governo do Estado do Maranhão - SECID',
   },
   icons: {
     icon: '/favicon.ico',
