@@ -1,4 +1,3 @@
-import Image from 'next/image'
 import { ImageResponse } from 'next/og'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -27,7 +26,8 @@ export async function createShareImageResponse() {
             'linear-gradient(165deg, #e8f2fa 0%, #ffffff 55%, #f0f7fc 100%)'
         }}
       >
-        <Image
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src={logoSrc}
           alt=""
           height={200}

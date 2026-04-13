@@ -19,17 +19,14 @@ export function Header({
         {actions}
       </div>
     ) : showLoginButton ? (
-      <Button
-        asChild
-        className="bg-program-green-primary hover:bg-program-green-hover text-white"
-      >
+      <Button asChild className="shadow-brand-md">
         <Link href="/login">Acessar Sistema</Link>
       </Button>
     ) : null
 
   return (
-    <header className="border-b sticky top-0 z-50 drop-shadow-md min-h-20 bg-white">
-      <div className="container mx-auto flex min-h-20 flex-wrap items-center justify-between gap-3 px-4 py-3">
+    <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto flex min-h-20 flex-wrap items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 max-w-7xl py-3">
         <Link
           href="/"
           className="flex min-w-0 items-center gap-3 transition-opacity hover:opacity-80"
@@ -44,7 +41,7 @@ export function Header({
             />
           </div>
           <div className="min-w-0">
-            <h1 className="text-xl font-bold leading-tight text-program-blue-dark">
+            <h1 className="text-xl font-bold leading-tight text-foreground tracking-tight">
               Aquisição Assistida
             </h1>
             <p className="text-xs text-muted-foreground">
