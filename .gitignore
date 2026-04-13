@@ -28,3 +28,5 @@ bun-debug.log*
 next-env.d.ts
 
 .vercel
+.claude
+.agents

@@ -1,57 +1,103 @@
 'use client'
 
-import type { ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 
+import { MobileNav } from '@/components/1/mobile-nav'
+import { navLinks } from '@/components/header-nav-links'
 import { Button } from '@/components/ui/button'
+import { useScroll } from '@/hooks/use-scroll'
+import { cn } from '@/lib/utils'
+
+import type { ReactNode } from 'react'
 
 export function Header({
   showLoginButton = true,
-  actions
+  actions,
+  floatingScrollExpand: _floatingScrollExpand = false
 }: {
   showLoginButton?: boolean
   actions?: ReactNode
+  floatingScrollExpand?: boolean
 }) {
-  const right =
+  const scrolled = useScroll(10)
+
+  const desktopCtas =
     actions != null ? (
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        {actions}
-      </div>
+      <div className="flex items-center gap-2">{actions}</div>
     ) : showLoginButton ? (
-      <Button asChild className="shadow-brand-md">
-        <Link href="/login">Acessar Sistema</Link>
-      </Button>
+      <>
+        <Button asChild size="sm" variant="outline">
+          <Link href="/login">Acessar sistema</Link>
+        </Button>
+        <Button asChild size="sm" className="shadow-brand-md">
+          <Link href="/ofertante/cadastro">Cadastro ofertante</Link>
+        </Button>
+      </>
     ) : null
 
+  const mobileDrawerFooter =
+    actions != null ? (
+      <div className="flex flex-col gap-2">{actions}</div>
+    ) : showLoginButton ? undefined : null
+
   return (
-    <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex min-h-20 flex-wrap items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 max-w-7xl py-3">
+    <header
+      className={cn(
+        'sticky top-0 z-50 mx-auto w-full max-w-4xl md:rounded-md md:transition-all md:ease-out',
+        {
+          'border-border bg-background/95 backdrop-blur-sm supports-[backdrop-filter]:bg-background/50 md:top-2 md:max-w-3xl':
+            scrolled
+        }
+      )}
+    >
+      <nav
+        className={cn(
+          'flex h-20 w-full items-center justify-between gap-2 px-4 md:h-18 md:transition-all md:ease-out',
+          {
+            'md:px-2': scrolled
+          }
+        )}
+      >
         <Link
+          className="flex min-w-0 max-w-[min(100%,18rem)] shrink items-center gap-2 rounded-md p-2 hover:bg-muted dark:hover:bg-muted/50 sm:max-w-xs"
           href="/"
-          className="flex min-w-0 items-center gap-3 transition-opacity hover:opacity-80"
         >
-          <div className="relative shrink-0 size-12 aspect-square">
+          <span className="relative size-8 shrink-0">
             <Image
               src="/icon.png"
-              alt="Icone do Aquisição Assistida"
+              alt=""
               fill
               className="object-contain object-left"
+              sizes="48px"
               priority
             />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-xl font-bold leading-tight text-foreground tracking-tight">
-              Aquisição Assistida
-            </h1>
-            <p className="text-xs text-muted-foreground">
-              Governo do Estado do Maranhão
-            </p>
-          </div>
+          </span>
+          <span className="min-w-0 truncate text-left font-semibold leading-tight">
+            Aquisição Assistida
+          </span>
         </Link>
 
-        {right}
-      </div>
+        <div className="hidden min-w-0 flex-1 items-center justify-end gap-2 md:flex">
+          <div className="flex min-w-0 flex-wrap items-center justify-end">
+            {navLinks.map((link) => (
+              <Button asChild key={link.label} variant="ghost">
+                <Link href={link.href}>{link.label}</Link>
+              </Button>
+            ))}
+          </div>
+          {desktopCtas}
+        </div>
+
+        <div className="flex shrink-0 items-center justify-end gap-2 md:hidden">
+          {actions != null ? (
+            <div className="flex max-w-[min(100%,14rem)] flex-wrap items-center justify-end gap-1">
+              {actions}
+            </div>
+          ) : null}
+          <MobileNav footer={mobileDrawerFooter ?? undefined} />
+        </div>
+      </nav>
     </header>
   )
 }

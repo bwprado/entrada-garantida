@@ -1,14 +1,14 @@
 import Image from 'next/image'
 import Link from 'next/link'
 
-import { Header } from '@/components/header'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import {
   AnimatedSection,
   StaggerContainer,
   StaggerItem
 } from '@/components/animations'
+import { Header } from '@/components/header'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   ArrowRight,
   Building2,
@@ -22,11 +22,11 @@ import {
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
+    <div className="min-h-screen flex flex-col relative">
+      <Header floatingScrollExpand />
 
-      {/* Hero Section - Full viewport height with scroll indicator */}
-      <section className="relative min-h-screen flex flex-col overflow-hidden">
+      {/* Hero: overlap header so the image reaches the viewport top (header stays z-50 on top). */}
+      <section className="relative h-screen flex flex-col overflow-hidden">
         {/* Background Image */}
         <div className="absolute inset-0 z-0">
           <Image
@@ -141,7 +141,7 @@ export default function LandingPage() {
       </section>
 
       {/* About Section - Asymmetric Layout */}
-      <section className="py-20 md:py-28 bg-gradient-to-br from-muted/50 to-background">
+      <section className="py-20 md:py-34 bg-gradient-to-br from-muted/50 to-background">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
             {/* Image - Takes more space */}
@@ -359,7 +359,7 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 md:py-28 bg-primary text-primary-foreground relative overflow-hidden">
+      <section className="py-20 md:py-34 bg-primary text-primary-foreground relative overflow-hidden">
         {/* Background decoration */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2" />
