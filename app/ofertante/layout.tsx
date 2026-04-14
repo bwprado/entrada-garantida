@@ -1,8 +1,6 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { usePathname } from 'next/navigation'
-import { useConvexAuth } from 'convex/react'
 
 import { Header } from '@/components/header'
 import { OfertanteHeaderActions } from '@/components/ofertante-header-actions'

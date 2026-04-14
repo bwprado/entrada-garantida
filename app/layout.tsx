@@ -6,14 +6,16 @@ import { Analytics } from '@vercel/analytics/next'
 import { Geist } from 'next/font/google'
 import { Toaster } from 'sonner'
 
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import type React from 'react'
 
 const geist = Geist({ subsets: ['latin'] })
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+  (process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : 'http://localhost:3000')
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -26,19 +28,29 @@ export const metadata: Metadata = {
     description:
       'Iniciativa estadual de subsídio para aquisição de imóveis - Governo do Estado do Maranhão - SECID',
     locale: 'pt_BR',
-    type: 'website',
+    type: 'website'
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Aquisição Assistida - Governo do Maranhão - SECID',
     description:
-      'Iniciativa estadual de subsídio para aquisição de imóveis - Governo do Estado do Maranhão - SECID',
+      'Iniciativa estadual de subsídio para aquisição de imóveis - Governo do Estado do Maranhão - SECID'
   },
   icons: {
     icon: '/favicon.ico',
     shortcut: '/favicon.ico',
-    apple: '/favicon.ico',
-  },
+    apple: '/favicon.ico'
+  }
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  viewportFit: 'cover',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  colorScheme: 'light',
+  themeColor: [{ media: '(prefers-color-scheme: light)', color: 'white' }]
 }
 
 export default async function RootLayout({
