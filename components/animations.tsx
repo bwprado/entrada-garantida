@@ -13,9 +13,7 @@ interface AnimatedSectionProps {
   once?: boolean
 }
 
-type AnimatedSectionDirection = NonNullable<AnimatedSectionProps["direction"]>
-
-const directionVariants: Record<AnimatedSectionDirection, Variants> = {
+const directionVariants: Record<string, { hidden: object; visible: object }> = {
   up: {
     hidden: { opacity: 0, y: 30 },
     visible: { opacity: 1, y: 0 }
@@ -109,78 +107,76 @@ interface StaggerItemProps {
   direction?: "up" | "down" | "left" | "right" | "scale"
 }
 
-type StaggerItemDirection = NonNullable<StaggerItemProps["direction"]>
-
-const staggerItemVariantsByDirection: Record<StaggerItemDirection, Variants> = {
-  up: {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 30
-      }
-    }
-  },
-  down: {
-    hidden: { opacity: 0, y: -20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 30
-      }
-    }
-  },
-  left: {
-    hidden: { opacity: 0, x: -20 },
-    visible: {
-      opacity: 1,
-      x: 0,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 30
-      }
-    }
-  },
-  right: {
-    hidden: { opacity: 0, x: 20 },
-    visible: {
-      opacity: 1,
-      x: 0,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 30
-      }
-    }
-  },
-  scale: {
-    hidden: { opacity: 0, scale: 0.95 },
-    visible: {
-      opacity: 1,
-      scale: 1,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 30
-      }
-    }
-  }
-}
-
 export function StaggerItem({
   children,
   className,
   direction = "up"
 }: StaggerItemProps) {
+  const itemVariants: Variants = {
+    up: {
+      hidden: { opacity: 0, y: 20 },
+      visible: {
+        opacity: 1,
+        y: 0,
+        transition: {
+          type: "spring",
+          stiffness: 300,
+          damping: 30
+        }
+      }
+    },
+    down: {
+      hidden: { opacity: 0, y: -20 },
+      visible: {
+        opacity: 1,
+        y: 0,
+        transition: {
+          type: "spring",
+          stiffness: 300,
+          damping: 30
+        }
+      }
+    },
+    left: {
+      hidden: { opacity: 0, x: -20 },
+      visible: {
+        opacity: 1,
+        x: 0,
+        transition: {
+          type: "spring",
+          stiffness: 300,
+          damping: 30
+        }
+      }
+    },
+    right: {
+      hidden: { opacity: 0, x: 20 },
+      visible: {
+        opacity: 1,
+        x: 0,
+        transition: {
+          type: "spring",
+          stiffness: 300,
+          damping: 30
+        }
+      }
+    },
+    scale: {
+      hidden: { opacity: 0, scale: 0.95 },
+      visible: {
+        opacity: 1,
+        scale: 1,
+        transition: {
+          type: "spring",
+          stiffness: 300,
+          damping: 30
+        }
+      }
+    }
+  }
+
   return (
-    <motion.div variants={staggerItemVariantsByDirection[direction]} className={className}>
+    <motion.div variants={itemVariants} className={className}>
       {children}
     </motion.div>
   )

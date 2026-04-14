@@ -26,7 +26,7 @@ export default function LandingPage() {
       <Header floatingScrollExpand />
 
       {/* Hero: overlap header so the image reaches the viewport top (header stays z-50 on top). */}
-      <section className="relative h-screen flex flex-col overflow-hidden">
+      <section className="relative min-h-[calc(100dvh-5rem)] md:h-screen flex flex-col overflow-hidden">
         {/* Background Image */}
         <div className="absolute inset-0 z-0">
           <Image
@@ -64,7 +64,7 @@ export default function LandingPage() {
             </AnimatedSection>
 
             <AnimatedSection delay={0.2} direction="up">
-              <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-6 text-white drop-shadow-lg tracking-tight leading-tight">
+              <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold mb-6 text-white drop-shadow-lg tracking-tight leading-tight">
                 Aquisição Assistida para Sua Casa Própria
               </h1>
             </AnimatedSection>
@@ -395,11 +395,12 @@ export default function LandingPage() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
             <div>
-              <div className="relative mb-6 h-24 w-24">
+              <div className="relative mb-6 h-32 w-auto">
                 <Image
-                  src="/secid-squared.png"
+                  src="/logo-secid-horizontal.png"
                   alt="Governo do Maranhão e SECID"
                   fill
+                  sizes="200px"
                   className="object-contain object-left"
                 />
               </div>

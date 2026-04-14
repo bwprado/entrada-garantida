@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 
-import { MobileNav } from '@/components/1/mobile-nav'
+import { MobileNav } from '@/components/mobile-nav'
 import { navLinks } from '@/components/header-nav-links'
 import { Button } from '@/components/ui/button'
 import { useScroll } from '@/hooks/use-scroll'
