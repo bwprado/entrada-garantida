@@ -143,10 +143,8 @@ export const users = defineTable({
   // Convex Auth profile fields
   name: v.optional(v.string()),
   image: v.optional(v.string()),
-  emailVerificationTime: v.optional(v.number()),
   phone: v.optional(v.string()),
   phoneVerificationTime: v.optional(v.number()),
-  isAnonymous: v.optional(v.boolean()),
 
   role: userRoleEnum,
   cpf: v.string(),
@@ -157,8 +155,6 @@ export const users = defineTable({
 
   // Status and timestamps
   status: userStatusEnum,
-  otpCodigo: v.optional(v.string()),
-  otpExpiraEm: v.optional(v.number()),
   criadoEm: v.number(),
   atualizadoEm: v.number(),
 

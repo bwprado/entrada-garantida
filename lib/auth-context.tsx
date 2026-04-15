@@ -105,7 +105,11 @@ export type UserWithProfile = Doc<'users'> & {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { isLoading: authLoading, isAuthenticated } = useConvexAuth()
   const { signIn, signOut } = useAuthActions()
-  const userWithProfile = useQuery(api.users.getCurrentUserWithProfile)
+  const shouldFetchUser = !authLoading && isAuthenticated
+  const userWithProfile = useQuery(
+    api.users.getCurrentUserWithProfile,
+    shouldFetchUser ? {} : 'skip'
+  )
 
   const assertMutation = useMutation(api.users.assertBeneficiaryCpfTelefone)
   const registerOfertanteMutation = useMutation(api.users.registerOfertante)
@@ -118,6 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Merge user and profile data, including onboardingCompleto from profile
   const user = useMemo((): UserWithProfile | null | undefined => {
+    if (!shouldFetchUser) return null
     if (userWithProfile === undefined) return undefined
     if (userWithProfile === null) return null
     
@@ -136,7 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       onboardingCompleto,
       profile: profile || undefined
     }
-  }, [userWithProfile])
+  }, [shouldFetchUser, userWithProfile])
 
   const isLoading = useMemo(() => {
     if (authLoading) return true

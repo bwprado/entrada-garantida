@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import {
   Table,
@@ -23,25 +22,27 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table'
-import {
-  ArrowLeft,
-  Upload,
-  FileSpreadsheet,
-  FileText,
-  CheckCircle2,
-  XCircle,
-  Loader2,
-  Download
-} from 'lucide-react'
-import { useMutation, useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import type { Id } from '@/convex/_generated/dataModel'
 import { extractPdfPlainText } from '@/lib/beneficiarios/extract-pdf-text'
-import { normalizePhone } from '@/lib/normalize-phone'
 import {
   parseAnexoIListagemPlainText,
   type AnexoIParsedRow
 } from '@/lib/beneficiarios/parse-anexo-i-listagem'
+import { normalizePhone } from '@/lib/normalize-phone'
+import { useMutation, useQuery } from 'convex/react'
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Download,
+  FileSpreadsheet,
+  FileText,
+  Loader2,
+  Upload,
+  XCircle
+} from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useRef, useState } from 'react'
 
 interface ParsedBeneficiary {
   cpf: string
@@ -96,8 +97,7 @@ function buildParsedFromCore(
 ): ParsedBeneficiary {
   const errors: string[] = []
   const c = cpf.replace(/\D/g, '')
-  const phone = normalizePhone(telefoneDigits, 'BR')
-  const tel = phone.sms()
+  const phone = normalizePhone(telefoneDigits, 'BR', '98')
 
   if (c.length !== 11) errors.push('CPF inválido (deve ter 11 dígitos)')
   if (!nome || nome.length < 3) errors.push('Nome inválido')
@@ -109,7 +109,7 @@ function buildParsedFromCore(
   return {
     cpf: c,
     nome: nome.trim(),
-    telefone: tel,
+    telefone: phone.isValid() ? phone.save() : telefoneDigits,
     mesesAluguelSocial,
     possuiIdosoFamilia,
     chefiaFeminina,
@@ -591,8 +591,7 @@ export default function AdminBulkUploadPage() {
                   ) : (
                     <>
                       <Upload className="w-4 h-4 mr-2" />
-                      Importar {parsedData.length}{' '}
-                      beneficiários
+                      Importar {parsedData.length} beneficiários
                     </>
                   )}
                 </Button>

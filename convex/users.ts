@@ -62,20 +62,36 @@ export const getCurrentUserWithProfile = query({
       const profile = await ctx.db.get(user.beneficiaryProfileId)
       const properties = []
 
-      if (profile && profile.propriedadesInteresse && profile.propriedadesInteresse.length > 0) {
+      if (
+        profile &&
+        profile.propriedadesInteresse &&
+        profile.propriedadesInteresse.length > 0
+      ) {
         for (const propertyId of profile.propriedadesInteresse ?? []) {
           const property = await ctx.db.get(propertyId)
           if (property) {
             properties.push(property)
           }
         }
-        
       }
-      return { user, profile: await ctx.db.get(user.beneficiaryProfileId), properties }
-    } else if (user.role === 'ofertante' && user.ofertanteProfileId) {
-      return { user, profile: await ctx.db.get(user.ofertanteProfileId) }
-    } else if (user.role === 'admin' && user.adminProfileId) {
-      return { user, profile: await ctx.db.get(user.adminProfileId) }
+      return {
+        user,
+        profile: await ctx.db.get(user.beneficiaryProfileId),
+        properties
+      }
+    }
+    if (user.role === 'ofertante') {
+      const profile = user.ofertanteProfileId
+        ? await ctx.db.get(user.ofertanteProfileId)
+        : null
+      return { user, profile }
+    }
+
+    if (user.role === 'admin') {
+      const profile = user.adminProfileId
+        ? await ctx.db.get(user.adminProfileId)
+        : null
+      return { user, profile }
     }
 
     return null

@@ -1,8 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,14 +11,24 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Loader2, CheckCircle2, User, MapPin, CreditCard, Calendar } from "lucide-react";
+import { api } from "@/convex/_generated/api";
+import type { Doc } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/lib/auth-context";
-import { cpfMaskOptions, phoneMaskOptions, cepMaskOptions } from "@/lib/masks";
+import { cepMaskOptions, cpfMaskOptions } from "@/lib/masks";
 import { useMaskito } from "@maskito/react";
 import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { ArrowLeft, CheckCircle2, Loader2, MapPin, User } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 type Step = 1 | 2 | 3;
+
+function isOfertanteProfile(
+  p: Doc<"beneficiaryProfiles"> | Doc<"ofertanteProfiles"> | Doc<"adminProfiles"> | null | undefined
+): p is Doc<"ofertanteProfiles"> {
+  return !!p && "onboardingCompleto" in p;
+}
 
 export default function OfertanteOnboardingPage() {
   const router = useRouter();
@@ -50,10 +57,11 @@ export default function OfertanteOnboardingPage() {
 
   // Pre-fill form data from profile when it loads
   useEffect(() => {
-    if (userWithProfile === undefined) return; // Still loading
-    
+    if (userWithProfile === undefined || userWithProfile === null) return; // Still loading / signed out
+
     const { user: userData, profile: profileData } = userWithProfile;
-    
+    const ofProfile = isOfertanteProfile(profileData) ? profileData : null;
+
     if (userData) {
       setNome(userData.nome || "");
       // CPF might be on user or profile
@@ -61,18 +69,16 @@ export default function OfertanteOnboardingPage() {
         setCpf(userData.cpf);
       }
     }
-    
-    if (profileData) {
-      // Pre-fill from profile data
-      if (profileData.cpf) setCpf(profileData.cpf);
-      if (profileData.dataNascimento) setDataNascimento(profileData.dataNascimento);
-      if (profileData.cep) setCep(profileData.cep);
-      if (profileData.endereco) setEndereco(profileData.endereco);
-      if (profileData.numero) setNumero(profileData.numero);
-      if (profileData.complemento) setComplemento(profileData.complemento);
-      if (profileData.bairro) setBairro(profileData.bairro);
-      if (profileData.cidade) setCidade(profileData.cidade);
-      if (profileData.estado) setEstado(profileData.estado);
+
+    if (ofProfile) {
+      if (ofProfile.dataNascimento) setDataNascimento(ofProfile.dataNascimento);
+      if (ofProfile.cep) setCep(ofProfile.cep);
+      if (ofProfile.endereco) setEndereco(ofProfile.endereco);
+      if (ofProfile.numero) setNumero(ofProfile.numero);
+      if (ofProfile.complemento) setComplemento(ofProfile.complemento);
+      if (ofProfile.bairro) setBairro(ofProfile.bairro);
+      if (ofProfile.cidade) setCidade(ofProfile.cidade);
+      if (ofProfile.estado) setEstado(ofProfile.estado);
     }
     
     setIsInitializing(false);
@@ -157,15 +163,18 @@ export default function OfertanteOnboardingPage() {
 
     // Include all fields from profile if they were already saved during cadastro
     const profileData = userWithProfile?.profile;
-    
+    const ofertanteFromProfile = isOfertanteProfile(profileData)
+      ? profileData
+      : null;
+
     const result = await completeOnboarding({
       nome,
       cpf: cpf.replace(/\D/g, ""),
       dataNascimento,
       // Include fields from profile that were saved during cadastro
-      rg: profileData?.rg || undefined,
-      profissao: profileData?.profissao || undefined,
-      estadoCivil: profileData?.estadoCivil || undefined,
+      rg: ofertanteFromProfile?.rg || undefined,
+      profissao: ofertanteFromProfile?.profissao || undefined,
+      estadoCivil: ofertanteFromProfile?.estadoCivil || undefined,
       cep: cep.replace(/\D/g, ""),
       endereco,
       numero,
@@ -190,9 +199,12 @@ export default function OfertanteOnboardingPage() {
     return `${day}/${month}/${year}`;
   };
 
-  // Check if profile data exists from cadastro
-  const hasProfileData = !!profile && (
-    profile.cpf || profile.dataNascimento || profile.cep || profile.endereco
+  const ofertanteProfileForUi = isOfertanteProfile(profile) ? profile : null;
+  const hasProfileData = !!(
+    user?.cpf ||
+    ofertanteProfileForUi?.dataNascimento ||
+    ofertanteProfileForUi?.cep ||
+    ofertanteProfileForUi?.endereco
   );
 
   return (
@@ -520,7 +532,11 @@ export default function OfertanteOnboardingPage() {
 
           {/* Logout Option */}
           <div className="mt-8 text-center">
-            <Button variant="ghost" onClick={logout} className="text-muted-foreground">
+            <Button
+              variant="ghost"
+              onClick={() => void logout()}
+              className="text-muted-foreground"
+            >
               Sair da conta
             </Button>
           </div>

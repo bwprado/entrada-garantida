@@ -47,6 +47,7 @@ import { api } from '@/convex/_generated/api'
 import { useConvex } from 'convex/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { useForm, type FieldPath, type UseFormReturn } from 'react-hook-form'
 import { z } from 'zod'
 
@@ -423,6 +424,8 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
       )
       if (!result.success) {
         setError(result.error || 'Código inválido')
+      } else {
+        toast.success('Login realizado')
       }
     } else {
       const result = await completePhoneSignIn(
@@ -432,6 +435,8 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
       )
       if (!result.success) {
         setError(result.error || 'Código inválido')
+      } else {
+        toast.success('Login realizado')
       }
     }
 
