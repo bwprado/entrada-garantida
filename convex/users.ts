@@ -9,6 +9,7 @@ import { v } from 'convex/values'
 import { normalizePhone } from '../lib/normalize-phone'
 import { DataModel, Doc, Id } from './_generated/dataModel'
 import { internalMutation, mutation, query } from './_generated/server'
+import { verifyAdmin, verifySelfOrAdmin } from './authz'
 import {
   estadoCivilEnum,
   sexoEnum,
@@ -78,6 +79,7 @@ export const getCurrentUserWithProfile = query({
 export const getBeneficiaryProfile = query({
   args: { userId: v.id('users') },
   handler: async (ctx, args) => {
+    await verifySelfOrAdmin(ctx, args.userId)
     const user = await ctx.db.get(args.userId)
     if (!user || user.role !== 'beneficiary' || !user.beneficiaryProfileId) {
       return null
@@ -90,6 +92,7 @@ export const getBeneficiaryProfile = query({
 export const getOfertanteProfile = query({
   args: { userId: v.id('users') },
   handler: async (ctx, args) => {
+    await verifySelfOrAdmin(ctx, args.userId)
     const user = await ctx.db.get(args.userId)
     if (!user || user.role !== 'ofertante' || !user.ofertanteProfileId) {
       return null
@@ -102,6 +105,7 @@ export const getOfertanteProfile = query({
 export const getAdminProfile = query({
   args: { userId: v.id('users') },
   handler: async (ctx, args) => {
+    await verifySelfOrAdmin(ctx, args.userId)
     const user = await ctx.db.get(args.userId)
     if (!user || user.role !== 'admin' || !user.adminProfileId) {
       return null
@@ -115,6 +119,7 @@ export const getAdminProfile = query({
 export const getByCPF = query({
   args: { cpf: v.string() },
   handler: async (ctx, args): Promise<Doc<'users'> | null> => {
+    await verifyAdmin(ctx)
     const cleaned = cleanCPF(args.cpf)
     if (!isValidCPFLength(cleaned)) return null
 
@@ -128,6 +133,7 @@ export const getByCPF = query({
 export const getById = query({
   args: { id: v.id('users') },
   handler: async (ctx, args): Promise<Doc<'users'> | null> => {
+    await verifySelfOrAdmin(ctx, args.id)
     return await ctx.db.get(args.id)
   }
 })
@@ -145,6 +151,7 @@ export const getBeneficiaries = query({
     )
   },
   handler: async (ctx, args) => {
+    await verifyAdmin(ctx)
     if (args.status) {
       return await ctx.db
         .query('users')
@@ -174,6 +181,7 @@ export const getBeneficiariesWithProfiles = query({
     )
   },
   handler: async (ctx, args) => {
+    await verifyAdmin(ctx)
     let users
     if (args.status) {
       users = await ctx.db
@@ -211,6 +219,7 @@ export const getBeneficiariesPaginated = query({
     sortDirection: v.optional(v.union(v.literal('asc'), v.literal('desc')))
   },
   handler: async (ctx, args) => {
+    await verifyAdmin(ctx)
     const tableQuery: QueryInitializer<DataModel['users']> =
       ctx.db.query('users')
 
@@ -245,6 +254,7 @@ export const getBeneficiariesCount = query({
     searchQuery: v.optional(v.string())
   },
   handler: async (ctx, args) => {
+    await verifyAdmin(ctx)
     const searchQuery = args.searchQuery?.trim()
     const tableQuery: QueryInitializer<DataModel['users']> =
       ctx.db.query('users')
@@ -268,6 +278,7 @@ export const getBeneficiariesCount = query({
 export const getBeneficiariesForRanking = query({
   args: {},
   handler: async (ctx) => {
+    await verifyAdmin(ctx)
     const users = await ctx.db
       .query('users')
       .withIndex('by_role_and_status', (q) =>
@@ -314,6 +325,7 @@ export const getBeneficiariesForRanking = query({
 export const getAdmins = query({
   args: {},
   handler: async (ctx) => {
+    await verifyAdmin(ctx)
     return await ctx.db
       .query('users')
       .withIndex('by_role', (q) => q.eq('role', 'admin'))
@@ -324,6 +336,7 @@ export const getAdmins = query({
 export const getOfertantes = query({
   args: {},
   handler: async (ctx) => {
+    await verifyAdmin(ctx)
     return await ctx.db
       .query('users')
       .withIndex('by_role', (q) => q.eq('role', 'ofertante'))
@@ -334,6 +347,7 @@ export const getOfertantes = query({
 export const getOfertantesWithProfiles = query({
   args: {},
   handler: async (ctx) => {
+    await verifyAdmin(ctx)
     const users = await ctx.db
       .query('users')
       .withIndex('by_role', (q) => q.eq('role', 'ofertante'))
@@ -354,6 +368,7 @@ export const getOfertantesWithProfiles = query({
 export const getConstrutores = query({
   args: {},
   handler: async (ctx) => {
+    await verifyAdmin(ctx)
     return await ctx.db
       .query('users')
       .withIndex('by_role', (q) => q.eq('role', 'construtor'))
@@ -439,6 +454,7 @@ export const updateBeneficiaryProfile = mutation({
     chefiaFeminina: v.optional(v.boolean())
   },
   handler: async (ctx, args) => {
+    const actor = await verifySelfOrAdmin(ctx, args.userId)
     const user = await ctx.db.get(args.userId)
     if (!user) {
       throw new Error('Usuário não encontrado')
@@ -486,9 +502,7 @@ export const updateBeneficiaryProfile = mutation({
       updates.aceitaComunicacoes = args.aceitaComunicacoes
 
     // Personal fields (only admin can update these)
-    const currentUserId = await getAuthUserId(ctx)
-    const currentUser = currentUserId ? await ctx.db.get(currentUserId) : null
-    const isAdmin = currentUser?.role === 'admin'
+    const isAdmin = actor.role === 'admin'
 
     if (isAdmin) {
       if (args.rg !== undefined) updates.rg = args.rg
@@ -554,6 +568,7 @@ export const updateOfertanteProfile = mutation({
     profissao: v.optional(v.string())
   },
   handler: async (ctx, args) => {
+    const actor = await verifySelfOrAdmin(ctx, args.userId)
     const user = await ctx.db.get(args.userId)
     if (!user) {
       throw new Error('Usuário não encontrado')
@@ -572,14 +587,7 @@ export const updateOfertanteProfile = mutation({
       throw new Error('Perfil de ofertante não encontrado')
     }
 
-    const currentUserId = await getAuthUserId(ctx)
-    const currentUser = currentUserId ? await ctx.db.get(currentUserId) : null
-    const isAdmin = currentUser?.role === 'admin'
-    const isSelf = currentUserId === args.userId
-
-    if (!isAdmin && !isSelf) {
-      throw new Error('Permissão negada')
-    }
+    const isAdmin = actor.role === 'admin'
 
     const updates: Partial<Doc<'ofertanteProfiles'>> = {
       atualizadoEm: Date.now()
@@ -625,6 +633,7 @@ export const updateAdminProfile = mutation({
     cargo: v.optional(v.string())
   },
   handler: async (ctx, args) => {
+    await verifySelfOrAdmin(ctx, args.userId)
     const user = await ctx.db.get(args.userId)
     if (!user) {
       throw new Error('Usuário não encontrado')
@@ -632,15 +641,6 @@ export const updateAdminProfile = mutation({
 
     if (user.role !== 'admin') {
       throw new Error('Apenas administradores podem atualizar este perfil')
-    }
-
-    const currentUserId = await getAuthUserId(ctx)
-    const currentUser = currentUserId ? await ctx.db.get(currentUserId) : null
-    const isSuperAdmin = currentUser?.role === 'admin' // TODO: Check for super admin level
-    const isSelf = currentUserId === args.userId
-
-    if (!isSuperAdmin && !isSelf) {
-      throw new Error('Permissão negada')
     }
 
     // Update basic user info
@@ -677,17 +677,10 @@ export const updateUserBasicInfo = mutation({
     telefone: v.optional(v.string())
   },
   handler: async (ctx, args) => {
+    await verifySelfOrAdmin(ctx, args.userId)
     const user = await ctx.db.get(args.userId)
     if (!user) {
       throw new Error('Usuário não encontrado')
-    }
-
-    const currentUserId = await getAuthUserId(ctx)
-    if (currentUserId !== args.userId) {
-      const currentUser = currentUserId ? await ctx.db.get(currentUserId) : null
-      if (currentUser?.role !== 'admin') {
-        throw new Error('Permissão negada')
-      }
     }
 
     const updates: Partial<Doc<'users'>> = {
@@ -858,6 +851,7 @@ export const reportDataError = mutation({
 export const getBeneficiariesWithErrors = query({
   args: {},
   handler: async (ctx) => {
+    await verifyAdmin(ctx)
     return await ctx.db
       .query('users')
       .withIndex('by_role_and_status', (q) =>
@@ -871,6 +865,7 @@ export const getBeneficiariesWithErrors = query({
 export const resolveDataError = mutation({
   args: { userId: v.id('users') },
   handler: async (ctx, args) => {
+    await verifyAdmin(ctx)
     const user = await ctx.db.get(args.userId)
     if (!user) {
       throw new Error('Usuário não encontrado')
@@ -894,6 +889,7 @@ export const selectProperty = mutation({
     propertyId: v.id('properties')
   },
   handler: async (ctx, args) => {
+    await verifySelfOrAdmin(ctx, args.userId)
     const user = await ctx.db.get(args.userId)
     if (!user || user.role !== 'beneficiary') {
       throw new Error('Usuário inválido')
@@ -952,9 +948,14 @@ export const removePropertySelection = mutation({
     propertyId: v.id('properties')
   },
   handler: async (ctx, args) => {
+    await verifySelfOrAdmin(ctx, args.userId)
     const user = await ctx.db.get(args.userId)
     if (!user) {
       throw new Error('Usuário não encontrado')
+    }
+
+    if (user.role !== 'beneficiary') {
+      throw new Error('Usuário inválido')
     }
 
     if (!user.beneficiaryProfileId) {
@@ -1011,6 +1012,7 @@ export const updateProfile = mutation({
     estado: v.optional(v.string())
   },
   handler: async (ctx, args) => {
+    await verifySelfOrAdmin(ctx, args.userId)
     const user = await ctx.db.get(args.userId)
     if (!user) {
       throw new Error('Usuário não encontrado')
@@ -1074,6 +1076,7 @@ export const createAdmin = mutation({
     cargo: v.optional(v.string())
   },
   handler: async (ctx, args) => {
+    await verifyAdmin(ctx)
     const cleaned = cleanCPF(args.cpf)
 
     const existing = await ctx.db
@@ -1167,11 +1170,7 @@ export const bulkUploadBeneficiaries = mutation({
     ignorados: number
     erros: Array<{ linha: number; erro: string }>
   }> => {
-    // Verify admin
-    const admin = await ctx.db.get(args.adminId)
-    if (!admin || admin.role !== 'admin') {
-      throw new Error('Apenas administradores podem fazer upload em massa')
-    }
+    await verifyAdmin(ctx)
 
     const erros: Array<{ linha: number; erro: string }> = []
     let importadosSemErro = 0
@@ -1313,6 +1312,7 @@ export const updateUserStatus = mutation({
     )
   },
   handler: async (ctx, args) => {
+    await verifyAdmin(ctx)
     await ctx.db.patch(args.userId, {
       status: args.status,
       atualizadoEm: Date.now()
@@ -1482,6 +1482,7 @@ export const completeOfertanteOnboarding = mutation({
 export const getOfertantesPendentes = query({
   args: {},
   handler: async (ctx) => {
+    await verifyAdmin(ctx)
     return await ctx.db
       .query('users')
       .withIndex('by_role_and_status', (q) =>
@@ -1531,7 +1532,10 @@ export const createBeneficiary = mutation({
 
     const currentUser = await ctx.db.get(currentUserId)
     if (!currentUser || currentUser.role !== 'admin') {
-      return { success: false, error: 'Apenas administradores podem criar usuários' }
+      return {
+        success: false,
+        error: 'Apenas administradores podem criar usuários'
+      }
     }
 
     const cleanedCPF = cleanCPF(args.cpf)
@@ -1639,7 +1643,10 @@ export const createOfertanteMinimal = mutation({
 
     const currentUser = await ctx.db.get(currentUserId)
     if (!currentUser || currentUser.role !== 'admin') {
-      return { success: false, error: 'Apenas administradores podem criar usuários' }
+      return {
+        success: false,
+        error: 'Apenas administradores podem criar usuários'
+      }
     }
 
     const n = normalizePhone(args.telefone)

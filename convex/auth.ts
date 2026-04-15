@@ -41,6 +41,7 @@ async function findUserByPhone(
   ctx: QueryCtx,
   phone: string
 ): Promise<{ _id: GenericId<'users'>; role: string } | null> {
+  console.log('findUserByPhone', phone)
   // Query by telefone field (app field)
   const user = await ctx.db
     .query('users')
