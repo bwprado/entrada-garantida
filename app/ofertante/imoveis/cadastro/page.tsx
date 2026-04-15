@@ -107,14 +107,8 @@ export default function NovoImovelPage() {
   const { handleSubmit, control, reset } = form
 
   useEffect(() => {
-    if (!isLoading) {
-      if (!isAuthenticated) {
-        router.push("/login/ofertante")
-      } else if (user?.role !== "ofertante") {
-        router.push("/")
-      } else if (!user.onboardingCompleto) {
-        router.push("/ofertante/onboarding")
-      }
+    if (!isLoading && isAuthenticated && user?.role === "ofertante" && !user.onboardingCompleto) {
+      router.push("/ofertante/onboarding")
     }
   }, [isAuthenticated, isLoading, user, router])
 

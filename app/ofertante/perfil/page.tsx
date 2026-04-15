@@ -3,11 +3,10 @@
 import { AddressFields, CommonFields, OfertanteFields, ProfileLayout } from "@/components/profile"
 import { Form } from "@/components/ui/form"
 import { api } from "@/convex/_generated/api"
-import { useAuth } from "@/lib/auth-context"
+import { Doc } from "@/convex/_generated/dataModel"
 import { parseDataNascimentoBrParaIso } from "@/lib/date-br"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery } from "convex/react"
-import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
@@ -53,10 +52,10 @@ const perfilOfertanteSchema = z.object({
 type PerfilOfertanteFormData = z.infer<typeof perfilOfertanteSchema>
 
 export default function OfertantePerfilPage() {
-  const router = useRouter()
-  const { user, isLoading: isAuthLoading } = useAuth()
-  
-  const userWithProfile = useQuery(api.users.getCurrentUserWithProfile)
+    
+  const query = useQuery(api.users.getCurrentUserWithProfile)
+  const user = query?.user as Doc<'users'>
+  const profile = query?.profile as Doc<'ofertanteProfiles'>
   const updateProfile = useMutation(api.users.updateOfertanteProfile)
   const updateBasicInfo = useMutation(api.users.updateUserBasicInfo)
 
@@ -84,12 +83,11 @@ export default function OfertantePerfilPage() {
 
   // Populate form when data is loaded
   useEffect(() => {
-    if (userWithProfile?.user && userWithProfile?.profile) {
-      const { user, profile } = userWithProfile
+    if (user && profile) {
       
       form.reset({
         nome: user.nome,
-        nomeSocial: user.nomeSocial || "",
+        nomeSocial: user.nome || "",
         cpf: user.cpf,
         telefone: user.phone,
         email: user.email || "",
@@ -106,14 +104,7 @@ export default function OfertantePerfilPage() {
         estado: profile.estado,
       })
     }
-  }, [userWithProfile, form])
-
-  // Redirect if not authenticated or not ofertante
-  useEffect(() => {
-    if (!isAuthLoading && user && user.role !== "ofertante") {
-      router.push("/login")
-    }
-  }, [user, isAuthLoading, router])
+  }, [user, profile, form])
 
   const onSubmit = async (data: PerfilOfertanteFormData) => {
     try {
@@ -140,7 +131,7 @@ export default function OfertantePerfilPage() {
       })
 
       // Update basic info (only nomeSocial can be updated by user)
-      if (data.nomeSocial !== userWithProfile?.user.nomeSocial) {
+      if (data.nomeSocial !== user.nome) {
         await updateBasicInfo({
           userId: user._id,
           nomeSocial: data.nomeSocial || undefined,
@@ -154,7 +145,7 @@ export default function OfertantePerfilPage() {
     }
   }
 
-  if (isAuthLoading || !userWithProfile) {
+  if (!user || !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>

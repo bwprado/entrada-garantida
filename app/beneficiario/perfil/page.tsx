@@ -20,7 +20,6 @@ import { cepMaskOptions } from '@/lib/masks'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMaskito } from '@maskito/react'
 import { useMutation, useQuery } from 'convex/react'
-import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -93,7 +92,6 @@ const perfilBeneficiarioSchema = z.object({
 
 type PerfilBeneficiarioFormData = z.infer<typeof perfilBeneficiarioSchema>
 export default function BeneficiarioPerfilPage() {
-  const router = useRouter()
   const cepRef = useMaskito({ options: cepMaskOptions })
   const query = useQuery(api.users.getCurrentUserWithProfile)
   const user = query?.user as Doc<'users'>
@@ -183,13 +181,6 @@ export default function BeneficiarioPerfilPage() {
       })
     }
   }, [user, profile, form])
-
-  // Redirect if not authenticated or not beneficiary
-  useEffect(() => {
-    if (!user || user.role !== 'beneficiary') {
-      router.push('/login')
-    }
-  }, [user, router])
 
   const onSubmit = async (data: PerfilBeneficiarioFormData) => {
     try {

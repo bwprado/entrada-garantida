@@ -21,8 +21,8 @@ import { useAuth } from '@/lib/auth-context'
 import { LayoutDashboard, LogOut, Shield, Upload } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { useEffect, type ReactNode } from 'react'
+import { usePathname } from 'next/navigation'
+import type { ReactNode } from 'react'
 
 const nav: Array<{
   href: string
@@ -50,19 +50,7 @@ const nav: Array<{
 
 export function AdminAppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
-  const router = useRouter()
-  const { logout, user, isLoading } = useAuth()
-
-  useEffect(() => {
-    if (isLoading) return
-    if (!user) {
-      router.replace('/login/admin')
-      return
-    }
-    if (user.role !== 'admin') {
-      router.replace('/')
-    }
-  }, [user, isLoading, router])
+  const { logout, user } = useAuth()
 
   const handleLogout = async () => {
     await logout('/login/admin')

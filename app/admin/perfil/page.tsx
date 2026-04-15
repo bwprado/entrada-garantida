@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -52,7 +51,6 @@ const perfilAdminSchema = z.object({
 type PerfilAdminFormData = z.infer<typeof perfilAdminSchema>
 
 export default function AdminPerfilPage() {
-  const router = useRouter()
   const { user, isLoading: isAuthLoading } = useAuth()
 
   const userWithProfile = useQuery(api.users.getCurrentUserWithProfile)
@@ -84,13 +82,6 @@ export default function AdminPerfilPage() {
       })
     }
   }, [userWithProfile, form])
-
-  // Redirect if not authenticated or not admin
-  useEffect(() => {
-    if (!isAuthLoading && user && user.role !== 'admin') {
-      router.push('/login')
-    }
-  }, [user, isAuthLoading, router])
 
   const onSubmit = async (data: PerfilAdminFormData) => {
     try {
