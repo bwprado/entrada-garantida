@@ -1,4 +1,5 @@
 import {
+  AuthProviderConfig,
   convexAuth,
   type GenericActionCtxWithAuthConfig,
   type PhoneConfig
@@ -68,7 +69,7 @@ function validateUserRole(
   }
 }
 
-function createPhoneProvider(id: PhoneProviderId): PhoneConfig<AnyDataModel> {
+function createPhoneProvider(id: PhoneProviderId): AuthProviderConfig {
   return {
     id,
     type: 'phone',
