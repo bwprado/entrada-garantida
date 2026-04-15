@@ -1,7 +1,13 @@
 import { getAuthUserId } from '@convex-dev/auth/server'
+import {
+  OrderedQuery,
+  Query,
+  QueryInitializer,
+  paginationOptsValidator
+} from 'convex/server'
 import { v } from 'convex/values'
 import { normalizePhone } from '../lib/normalize-phone'
-import { Doc, Id } from './_generated/dataModel'
+import { DataModel, Doc, Id } from './_generated/dataModel'
 import { internalMutation, mutation, query } from './_generated/server'
 import {
   estadoCivilEnum,
@@ -31,6 +37,16 @@ function sameBrazilMobile(stored: string, input: string): boolean {
   const b = normalizePhone(input)
   if (!a.isValid() || !b.isValid()) return false
   return a.digits() === b.digits()
+}
+
+/** Normalize name for search (lowercase, no accents, trimmed) */
+export function normalizeName(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/\s+/g, ' ') // Normalize whitespace
 }
 
 // ============ PROFILE QUERIES ============
@@ -184,6 +200,68 @@ export const getBeneficiariesWithProfiles = query({
     )
 
     return usersWithProfiles
+  }
+})
+
+/** Get beneficiaries with pagination, search, and sorting */
+export const getBeneficiariesPaginated = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    searchQuery: v.optional(v.string()),
+    sortDirection: v.optional(v.union(v.literal('asc'), v.literal('desc')))
+  },
+  handler: async (ctx, args) => {
+    const tableQuery: QueryInitializer<DataModel['users']> =
+      ctx.db.query('users')
+
+    let indexedQuery: Query<DataModel['users']> = tableQuery.withIndex(
+      'by_role',
+      (q) => q.eq('role', 'beneficiary')
+    )
+
+    let orderedQuery: OrderedQuery<DataModel['users']> = indexedQuery
+    if (args.sortDirection) {
+      orderedQuery = indexedQuery.order(args.sortDirection ?? 'asc')
+    }
+
+    const searchQuery = args.searchQuery?.trim()
+
+    if (searchQuery && searchQuery.length > 0) {
+      orderedQuery = tableQuery.withSearchIndex('search_name', (q) =>
+        q
+          .search('searchName', normalizeName(searchQuery))
+          .eq('role', 'beneficiary')
+      )
+    }
+
+    const results = await orderedQuery.paginate(args.paginationOpts)
+
+    return results
+  }
+})
+
+export const getBeneficiariesCount = query({
+  args: {
+    searchQuery: v.optional(v.string())
+  },
+  handler: async (ctx, args) => {
+    const searchQuery = args.searchQuery?.trim()
+    const tableQuery: QueryInitializer<DataModel['users']> =
+      ctx.db.query('users')
+    let indexedQuery: Query<DataModel['users']> = tableQuery.withIndex(
+      'by_role',
+      (q) => q.eq('role', 'beneficiary')
+    )
+    let orderedQuery: OrderedQuery<DataModel['users']> = indexedQuery
+    if (searchQuery && searchQuery.length > 0) {
+      orderedQuery = tableQuery.withSearchIndex('search_name', (q) =>
+        q
+          .search('searchName', normalizeName(searchQuery))
+          .eq('role', 'beneficiary')
+      )
+    }
+    const results = await orderedQuery.collect()
+    return results.length
   }
 })
 
@@ -1121,6 +1199,7 @@ export const bulkUploadBeneficiaries = mutation({
           role: 'beneficiary',
           cpf: cleaned,
           nome: b.nome,
+          searchName: normalizeName(b.nome),
           telefone: b.telefone,
           email: b.email,
           status: 'pending',

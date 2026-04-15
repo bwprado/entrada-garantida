@@ -11,6 +11,7 @@
 import type * as auth from "../auth.js";
 import type * as documents from "../documents.js";
 import type * as http from "../http.js";
+import type * as migrations from "../migrations.js";
 import type * as properties from "../properties.js";
 import type * as public_ from "../public.js";
 import type * as r2 from "../r2.js";
@@ -27,6 +28,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   documents: typeof documents;
   http: typeof http;
+  migrations: typeof migrations;
   properties: typeof properties;
   public: typeof public_;
   r2: typeof r2;
@@ -63,4 +65,5 @@ export declare const internal: FilterApi<
 export declare const components: {
   r2: import("@convex-dev/r2/_generated/component.js").ComponentApi<"r2">;
   twilio: import("@convex-dev/twilio/_generated/component.js").ComponentApi<"twilio">;
+  migrations: import("@convex-dev/migrations/_generated/component.js").ComponentApi<"migrations">;
 };

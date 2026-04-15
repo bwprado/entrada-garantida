@@ -151,6 +151,8 @@ export const users = defineTable({
   role: userRoleEnum,
   cpf: v.string(),
   nome: v.string(),
+  // Normalized name for search (lowercase, no accents, trimmed)
+  searchName: v.optional(v.string()),
   telefone: v.string(),
   email: v.optional(v.string()),
 
@@ -184,6 +186,11 @@ export const users = defineTable({
   .index('by_beneficiary_profile', ['beneficiaryProfileId'])
   .index('by_ofertante_profile', ['ofertanteProfileId'])
   .index('by_admin_profile', ['adminProfileId'])
+  .index('by_searchName', ['searchName'])
+  .searchIndex('search_name', {
+    searchField: 'searchName',
+    filterFields: ['role']
+  })
 
 // Beneficiary Profiles table - all beneficiary-specific data
 export const beneficiaryProfiles = defineTable({

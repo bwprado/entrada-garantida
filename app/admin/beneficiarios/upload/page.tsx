@@ -37,6 +37,7 @@ import { useMutation, useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import type { Id } from '@/convex/_generated/dataModel'
 import { extractPdfPlainText } from '@/lib/beneficiarios/extract-pdf-text'
+import { normalizePhone } from '@/lib/normalize-phone'
 import {
   parseAnexoIListagemPlainText,
   type AnexoIParsedRow
@@ -86,11 +87,13 @@ function buildParsedFromCore(
 ): ParsedBeneficiary {
   const errors: string[] = []
   const c = cpf.replace(/\D/g, '')
-  const tel = telefoneDigits.replace(/\D/g, '')
+  console.log(telefoneDigits)
+  const phone = normalizePhone(telefoneDigits, 'BR', '98')
+  const tel = phone.sms()
 
   if (c.length !== 11) errors.push('CPF inválido (deve ter 11 dígitos)')
   if (!nome || nome.length < 3) errors.push('Nome inválido')
-  if (!tel || tel.length < 9) errors.push('Telefone inválido')
+  if (!phone.isValid()) errors.push('Telefone inválido')
   if (isNaN(mesesAluguelSocial) || mesesAluguelSocial < 0) {
     errors.push('Meses em aluguel social inválido')
   }

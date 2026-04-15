@@ -60,6 +60,7 @@ interface PhoneNormalizer {
  * @function normalizePhone
  * @param {string | undefined} phone - The phone number to normalize
  * @param {string} countryCode - The country code ('BR' or 'US', defaults to 'BR')
+ * @param {string} defaultAreaCode - Optional default BR area code (DDD) for local 8-9 digit numbers
  * @returns {PhoneNormalizer} An object with chainable format methods
  *
  * @example
@@ -94,11 +95,25 @@ interface PhoneNormalizer {
  *
  * normalizePhone('2125551234', 'US').sms()
  * // Returns: '+12125551234'
+ *
+ * @example
+ * // BR local number without DDD
+ * normalizePhone('99999-9999', 'BR', '11').sms()
+ * // Returns: '+5511999999999'
  */
-export const normalizePhone = (phone: string | undefined, countryCode: 'BR' | 'US' = 'BR'): PhoneNormalizer => {
+export const normalizePhone = (
+  phone: string | undefined,
+  countryCode: 'BR' | 'US' = 'BR',
+  defaultAreaCode?: string
+): PhoneNormalizer => {
   const getDigits = (): string => {
     if (!phone) return ''
     return phone.replace(/\D/g, '')
+  }
+
+  const getDefaultAreaCodeDigits = (): string => {
+    if (!defaultAreaCode) return ''
+    return defaultAreaCode.replace(/\D/g, '')
   }
 
   const getNormalizedDigits = (): string => {
@@ -119,6 +134,12 @@ export const normalizePhone = (phone: string | undefined, countryCode: 'BR' | 'U
 
       if (digits.length === 11 || digits.length === 10) {
         return `55${digits}`
+      }
+
+      // BR local number without area code (8 or 9 digits) + provided default DDD
+      const areaCode = getDefaultAreaCodeDigits()
+      if ((digits.length === 9 || digits.length === 8) && areaCode.length === 2) {
+        return `55${areaCode}${digits}`
       }
     } else if (countryCode === 'US') {
       // US: +1 prefix

@@ -11,7 +11,9 @@
     "start": "next start"
   },
   "dependencies": {
+    "@convex-dev/aggregate": "^0.2.1",
     "@convex-dev/auth": "^0.0.91",
+    "@convex-dev/migrations": "^0.3.3",
     "@convex-dev/r2": "^0.9.1",
     "@convex-dev/twilio": "^0.2.1",
     "@hookform/resolvers": "^3.10.0",
