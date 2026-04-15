@@ -61,6 +61,15 @@ interface ParsedBeneficiary {
   error?: string
 }
 
+interface UploadResult {
+  total: number
+  sucessos: number
+  importadosSemErro: number
+  importadosComErro: number
+  ignorados: number
+  erros: Array<{ linha: number; erro: string }>
+}
+
 const EXPECTED_HEADERS = [
   'cpf',
   'nome',
@@ -87,8 +96,7 @@ function buildParsedFromCore(
 ): ParsedBeneficiary {
   const errors: string[] = []
   const c = cpf.replace(/\D/g, '')
-  console.log(telefoneDigits)
-  const phone = normalizePhone(telefoneDigits, 'BR', '98')
+  const phone = normalizePhone(telefoneDigits, 'BR')
   const tel = phone.sms()
 
   if (c.length !== 11) errors.push('CPF inválido (deve ter 11 dígitos)')
@@ -128,11 +136,7 @@ export default function AdminBulkUploadPage() {
   const [parsedData, setParsedData] = useState<ParsedBeneficiary[]>([])
   const [isParsing, setIsParsing] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
-  const [uploadResult, setUploadResult] = useState<{
-    total: number
-    sucessos: number
-    erros: Array<{ linha: number; erro: string }>
-  } | null>(null)
+  const [uploadResult, setUploadResult] = useState<UploadResult | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const me = useQuery(api.users.getCurrentUserProfile, {})
@@ -296,12 +300,6 @@ export default function AdminBulkUploadPage() {
   const handleUpload = async () => {
     if (parsedData.length === 0) return
 
-    const validData = parsedData.filter((p) => p.valid)
-    if (validData.length === 0) {
-      alert('Nenhum registro válido para importar')
-      return
-    }
-
     if (!me || me.role !== 'admin') {
       alert('Sessão de administrador não encontrada.')
       return
@@ -314,7 +312,7 @@ export default function AdminBulkUploadPage() {
 
       const result = await bulkUploadMutation({
         adminId,
-        beneficiaries: validData.map((b) => ({
+        beneficiaries: parsedData.map((b) => ({
           cpf: b.cpf,
           nome: b.nome,
           telefone: b.telefone,
@@ -326,13 +324,18 @@ export default function AdminBulkUploadPage() {
           pessoasFamilia: b.pessoasFamilia,
           sexo: b.sexo,
           raca: b.raca,
-          deficiencias: b.deficiencias
+          deficiencias: b.deficiencias,
+          importHasError: !b.valid,
+          importErrorMessage: b.error
         }))
       })
 
       setUploadResult({
-        total: parsedData.length,
+        total: result.total,
         sucessos: result.sucessos,
+        importadosSemErro: result.importadosSemErro ?? result.sucessos,
+        importadosComErro: result.importadosComErro ?? 0,
+        ignorados: result.ignorados ?? 0,
         erros: result.erros
       })
     } catch (error) {
@@ -575,7 +578,7 @@ export default function AdminBulkUploadPage() {
                   onClick={handleUpload}
                   disabled={
                     isUploading ||
-                    parsedData.filter((p) => p.valid).length === 0 ||
+                    parsedData.length === 0 ||
                     !me ||
                     me.role !== 'admin'
                   }
@@ -588,7 +591,7 @@ export default function AdminBulkUploadPage() {
                   ) : (
                     <>
                       <Upload className="w-4 h-4 mr-2" />
-                      Importar {parsedData.filter((p) => p.valid).length}{' '}
+                      Importar {parsedData.length}{' '}
                       beneficiários
                     </>
                   )}
@@ -621,7 +624,7 @@ export default function AdminBulkUploadPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-6">
                 <div className="text-center p-4 bg-muted rounded-lg">
                   <p className="text-3xl font-bold">{uploadResult.total}</p>
                   <p className="text-sm text-muted-foreground">Total</p>
@@ -630,7 +633,25 @@ export default function AdminBulkUploadPage() {
                   <p className="text-3xl font-bold text-green-600">
                     {uploadResult.sucessos}
                   </p>
-                  <p className="text-sm text-green-700">Sucessos</p>
+                  <p className="text-sm text-green-700">Importados</p>
+                </div>
+                <div className="text-center p-4 bg-emerald-50 rounded-lg">
+                  <p className="text-3xl font-bold text-emerald-700">
+                    {uploadResult.importadosSemErro}
+                  </p>
+                  <p className="text-sm text-emerald-700">Sem erro</p>
+                </div>
+                <div className="text-center p-4 bg-amber-50 rounded-lg">
+                  <p className="text-3xl font-bold text-amber-700">
+                    {uploadResult.importadosComErro}
+                  </p>
+                  <p className="text-sm text-amber-700">Com erro</p>
+                </div>
+                <div className="text-center p-4 bg-slate-100 rounded-lg">
+                  <p className="text-3xl font-bold text-slate-700">
+                    {uploadResult.ignorados}
+                  </p>
+                  <p className="text-sm text-slate-700">Ignorados</p>
                 </div>
                 <div className="text-center p-4 bg-red-100 rounded-lg">
                   <p className="text-3xl font-bold text-red-600">

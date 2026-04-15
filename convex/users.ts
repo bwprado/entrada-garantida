@@ -1149,7 +1149,9 @@ export const bulkUploadBeneficiaries = mutation({
         numero: v.optional(v.string()),
         bairro: v.optional(v.string()),
         cidade: v.optional(v.string()),
-        estado: v.optional(v.string())
+        estado: v.optional(v.string()),
+        importHasError: v.optional(v.boolean()),
+        importErrorMessage: v.optional(v.string())
       })
     )
   },
@@ -1160,6 +1162,9 @@ export const bulkUploadBeneficiaries = mutation({
     success: boolean
     total: number
     sucessos: number
+    importadosSemErro: number
+    importadosComErro: number
+    ignorados: number
     erros: Array<{ linha: number; erro: string }>
   }> => {
     // Verify admin
@@ -1169,8 +1174,11 @@ export const bulkUploadBeneficiaries = mutation({
     }
 
     const erros: Array<{ linha: number; erro: string }> = []
-    let sucessos = 0
+    let importadosSemErro = 0
+    let importadosComErro = 0
+    let ignorados = 0
     const now = Date.now()
+    const seenCpfsInBatch = new Set<string>()
 
     for (let i = 0; i < args.beneficiaries.length; i++) {
       const b = args.beneficiaries[i]
@@ -1179,30 +1187,50 @@ export const bulkUploadBeneficiaries = mutation({
       try {
         const cleaned = cleanCPF(b.cpf)
 
+        if (cleaned.length > 0) {
+          if (seenCpfsInBatch.has(cleaned)) {
+            erros.push({ linha, erro: 'CPF duplicado no arquivo' })
+            ignorados++
+            continue
+          }
+          seenCpfsInBatch.add(cleaned)
+
+          const existing = await ctx.db
+            .query('users')
+            .withIndex('by_cpf', (q) => q.eq('cpf', cleaned))
+            .first()
+
+          if (existing) {
+            erros.push({ linha, erro: 'CPF já cadastrado' })
+            ignorados++
+            continue
+          }
+        }
+
+        const importErrors: string[] = []
         if (!isValidCPFLength(cleaned)) {
-          erros.push({ linha, erro: 'CPF inválido' })
-          continue
+          importErrors.push('CPF inválido')
         }
-
-        const existing = await ctx.db
-          .query('users')
-          .withIndex('by_cpf', (q) => q.eq('cpf', cleaned))
-          .first()
-
-        if (existing) {
-          erros.push({ linha, erro: 'CPF já cadastrado' })
-          continue
+        if (b.importHasError && b.importErrorMessage?.trim()) {
+          importErrors.push(b.importErrorMessage.trim())
         }
+        const hasImportError = importErrors.length > 0
+        const safeNome = b.nome.trim() || `Beneficiário linha ${linha}`
 
         // Create user
         const userId = await ctx.db.insert('users', {
           role: 'beneficiary',
           cpf: cleaned,
-          nome: b.nome,
-          searchName: normalizeName(b.nome),
+          nome: safeNome,
+          searchName: normalizeName(safeNome),
           telefone: b.telefone,
           email: b.email,
           status: 'pending',
+          dadosComErro: hasImportError,
+          mensagemErroDados: hasImportError
+            ? Array.from(new Set(importErrors)).join('; ')
+            : undefined,
+          erroReportadoEm: hasImportError ? now : undefined,
           criadoEm: now,
           atualizadoEm: now
         })
@@ -1210,14 +1238,14 @@ export const bulkUploadBeneficiaries = mutation({
         // Create beneficiary profile
         const profileId = await ctx.db.insert('beneficiaryProfiles', {
           userId,
-          rg: b.rg,
+          rg: b.rg.trim() || 'Não informado',
           nomeMae: b.nomeMae,
           nomePai: b.nomePai,
           sexo: (b.sexo as any) ?? 'nao_informado',
           identidadeGenero: 'nao_informado',
           raca: (b.raca as any) ?? 'nao_informado',
           deficiencias: (b.deficiencias as any) ?? ['nao_possui'],
-          profissao: b.profissao,
+          profissao: b.profissao.trim() || 'Não informado',
           tipoRenda: (b.tipoRenda as any) ?? 'nao_informado',
           rendaFamiliarFaixa: (b.rendaFamiliarFaixa as any) ?? 'ate_2',
           pessoasFamilia: b.pessoasFamilia ?? 1,
@@ -1250,16 +1278,24 @@ export const bulkUploadBeneficiaries = mutation({
           beneficiaryProfileId: profileId
         })
 
-        sucessos++
+        if (hasImportError) {
+          importadosComErro++
+        } else {
+          importadosSemErro++
+        }
       } catch (e) {
         erros.push({ linha, erro: String(e) })
+        ignorados++
       }
     }
 
     return {
       success: true,
       total: args.beneficiaries.length,
-      sucessos,
+      sucessos: importadosSemErro + importadosComErro,
+      importadosSemErro,
+      importadosComErro,
+      ignorados,
       erros
     }
   }
