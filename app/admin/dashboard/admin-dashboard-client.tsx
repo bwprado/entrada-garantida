@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useQuery, useMutation, usePaginatedQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
@@ -49,19 +49,21 @@ import {
   MapPin,
   CreditCard,
   Loader2,
-  ChevronLeft,
   ChevronRight,
-  ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Plus
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { formatPhone as formatPhoneDisplay } from '@/lib/validation'
+import { AddUserSheet } from './add-user-sheet'
 
 export default function AdminDashboardClient() {
   const [activeTab, setActiveTab] = useState('beneficiarios')
   const [selectedBeneficiary, setSelectedBeneficiary] = useState<any>(null)
   const [showResolveDialog, setShowResolveDialog] = useState(false)
   const [resolvingId, setResolvingId] = useState<string | null>(null)
+  const [showAddUserSheet, setShowAddUserSheet] = useState(false)
 
   // Beneficiary table state
   const [searchInput, setSearchInput] = useState('')
@@ -137,10 +139,6 @@ export default function AdminDashboardClient() {
       ofertantes?.filter((o) => o.status === 'active').length || 0,
     ofertantesPendentes: ofertantesPendentes?.length || 0,
     beneficiariosComErros: beneficiariesWithErrors?.length || 0
-  }
-
-  const formatPhone = (phone: string) => {
-    return phone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
   }
 
   const formatCPF = (cpf: string) => {
@@ -306,6 +304,14 @@ export default function AdminDashboardClient() {
                         Filtrar
                       </Button>
                       <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAddUserSheet(true)}
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Adicionar
+                      </Button>
+                      <Button
                         asChild
                         variant="outline"
                         size="sm"
@@ -386,7 +392,7 @@ export default function AdminDashboardClient() {
                                 {b.nome}
                               </TableCell>
                               <TableCell>{formatCPF(b.cpf)}</TableCell>
-                              <TableCell>{formatPhone(b.telefone)}</TableCell>
+                              <TableCell>{formatPhoneDisplay(b.telefone)}</TableCell>
                               <TableCell>
                                 <Badge
                                   variant={
@@ -532,7 +538,7 @@ export default function AdminDashboardClient() {
                                         Telefone
                                       </p>
                                       <p className="font-medium">
-                                        {formatPhone(b.telefone)}
+                                        {formatPhoneDisplay(b.telefone)}
                                       </p>
                                     </div>
                                   </div>
@@ -654,7 +660,7 @@ export default function AdminDashboardClient() {
                                     </Badge>
                                   </div>
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-muted-foreground">
-                                    <p>Telefone: {formatPhone(o.telefone)}</p>
+                                    <p>Telefone: {formatPhoneDisplay(o.telefone)}</p>
                                     <p>
                                       Cadastro:{' '}
                                       {new Date(o.criadoEm).toLocaleDateString(
@@ -719,7 +725,7 @@ export default function AdminDashboardClient() {
                                           ? formatCPF(o.cpf)
                                           : 'Não informado'}
                                       </p>
-                                      <p>Telefone: {formatPhone(o.telefone)}</p>
+                                      <p>Telefone: {formatPhoneDisplay(o.telefone)}</p>
                                       <p>
                                         Cadastro:{' '}
                                         {new Date(
@@ -789,7 +795,7 @@ export default function AdminDashboardClient() {
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-muted-foreground">
                             <p>CNPJ: {c.cpf}</p>
-                            <p>Telefone: {formatPhone(c.telefone)}</p>
+                            <p>Telefone: {formatPhoneDisplay(c.telefone)}</p>
                             <p>
                               Cadastro:{' '}
                               {new Date(c.criadoEm).toLocaleDateString('pt-BR')}
@@ -959,6 +965,16 @@ export default function AdminDashboardClient() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Add User Sheet */}
+      <AddUserSheet
+        open={showAddUserSheet}
+        onOpenChange={setShowAddUserSheet}
+        onSuccess={() => {
+          // The paginated query will automatically refresh
+          toast.success('Lista de beneficiários atualizada')
+        }}
+      />
     </div>
   )
 }

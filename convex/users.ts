@@ -1490,3 +1490,213 @@ export const getOfertantesPendentes = query({
       .collect()
   }
 })
+
+// Create a single beneficiary (admin manual creation)
+export const createBeneficiary = mutation({
+  args: {
+    nome: v.string(),
+    cpf: v.string(),
+    telefone: v.string(),
+    email: v.optional(v.string()),
+    rg: v.string(),
+    sexo: sexoEnum,
+    raca: v.optional(racaEnum),
+    profissao: v.string(),
+    tipoRenda: tipoRendaEnum,
+    rendaFamiliarFaixa: rendaFamiliarFaixaEnum,
+    pessoasFamilia: v.number(),
+    cep: v.string(),
+    endereco: v.string(),
+    numero: v.string(),
+    bairro: v.string(),
+    cidade: v.string(),
+    estado: v.string(),
+    complemento: v.optional(v.string()),
+    nomeMae: v.optional(v.string()),
+    telefoneFixo: v.optional(v.string()),
+    dddTelefoneFixo: v.optional(v.string())
+  },
+  handler: async (
+    ctx,
+    args
+  ): Promise<{
+    success: boolean
+    userId?: Id<'users'>
+    error?: string
+  }> => {
+    const currentUserId = await getAuthUserId(ctx)
+    if (!currentUserId) {
+      return { success: false, error: 'Não autenticado' }
+    }
+
+    const currentUser = await ctx.db.get(currentUserId)
+    if (!currentUser || currentUser.role !== 'admin') {
+      return { success: false, error: 'Apenas administradores podem criar usuários' }
+    }
+
+    const cleanedCPF = cleanCPF(args.cpf)
+    const n = normalizePhone(args.telefone)
+
+    // Validate CPF length
+    if (!isValidCPFLength(cleanedCPF)) {
+      return { success: false, error: 'CPF deve ter 11 dígitos' }
+    }
+
+    // Validate phone
+    if (!n.isValid()) {
+      return { success: false, error: 'Telefone inválido' }
+    }
+
+    // Check for existing CPF
+    const existingCPF = await ctx.db
+      .query('users')
+      .withIndex('by_cpf', (q) => q.eq('cpf', cleanedCPF))
+      .first()
+
+    if (existingCPF) {
+      return { success: false, error: 'CPF já cadastrado' }
+    }
+
+    const now = Date.now()
+    const telefoneE164 = n.save()
+
+    // Create user
+    const userId = await ctx.db.insert('users', {
+      role: 'beneficiary',
+      cpf: cleanedCPF,
+      nome: args.nome,
+      searchName: normalizeName(args.nome),
+      telefone: telefoneE164,
+      email: args.email,
+      status: 'pending',
+      criadoEm: now,
+      atualizadoEm: now
+    })
+
+    // Create beneficiary profile
+    const profileId = await ctx.db.insert('beneficiaryProfiles', {
+      userId,
+      rg: args.rg,
+      nomeMae: args.nomeMae,
+      nomePai: '',
+      sexo: args.sexo,
+      identidadeGenero: 'nao_informado',
+      raca: args.raca ?? 'nao_informado',
+      deficiencias: ['nao_possui'],
+      profissao: args.profissao,
+      tipoRenda: args.tipoRenda,
+      rendaFamiliarFaixa: args.rendaFamiliarFaixa,
+      pessoasFamilia: args.pessoasFamilia,
+      mesesAluguelSocial: 0,
+      possuiIdosoFamilia: false,
+      chefiaFeminina: false,
+      cep: args.cep,
+      endereco: args.endereco,
+      numero: args.numero,
+      complemento: args.complemento ?? '',
+      bairro: args.bairro,
+      cidade: args.cidade,
+      estado: args.estado,
+      empreendimento: '',
+      dddTelefoneFixo: args.dddTelefoneFixo ?? '',
+      telefoneFixo: args.telefoneFixo ?? '',
+      dddTelefoneRecado: '',
+      telefoneRecado: '',
+      falarCom: '',
+      aceitaComunicacoes: false,
+      criadoEm: now,
+      atualizadoEm: now,
+      propriedadesInteresse: []
+    })
+
+    // Update user with profile reference
+    await ctx.db.patch(userId, {
+      beneficiaryProfileId: profileId
+    })
+
+    return { success: true, userId }
+  }
+})
+
+// Create ofertante with minimal fields (admin manual creation)
+export const createOfertanteMinimal = mutation({
+  args: {
+    nome: v.string(),
+    telefone: v.string()
+  },
+  handler: async (
+    ctx,
+    args
+  ): Promise<{
+    success: boolean
+    userId?: Id<'users'>
+    error?: string
+  }> => {
+    const currentUserId = await getAuthUserId(ctx)
+    if (!currentUserId) {
+      return { success: false, error: 'Não autenticado' }
+    }
+
+    const currentUser = await ctx.db.get(currentUserId)
+    if (!currentUser || currentUser.role !== 'admin') {
+      return { success: false, error: 'Apenas administradores podem criar usuários' }
+    }
+
+    const n = normalizePhone(args.telefone)
+    if (!n.isValid()) {
+      return { success: false, error: 'Telefone inválido' }
+    }
+
+    const telefoneE164 = n.save()
+
+    // Check for existing phone
+    const existingUser = await ctx.db
+      .query('users')
+      .withIndex('by_telefone', (q) => q.eq('telefone', telefoneE164))
+      .first()
+
+    if (existingUser) {
+      return { success: false, error: 'Este telefone já está cadastrado' }
+    }
+
+    const now = Date.now()
+
+    const userId = await ctx.db.insert('users', {
+      role: 'ofertante',
+      cpf: '',
+      nome: args.nome,
+      searchName: normalizeName(args.nome),
+      telefone: telefoneE164,
+      status: 'onboarding',
+      criadoEm: now,
+      atualizadoEm: now
+    })
+
+    // Create empty ofertante profile
+    const profileId = await ctx.db.insert('ofertanteProfiles', {
+      userId,
+      rg: '',
+      dataNascimento: '',
+      estadoCivil: 'solteiro',
+      profissao: '',
+      cep: '',
+      endereco: '',
+      numero: '',
+      complemento: '',
+      bairro: '',
+      cidade: '',
+      estado: '',
+      onboardingCompleto: false,
+      documentosPendentes: ['rg', 'comp_residencia'],
+      criadoEm: now,
+      atualizadoEm: now
+    })
+
+    // Update user with profile reference
+    await ctx.db.patch(userId, {
+      ofertanteProfileId: profileId
+    })
+
+    return { success: true, userId }
+  }
+})
