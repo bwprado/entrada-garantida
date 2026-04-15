@@ -1,7 +1,12 @@
 import { v } from 'convex/values'
 import { Doc, Id } from './_generated/dataModel'
 import { mutation, query } from './_generated/server'
-import { verifyAdmin, verifyLogin, verifyPropertyOwnerOrAdmin } from './authz'
+import {
+  verifyAdmin,
+  verifyLogin,
+  verifyPropertyOwnerOrAdmin,
+  verifySelfOrAdmin
+} from './authz'
 import { MAX_PROPERTY_PRICE } from './schema'
 
 const MIN_COMPARTIMENTOS = 1
@@ -30,6 +35,24 @@ export const getByIds = query({
   args: { ids: v.array(v.id('properties')) },
   handler: async (ctx, args): Promise<Doc<'properties'>[]> => {
     const properties = await Promise.all(args.ids.map((id) => ctx.db.get(id)))
+    return properties.filter((p): p is Doc<'properties'> => p !== null)
+  }
+})
+
+export const getUserSelectedProperties = query({
+  args: { userId: v.id('users') },
+  handler: async (ctx, args) => {
+    const user = await verifySelfOrAdmin(ctx, args.userId)
+    if (!user || user.role !== 'beneficiary' || !user?.beneficiaryProfileId) {
+      throw new Error('Usuário inválido')
+    }
+    const profile = await ctx.db.get(user?.beneficiaryProfileId)
+    if (!profile) {
+      throw new Error('Beneficiário não encontrado')
+    }
+    const properties = await Promise.all(
+      profile.propriedadesInteresse?.map((id) => ctx.db.get(id)) || []
+    )
     return properties.filter((p): p is Doc<'properties'> => p !== null)
   }
 })

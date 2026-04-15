@@ -1,124 +1,126 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { useAuth } from "@/lib/auth-context";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import ImovelCard from './imovel-card'
+import PropertyFilters from './property-filters'
+
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Search, Heart, X, Loader2, AlertCircle } from "lucide-react";
-import { toast } from "sonner";
-import ImovelCard from "./imovel-card";
-import PropertyFilters from "./property-filters";
+  DialogTitle
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
+import { api } from '@/convex/_generated/api'
+import { useAuth } from '@/lib/auth-context'
+import { useMutation, useQuery } from 'convex/react'
+import { AlertCircle, Heart, Loader2, Search, X } from 'lucide-react'
+import { useState } from 'react'
+import { toast } from 'sonner'
 
 export default function ImoveisClient() {
-  const { user, isAuthenticated } = useAuth();
-  const properties = useQuery(api.properties.getValidated, {});
-  const userSelections = useQuery(
-    api.users.getById,
-    user ? { id: user._id } : "skip"
-  );
-  
-  const selectPropertyMutation = useMutation(api.users.selectProperty);
-  const removePropertyMutation = useMutation(api.users.removePropertySelection);
+  const { user, isAuthenticated } = useAuth()
+  const properties = useQuery(api.properties.getValidated, {})
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState("recentes");
-  const [showLimitDialog, setShowLimitDialog] = useState(false);
-  const [loadingPropertyId, setLoadingPropertyId] = useState<string | null>(null);
+  const userSelectedProperties = useQuery(
+    api.properties.getUserSelectedProperties,
+    user ? { userId: user._id } : 'skip'
+  )
+
+  const selectPropertyMutation = useMutation(api.users.selectProperty)
+  const removePropertyMutation = useMutation(api.users.removePropertySelection)
+
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState('recentes')
+  const [showLimitDialog, setShowLimitDialog] = useState(false)
+  const [loadingPropertyId, setLoadingPropertyId] = useState<string | null>(
+    null
+  )
 
   // Get user's current selections
-  const userData = userSelections;
-  const selectedPropertyIds = userData?.propriedadesInteresse || [];
-  const selectionCount = selectedPropertyIds.length;
+  const selectionCount = userSelectedProperties?.length || 0
 
   // Filter properties based on search
   const filteredProperties = properties?.filter((property) => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
+    if (!searchQuery) return true
+    const query = searchQuery.toLowerCase()
     return (
       property.titulo.toLowerCase().includes(query) ||
       property.endereco.toLowerCase().includes(query)
-    );
-  });
+    )
+  })
 
   // Sort properties
   const sortedProperties = [...(filteredProperties || [])].sort((a, b) => {
     switch (sortBy) {
-      case "menor-preco":
-        return a.valorVenda - b.valorVenda;
-      case "maior-preco":
-        return b.valorVenda - a.valorVenda;
-      case "recentes":
+      case 'menor-preco':
+        return a.valorVenda - b.valorVenda
+      case 'maior-preco':
+        return b.valorVenda - a.valorVenda
+      case 'recentes':
       default:
-        return b.criadoEm - a.criadoEm;
+        return b.criadoEm - a.criadoEm
     }
-  });
+  })
 
   const handleSelectProperty = async (propertyId: string) => {
     if (!isAuthenticated || !user) {
-      toast.error("Você precisa estar logado para selecionar imóveis");
-      return;
+      toast.error('Você precisa estar logado para selecionar imóveis')
+      return
     }
 
     if (selectionCount >= 3) {
-      setShowLimitDialog(true);
-      return;
+      setShowLimitDialog(true)
+      return
     }
 
-    setLoadingPropertyId(propertyId);
+    setLoadingPropertyId(propertyId)
     try {
       await selectPropertyMutation({
         userId: user._id,
-        propertyId: propertyId as any,
-      });
-      toast.success(`Imóvel selecionado (${selectionCount + 1}/3)`);
+        propertyId: propertyId as any
+      })
+      toast.success(`Imóvel selecionado (${selectionCount + 1}/3)`)
     } catch (error: any) {
-      if (error.message?.includes("Máximo de 3")) {
-        setShowLimitDialog(true);
+      if (error.message?.includes('Máximo de 3')) {
+        setShowLimitDialog(true)
       } else {
-        toast.error(error.message || "Erro ao selecionar imóvel");
+        toast.error(error.message || 'Erro ao selecionar imóvel')
       }
     } finally {
-      setLoadingPropertyId(null);
+      setLoadingPropertyId(null)
     }
-  };
+  }
 
   const handleRemoveProperty = async (propertyId: string) => {
-    if (!isAuthenticated || !user) return;
+    if (!isAuthenticated || !user) return
 
-    setLoadingPropertyId(propertyId);
+    setLoadingPropertyId(propertyId)
     try {
       await removePropertyMutation({
         userId: user._id,
-        propertyId: propertyId as any,
-      });
-      toast.success("Imóvel removido da seleção");
+        propertyId: propertyId as any
+      })
+      toast.success('Imóvel removido da seleção')
     } catch (error: any) {
-      toast.error(error.message || "Erro ao remover imóvel");
+      toast.error(error.message || 'Erro ao remover imóvel')
     } finally {
-      setLoadingPropertyId(null);
+      setLoadingPropertyId(null)
     }
-  };
+  }
 
   const isPropertySelected = (propertyId: string) => {
-    return selectedPropertyIds.includes(propertyId as any);
-  };
+    return userSelectedProperties?.some((p) => p._id === propertyId)
+  }
 
   return (
     <div className="flex flex-col gap-4 max-w-7xl mx-auto py-6">
@@ -133,19 +135,18 @@ export default function ImoveisClient() {
               Navegue pelos imóveis disponíveis na Aquisição Assistida e escolha
               até 3 opções
             </p>
-            
+
             {/* Selection Counter */}
             {isAuthenticated && (
               <div className="mt-6">
                 <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full">
                   <Heart className="w-5 h-5 fill-current" />
                   <span className="font-medium">
-                    {selectionCount === 0 
-                      ? "Você ainda não selecionou nenhum imóvel"
-                      : selectionCount === 3 
-                        ? "Você selecionou 3 imóveis (limite atingido)"
-                        : `Você selecionou ${selectionCount} imóvel(s) de 3 possíveis`
-                    }
+                    {selectionCount === 0
+                      ? 'Você ainda não selecionou nenhum imóvel'
+                      : selectionCount === 3
+                        ? 'Você selecionou 3 imóveis (limite atingido)'
+                        : `Você selecionou ${selectionCount} imóvel(s) de 3 possíveis`}
                   </span>
                 </div>
                 <div className="flex justify-center gap-1 mt-2">
@@ -154,8 +155,8 @@ export default function ImoveisClient() {
                       key={num}
                       className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                         num <= selectionCount
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-muted-foreground"
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-muted-foreground'
                       }`}
                     >
                       {num}
@@ -191,13 +192,13 @@ export default function ImoveisClient() {
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-col gap-4">
             <PropertyFilters />
-            
+
             {/* Results Header */}
             <div className="flex items-center justify-between mb-6">
               <p className="text-muted-foreground">
                 <span className="font-semibold text-foreground">
                   {sortedProperties.length} imóveis
-                </span>{" "}
+                </span>{' '}
                 encontrados
               </p>
               <Select value={sortBy} onValueChange={setSortBy}>
@@ -228,14 +229,18 @@ export default function ImoveisClient() {
                       title={property.titulo}
                       location={property.endereco}
                       imageSrc="/placeholder-property.jpg"
-                      status={property.status === "validated" ? "Disponível" : property.status}
+                      status={
+                        property.status === 'validated'
+                          ? 'Disponível'
+                          : property.status
+                      }
                       compartimentos={property.compartimentos}
                       areaM2={property.tamanho}
                       priceBRL={property.valorVenda}
                       type="Imóvel"
                       href={`/imoveis/${property._id}`}
                     />
-                    
+
                     {/* Selection Button */}
                     {isAuthenticated && (
                       <div className="absolute top-3 right-3">
@@ -258,12 +263,15 @@ export default function ImoveisClient() {
                             size="icon"
                             variant="secondary"
                             className={`rounded-full shadow-lg ${
-                              selectionCount >= 3 
-                                ? "bg-gray-300 hover:bg-gray-300 cursor-not-allowed" 
-                                : "bg-background/80 hover:bg-background"
+                              selectionCount >= 3
+                                ? 'bg-gray-300 hover:bg-gray-300 cursor-not-allowed'
+                                : 'bg-background/80 hover:bg-background'
                             }`}
                             onClick={() => handleSelectProperty(property._id)}
-                            disabled={selectionCount >= 3 || loadingPropertyId === property._id}
+                            disabled={
+                              selectionCount >= 3 ||
+                              loadingPropertyId === property._id
+                            }
                           >
                             {loadingPropertyId === property._id ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
@@ -274,11 +282,15 @@ export default function ImoveisClient() {
                         )}
                       </div>
                     )}
-                    
+
                     {/* Selected Badge */}
                     {isPropertySelected(property._id) && (
                       <Badge className="absolute top-3 left-3 bg-primary text-primary-foreground">
-                        Selecionado {selectedPropertyIds.indexOf(property._id as any) + 1}/3
+                        Selecionado{' '}
+                        {userSelectedProperties?.findIndex(
+                          (p) => p._id === property._id
+                        ) ?? 0 + 1}
+                        /3
                       </Badge>
                     )}
                   </div>
@@ -287,15 +299,17 @@ export default function ImoveisClient() {
             )}
 
             {/* Empty state for when user has reached limit */}
-            {isAuthenticated && selectionCount >= 3 && sortedProperties.length > 0 && (
-              <div className="mt-6 p-4 bg-muted/50 rounded-lg text-center">
-                <AlertCircle className="w-6 h-6 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-muted-foreground text-sm">
-                  Você atingiu o limite de 3 imóveis selecionados. 
-                  Remova um imóvel para selecionar outro.
-                </p>
-              </div>
-            )}
+            {isAuthenticated &&
+              selectionCount >= 3 &&
+              sortedProperties.length > 0 && (
+                <div className="mt-6 p-4 bg-muted/50 rounded-lg text-center">
+                  <AlertCircle className="w-6 h-6 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-muted-foreground text-sm">
+                    Você atingiu o limite de 3 imóveis selecionados. Remova um
+                    imóvel para selecionar outro.
+                  </p>
+                </div>
+              )}
           </div>
         </div>
       </div>
@@ -306,26 +320,18 @@ export default function ImoveisClient() {
           <DialogHeader>
             <DialogTitle>Limite de Seleção Atingido</DialogTitle>
             <DialogDescription>
-              Você já selecionou 3 imóveis, que é o máximo permitido. 
-              Para selecionar um novo imóvel, você precisa remover um dos já selecionados.
+              Você já selecionou 3 imóveis, que é o máximo permitido. Para
+              selecionar um novo imóvel, você precisa remover um dos já
+              selecionados.
             </DialogDescription>
           </DialogHeader>
           <div className="mt-4 flex justify-end">
-            <Button onClick={() => setShowLimitDialog(false)}>
-              Entendido
-            </Button>
+            <Button onClick={() => setShowLimitDialog(false)}>Entendido</Button>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Footer */}
-      <footer className="border-t py-8 bg-muted/30">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-sm text-muted-foreground">
-            © 2025 Aquisição Assistida - Governo do Estado do Maranhão. Todos os direitos reservados.
-          </p>
-        </div>
-      </footer>
     </div>
-  );
+  )
 }
