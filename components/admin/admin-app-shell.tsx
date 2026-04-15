@@ -147,7 +147,7 @@ export function AdminAppShell({ children }: { children: ReactNode }) {
           <SidebarMenu>
             <SidebarMenuItem>
               <div className="truncate px-2 py-1.5 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-                {user?.nome ?? user?.telefone ?? '—'}
+                {user?.nome ?? user?.phone ?? '—'}
               </div>
             </SidebarMenuItem>
             <SidebarMenuItem>

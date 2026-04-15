@@ -42,15 +42,7 @@ async function findUserByPhone(
   phone: string
 ): Promise<{ _id: GenericId<'users'>; role: string } | null> {
   console.log('findUserByPhone', phone)
-  // Query by telefone field (app field)
-  const user = await ctx.db
-    .query('users')
-    .withIndex('by_telefone', (q) => q.eq('telefone', phone))
-    .first()
-
-  if (user) return user
-
-  // Fallback: check phone field (Convex Auth)
+  // Query by canonical phone field.
   return await ctx.db
     .query('users')
     .withIndex('phone', (q) => q.eq('phone', phone))

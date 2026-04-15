@@ -91,7 +91,7 @@ export default function OfertantePerfilPage() {
         nome: user.nome,
         nomeSocial: user.nomeSocial || "",
         cpf: user.cpf,
-        telefone: user.telefone,
+        telefone: user.phone,
         email: user.email || "",
         rg: profile.rg,
         dataNascimento: profile.dataNascimento,

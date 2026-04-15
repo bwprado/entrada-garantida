@@ -1,52 +1,52 @@
-"use client"
+'use client'
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
-import { useQuery, useMutation } from "convex/react"
-import { api } from "@/convex/_generated/api"
-import { Form } from "@/components/ui/form"
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '@/convex/_generated/api'
+import { Form } from '@/components/ui/form'
 import {
   FormField,
   FormItem,
   FormLabel,
   FormControl,
-  FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
+  FormMessage
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { ProfileLayout, CommonFields } from "@/components/profile"
-import { useAuth } from "@/lib/auth-context"
-import { toast } from "sonner"
-import { useMaskito } from "@maskito/react"
-import { phoneMaskOptions } from "@/lib/masks"
+  SelectValue
+} from '@/components/ui/select'
+import { ProfileLayout, CommonFields } from '@/components/profile'
+import { useAuth } from '@/lib/auth-context'
+import { toast } from 'sonner'
+import { useMaskito } from '@maskito/react'
+import { phoneMaskOptions } from '@/lib/masks'
 
 const adminNivelAcessoOptions = [
-  { value: "super", label: "Super Administrador" },
-  { value: "moderador", label: "Moderador" },
-  { value: "leitor", label: "Leitor" },
+  { value: 'super', label: 'Super Administrador' },
+  { value: 'moderador', label: 'Moderador' },
+  { value: 'leitor', label: 'Leitor' }
 ]
 
 const perfilAdminSchema = z.object({
   // Common fields
-  nome: z.string().min(3, "Nome completo é obrigatório"),
+  nome: z.string().min(3, 'Nome completo é obrigatório'),
   nomeSocial: z.string().optional(),
-  cpf: z.string().min(14, "CPF inválido"),
-  telefone: z.string().min(14, "Celular inválido"),
-  email: z.string().email("E-mail inválido"),
+  cpf: z.string().min(14, 'CPF inválido'),
+  telefone: z.string().min(14, 'Celular inválido'),
+  email: z.string().email('E-mail inválido'),
 
   // Admin fields
-  nivelAcesso: z.enum(["super", "moderador", "leitor"]),
+  nivelAcesso: z.enum(['super', 'moderador', 'leitor']),
   departamento: z.string().optional(),
-  cargo: z.string().optional(),
+  cargo: z.string().optional()
 })
 
 type PerfilAdminFormData = z.infer<typeof perfilAdminSchema>
@@ -54,7 +54,7 @@ type PerfilAdminFormData = z.infer<typeof perfilAdminSchema>
 export default function AdminPerfilPage() {
   const router = useRouter()
   const { user, isLoading: isAuthLoading } = useAuth()
-  
+
   const userWithProfile = useQuery(api.users.getCurrentUserWithProfile)
   const updateProfile = useMutation(api.users.updateAdminProfile)
   const updateBasicInfo = useMutation(api.users.updateUserBasicInfo)
@@ -64,46 +64,38 @@ export default function AdminPerfilPage() {
   const form = useForm<PerfilAdminFormData>({
     resolver: zodResolver(perfilAdminSchema),
     defaultValues: {
-      nome: "",
-      nomeSocial: "",
-      cpf: "",
-      telefone: "",
-      email: "",
-      nivelAcesso: "leitor",
-      departamento: "",
-      cargo: "",
-    },
+      nome: '',
+      cpf: '',
+      telefone: '',
+      email: ''
+    }
   })
 
   // Populate form when data is loaded
   useEffect(() => {
     if (userWithProfile?.user) {
       const { user, profile } = userWithProfile
-      
+
       form.reset({
         nome: user.nome,
-        nomeSocial: user.nomeSocial || "",
         cpf: user.cpf,
-        telefone: user.telefone,
-        email: user.email || "",
-        nivelAcesso: profile?.nivelAcesso || "leitor",
-        departamento: profile?.departamento || "",
-        cargo: profile?.cargo || "",
+        telefone: user.phone,
+        email: user.email || ''
       })
     }
   }, [userWithProfile, form])
 
   // Redirect if not authenticated or not admin
   useEffect(() => {
-    if (!isAuthLoading && user && user.role !== "admin") {
-      router.push("/login")
+    if (!isAuthLoading && user && user.role !== 'admin') {
+      router.push('/login')
     }
   }, [user, isAuthLoading, router])
 
   const onSubmit = async (data: PerfilAdminFormData) => {
     try {
       if (!user?._id) {
-        toast.error("Usuário não encontrado")
+        toast.error('Usuário não encontrado')
         return
       }
 
@@ -113,19 +105,19 @@ export default function AdminPerfilPage() {
         email: data.email,
         nivelAcesso: data.nivelAcesso,
         departamento: data.departamento,
-        cargo: data.cargo,
+        cargo: data.cargo
       })
 
       // Update basic info
       await updateBasicInfo({
         userId: user._id,
-        nomeSocial: data.nomeSocial || undefined,
+        nomeSocial: data.nomeSocial || undefined
       })
 
-      toast.success("Perfil atualizado com sucesso!")
+      toast.success('Perfil atualizado com sucesso!')
     } catch (error) {
-      console.error("Erro ao atualizar perfil:", error)
-      toast.error("Erro ao atualizar perfil. Tente novamente.")
+      console.error('Erro ao atualizar perfil:', error)
+      toast.error('Erro ao atualizar perfil. Tente novamente.')
     }
   }
 
@@ -137,7 +129,7 @@ export default function AdminPerfilPage() {
     )
   }
 
-  if (!user || user.role !== "admin") {
+  if (!user || user.role !== 'admin') {
     return null
   }
 
@@ -153,11 +145,11 @@ export default function AdminPerfilPage() {
       >
         <div className="space-y-8">
           <CommonFields control={form.control} />
-          
+
           <div className="border-t pt-6" />
 
           <h3 className="text-lg font-semibold">Informações Administrativas</h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Nível de Acesso */}
             <FormField
@@ -196,7 +188,7 @@ export default function AdminPerfilPage() {
                 <FormItem>
                   <FormLabel>Departamento (opcional)</FormLabel>
                   <FormControl>
-                    <Input {...field} value={field.value || ""} />
+                    <Input {...field} value={field.value || ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -211,7 +203,7 @@ export default function AdminPerfilPage() {
                 <FormItem>
                   <FormLabel>Cargo (opcional)</FormLabel>
                   <FormControl>
-                    <Input {...field} value={field.value || ""} />
+                    <Input {...field} value={field.value || ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -153,7 +153,6 @@ export const users = defineTable({
   nome: v.string(),
   // Normalized name for search (lowercase, no accents, trimmed)
   searchName: v.optional(v.string()),
-  telefone: v.string(),
   email: v.optional(v.string()),
 
   // Status and timestamps
@@ -175,14 +174,13 @@ export const users = defineTable({
   // Profile references (role-specific profile table IDs)
   beneficiaryProfileId: v.optional(v.id('beneficiaryProfiles')),
   ofertanteProfileId: v.optional(v.id('ofertanteProfiles')),
-  adminProfileId: v.optional(v.id('adminProfiles')),
+  adminProfileId: v.optional(v.id('adminProfiles'))
 })
   .index('by_cpf', ['cpf'])
   .index('by_role', ['role'])
   .index('by_role_and_status', ['role', 'status'])
   .index('email', ['email'])
   .index('phone', ['phone'])
-  .index('by_telefone', ['telefone'])
   .index('by_beneficiary_profile', ['beneficiaryProfileId'])
   .index('by_ofertante_profile', ['ofertanteProfileId'])
   .index('by_admin_profile', ['adminProfileId'])
@@ -195,7 +193,7 @@ export const users = defineTable({
 // Beneficiary Profiles table - all beneficiary-specific data
 export const beneficiaryProfiles = defineTable({
   userId: v.id('users'),
-  
+
   // Personal details
   rg: v.string(),
   nomeResponsavelFamiliar: v.optional(v.string()),
@@ -205,20 +203,20 @@ export const beneficiaryProfiles = defineTable({
   identidadeGenero: identidadeGeneroEnum,
   raca: racaEnum,
   deficiencias: v.array(deficienciaEnum),
-  
+
   // Professional and income
   profissao: v.string(),
   empregador: v.optional(v.string()),
   ramoAtividade: v.optional(v.string()),
   tipoRenda: tipoRendaEnum,
   rendaFamiliarFaixa: rendaFamiliarFaixaEnum,
-  
+
   // Family composition
   pessoasFamilia: v.number(),
   mesesAluguelSocial: v.optional(v.number()),
   possuiIdosoFamilia: v.boolean(),
   chefiaFeminina: v.boolean(),
-  
+
   // Address
   cep: v.string(),
   endereco: v.string(),
@@ -228,7 +226,7 @@ export const beneficiaryProfiles = defineTable({
   cidade: v.string(),
   estado: v.string(),
   empreendimento: v.optional(v.string()),
-  
+
   // Contact
   dddTelefoneFixo: v.optional(v.string()),
   telefoneFixo: v.optional(v.string()),
@@ -236,28 +234,27 @@ export const beneficiaryProfiles = defineTable({
   telefoneRecado: v.optional(v.string()),
   falarCom: v.optional(v.string()),
   aceitaComunicacoes: v.boolean(),
-  
+
   // Property selections (max 3)
   propriedadesInteresse: v.optional(v.array(v.id('properties'))),
-  
+
   // Timestamps
   criadoEm: v.number(),
-  atualizadoEm: v.number(),
-})
-  .index('by_user', ['userId'])
+  atualizadoEm: v.number()
+}).index('by_user', ['userId'])
 
 // Ofertante Profiles table - all ofertante-specific data
 export const ofertanteProfiles = defineTable({
   userId: v.id('users'),
-  
+
   // Personal details
   rg: v.string(),
   dataNascimento: v.string(),
   estadoCivil: estadoCivilEnum,
-  
+
   // Professional
   profissao: v.string(),
-  
+
   // Address
   cep: v.string(),
   endereco: v.string(),
@@ -266,31 +263,29 @@ export const ofertanteProfiles = defineTable({
   bairro: v.string(),
   cidade: v.string(),
   estado: v.string(),
-  
+
   // Onboarding status
   onboardingCompleto: v.boolean(),
   documentosPendentes: v.optional(v.array(v.string())),
-  
+
   // Timestamps
   criadoEm: v.number(),
-  atualizadoEm: v.number(),
-})
-  .index('by_user', ['userId'])
+  atualizadoEm: v.number()
+}).index('by_user', ['userId'])
 
 // Admin Profiles table - minimal admin-specific data
 export const adminProfiles = defineTable({
   userId: v.id('users'),
-  
+
   // Admin-specific
   nivelAcesso: adminNivelAcessoEnum,
   departamento: v.optional(v.string()),
   cargo: v.optional(v.string()),
-  
+
   // Timestamps
   criadoEm: v.number(),
-  atualizadoEm: v.number(),
-})
-  .index('by_user', ['userId'])
+  atualizadoEm: v.number()
+}).index('by_user', ['userId'])
 
 // Properties table (simplified cadastro: endereço em linha única)
 export const properties = defineTable({

@@ -35,7 +35,8 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { UserPlus, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { fetchAddressByCEP, normalizePhone } from '@/lib/validation'
+import { fetchAddressByCEP } from '@/lib/validation'
+import { normalizePhone } from '@/lib/normalize-phone'
 
 // Form schema for adding users
 const userFormSchema = z
@@ -393,7 +394,7 @@ export function AddUserSheet({
         const result = await createBeneficiary({
           nome: values.nome,
           cpf: values.cpf!,
-          telefone: normalizePhone(values.telefone),
+          telefone: normalizePhone(values.telefone).save(),
           email: values.email || undefined,
           rg: values.rg!,
           sexo: values.sexo!,
@@ -422,7 +423,7 @@ export function AddUserSheet({
       } else {
         const result = await createOfertante({
           nome: values.nome,
-          telefone: normalizePhone(values.telefone)
+          telefone: normalizePhone(values.telefone).save()
         })
 
         if (result.success) {

@@ -55,8 +55,8 @@ import {
   Plus
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { formatPhone as formatPhoneDisplay } from '@/lib/validation'
 import { AddUserSheet } from './add-user-sheet'
+import { normalizePhone } from '@/lib/normalize-phone'
 
 export default function AdminDashboardClient() {
   const [activeTab, setActiveTab] = useState('beneficiarios')
@@ -392,7 +392,9 @@ export default function AdminDashboardClient() {
                                 {b.nome}
                               </TableCell>
                               <TableCell>{formatCPF(b.cpf)}</TableCell>
-                              <TableCell>{formatPhoneDisplay(b.telefone)}</TableCell>
+                              <TableCell>
+                                {normalizePhone(b.phone).display()}
+                              </TableCell>
                               <TableCell>
                                 <Badge
                                   variant={
@@ -538,7 +540,7 @@ export default function AdminDashboardClient() {
                                         Telefone
                                       </p>
                                       <p className="font-medium">
-                                        {formatPhoneDisplay(b.telefone)}
+                                        {normalizePhone(b.phone).display()}
                                       </p>
                                     </div>
                                   </div>
@@ -660,7 +662,10 @@ export default function AdminDashboardClient() {
                                     </Badge>
                                   </div>
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-muted-foreground">
-                                    <p>Telefone: {formatPhoneDisplay(o.telefone)}</p>
+                                    <p>
+                                      Telefone:{' '}
+                                      {normalizePhone(o.phone).display()}
+                                    </p>
                                     <p>
                                       Cadastro:{' '}
                                       {new Date(o.criadoEm).toLocaleDateString(
@@ -725,7 +730,10 @@ export default function AdminDashboardClient() {
                                           ? formatCPF(o.cpf)
                                           : 'Não informado'}
                                       </p>
-                                      <p>Telefone: {formatPhoneDisplay(o.telefone)}</p>
+                                      <p>
+                                        Telefone:{' '}
+                                        {normalizePhone(o.phone).display()}
+                                      </p>
                                       <p>
                                         Cadastro:{' '}
                                         {new Date(
@@ -795,7 +803,7 @@ export default function AdminDashboardClient() {
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-muted-foreground">
                             <p>CNPJ: {c.cpf}</p>
-                            <p>Telefone: {formatPhoneDisplay(c.telefone)}</p>
+                            <p>Telefone: {normalizePhone(c.phone).display()}</p>
                             <p>
                               Cadastro:{' '}
                               {new Date(c.criadoEm).toLocaleDateString('pt-BR')}

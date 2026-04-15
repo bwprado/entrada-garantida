@@ -1,10 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { useAuth } from "@/lib/auth-context";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,46 +9,43 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { api } from "@/convex/_generated/api";
+import { Doc } from "@/convex/_generated/dataModel";
+import { normalizePhone } from "@/lib/normalize-phone";
+import { useAuthActions } from "@convex-dev/auth/react";
+import { useMutation, useQuery } from "convex/react";
 import {
-  Home,
-  User,
-  FileText,
-  Clock,
-  CheckCircle2,
   AlertCircle,
+  ArrowRight,
+  Bed,
   Building2,
+  CheckCircle2,
+  Clock,
+  Edit,
+  FileText,
   Heart,
-  X,
+  Home,
   Loader2,
   MapPin,
-  Bed,
-  ArrowRight,
-  Edit,
+  User,
+  X,
 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
+
 import Image from "next/image";
+import Link from "next/link";
 
 export default function BeneficiarioDashboardPage() {
-  const { user, isAuthenticated, logout } = useAuth();
   const [removingId, setRemovingId] = useState<string | null>(null);
   
-  const userWithProfile = useQuery(
-    api.users.getCurrentUserWithProfile,
-    user ? {} : "skip"
-  );
+  const { signOut } = useAuthActions();
+  const query = useQuery(api.users.getCurrentUserWithProfile);
+  const user = query?.user;
+  const profile = query?.profile as Doc<'beneficiaryProfiles'>;
+  const properties = query?.properties;
   
-  const userData = userWithProfile?.user;
-  const profile = userWithProfile?.profile;
-
-  const selectedProperties = useQuery(
-    api.properties.getByIds,
-    profile?.propriedadesInteresse?.length 
-      ? { ids: profile.propriedadesInteresse }
-      : "skip"
-  );
-
   const removePropertyMutation = useMutation(api.users.removePropertySelection);
 
   const handleRemoveProperty = async (propertyId: string) => {
@@ -72,7 +65,7 @@ export default function BeneficiarioDashboardPage() {
     }
   };
 
-  const selectionCount = profile?.propriedadesInteresse?.length || 0;
+  const selectionCount = properties?.length || 0;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -82,7 +75,7 @@ export default function BeneficiarioDashboardPage() {
     }).format(value);
   };
 
-  if (!isAuthenticated) {
+  if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="w-full max-w-md mx-4">
@@ -110,7 +103,7 @@ export default function BeneficiarioDashboardPage() {
           {/* Welcome Section */}
           <div className="mb-8">
             <h2 className="text-3xl font-bold mb-2">
-              Bem-vindo, {userData?.nome || user?.nome || "Beneficiário"}
+              Bem-vindo, {user?.nome || "Beneficiário"}
             </h2>
             <p className="text-muted-foreground">
               Acompanhe o status da sua solicitação na Aquisição Assistida
@@ -162,7 +155,7 @@ export default function BeneficiarioDashboardPage() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {selectedProperties?.map((property, index) => (
+                      {properties?.map((property, index) => (
                         <div
                           key={property._id}
                           className="relative flex gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
@@ -247,7 +240,7 @@ export default function BeneficiarioDashboardPage() {
                     </Badge>
                   </div>
                   <CardDescription>
-                    Protocolo: #{userData?._id?.slice(-6) || "N/A"}
+                    Protocolo: #{user?._id?.slice(-6) || "N/A"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -275,8 +268,8 @@ export default function BeneficiarioDashboardPage() {
                           Cadastro Realizado
                         </h4>
                         <p className="text-sm text-muted-foreground">
-                          {userData?.criadoEm 
-                            ? new Date(userData.criadoEm).toLocaleDateString("pt-BR")
+                          {user?.criadoEm 
+                            ? new Date(user.criadoEm).toLocaleDateString("pt-BR")
                             : "Data não disponível"
                           }
                         </p>
@@ -378,25 +371,25 @@ export default function BeneficiarioDashboardPage() {
                 <CardContent className="space-y-3 text-sm">
                   <div>
                     <p className="text-muted-foreground">Nome</p>
-                    <p className="font-medium">{userData?.nome || "N/A"}</p>
+                    <p className="font-medium">{user?.nome || "N/A"}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">CPF</p>
                     <p className="font-medium">
-                      {userData?.cpf?.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4") || "N/A"}
+                      {user?.cpf?.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4") || "N/A"}
                     </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Telefone</p>
                     <p className="font-medium">
-                      {userData?.telefone?.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3") || "N/A"}
+                      {normalizePhone(user?.phone).display() || "N/A"}
                     </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Endereço</p>
                     <p className="font-medium">
-                      {profile?.endereco 
-                        ? `${profile.endereco}${profile.numero ? `, ${profile.numero}` : ""}`
+                      {profile?.cep 
+                        ? `${profile.cep}${profile.numero ? `, ${profile.numero}` : ""}`
                         : "N/A"
                       }
                     </p>
@@ -439,7 +432,7 @@ export default function BeneficiarioDashboardPage() {
                   <Button 
                     variant="outline" 
                     className="w-full justify-between text-destructive hover:text-destructive"
-                    onClick={logout}
+                    onClick={() => signOut()}
                   >
                     <span className="flex items-center">
                       Sair

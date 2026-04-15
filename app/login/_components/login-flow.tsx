@@ -947,7 +947,7 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
                             Celular
                           </p>
                           <p className="font-medium">
-                            {String(userData.telefone ?? '')}
+                            {String(userData.phone ?? '')}
                           </p>
                         </div>
                       </div>

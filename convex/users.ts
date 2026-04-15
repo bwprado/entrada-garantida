@@ -8,17 +8,17 @@ import {
 import { v } from 'convex/values'
 import { normalizePhone } from '../lib/normalize-phone'
 import { DataModel, Doc, Id } from './_generated/dataModel'
-import { internalMutation, mutation, query } from './_generated/server'
-import { verifyAdmin, verifySelfOrAdmin } from './authz'
+import { mutation, query } from './_generated/server'
+import { verifyAdmin, verifyLogin, verifySelfOrAdmin } from './authz'
 import {
-  estadoCivilEnum,
-  sexoEnum,
-  racaEnum,
+  adminNivelAcessoEnum,
   deficienciaEnum,
-  tipoRendaEnum,
-  rendaFamiliarFaixaEnum,
+  estadoCivilEnum,
   identidadeGeneroEnum,
-  adminNivelAcessoEnum
+  racaEnum,
+  rendaFamiliarFaixaEnum,
+  sexoEnum,
+  tipoRendaEnum
 } from './schema'
 
 // Clean CPF (remove non-digits)
@@ -32,7 +32,7 @@ function isValidCPFLength(cpf: string): boolean {
   return cleaned.length === 11
 }
 
-/** Compare stored telefone (any supported shape) with user input. */
+/** Compare stored phone (any supported shape) with user input. */
 function sameBrazilMobile(stored: string, input: string): boolean {
   const a = normalizePhone(stored)
   const b = normalizePhone(input)
@@ -56,22 +56,29 @@ export function normalizeName(name: string): string {
 export const getCurrentUserWithProfile = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx)
-    if (userId === null) return null
+    const user = await verifyLogin(ctx)
 
-    const user = await ctx.db.get(userId)
-    if (!user) return null
-
-    let profile = null
     if (user.role === 'beneficiary' && user.beneficiaryProfileId) {
-      profile = await ctx.db.get(user.beneficiaryProfileId)
+      const profile = await ctx.db.get(user.beneficiaryProfileId)
+      const properties = []
+
+      if (profile && profile.propriedadesInteresse && profile.propriedadesInteresse.length > 0) {
+        for (const propertyId of profile.propriedadesInteresse ?? []) {
+          const property = await ctx.db.get(propertyId)
+          if (property) {
+            properties.push(property)
+          }
+        }
+        
+      }
+      return { user, profile: await ctx.db.get(user.beneficiaryProfileId), properties }
     } else if (user.role === 'ofertante' && user.ofertanteProfileId) {
-      profile = await ctx.db.get(user.ofertanteProfileId)
+      return { user, profile: await ctx.db.get(user.ofertanteProfileId) }
     } else if (user.role === 'admin' && user.adminProfileId) {
-      profile = await ctx.db.get(user.adminProfileId)
+      return { user, profile: await ctx.db.get(user.adminProfileId) }
     }
 
-    return { user, profile }
+    return null
   }
 })
 
@@ -401,7 +408,7 @@ export const getLoginInfoByTelefone = query({
     for (const v of variants) {
       const user = await ctx.db
         .query('users')
-        .withIndex('by_telefone', (q) => q.eq('telefone', v))
+        .withIndex('phone', (q) => q.eq('phone', v))
         .first()
       if (user) {
         return { ok: true, exists: true, role: user.role }
@@ -689,7 +696,7 @@ export const updateUserBasicInfo = mutation({
 
     if (args.nome !== undefined) updates.nome = args.nome
     if (args.email !== undefined) updates.email = args.email
-    if (args.telefone !== undefined) updates.telefone = args.telefone
+    if (args.telefone !== undefined) updates.phone = args.telefone
 
     await ctx.db.patch(args.userId, updates)
 
@@ -748,7 +755,7 @@ export const assertBeneficiaryCpfTelefone = mutation({
       }
     }
 
-    if (!sameBrazilMobile(user.telefone, args.telefone)) {
+    if (!user.phone || !sameBrazilMobile(user.phone, args.telefone)) {
       return {
         success: false,
         error:
@@ -1023,7 +1030,7 @@ export const updateProfile = mutation({
     }
 
     if (args.email !== undefined) updates.email = args.email
-    if (args.telefone !== undefined) updates.telefone = args.telefone
+    if (args.telefone !== undefined) updates.phone = args.telefone
 
     await ctx.db.patch(args.userId, updates)
 
@@ -1095,7 +1102,7 @@ export const createAdmin = mutation({
       cpf: cleaned,
       nome: args.nome,
       email: args.email,
-      telefone: args.telefone,
+      phone: args.telefone,
       status: 'active',
       criadoEm: now,
       atualizadoEm: now
@@ -1222,7 +1229,7 @@ export const bulkUploadBeneficiaries = mutation({
           cpf: cleaned,
           nome: safeNome,
           searchName: normalizeName(safeNome),
-          telefone: b.telefone,
+          phone: b.telefone,
           email: b.email,
           status: 'pending',
           dadosComErro: hasImportError,
@@ -1340,11 +1347,11 @@ export const registerOfertante = mutation({
     if (!n.isValid()) {
       return { success: false, error: 'Telefone inválido' }
     }
-    const telefoneE164 = n.save()
+    const phoneE164 = n.save()
 
     const existingUser = await ctx.db
       .query('users')
-      .withIndex('by_telefone', (q) => q.eq('telefone', telefoneE164))
+      .withIndex('phone', (q) => q.eq('phone', phoneE164))
       .first()
 
     if (existingUser) {
@@ -1357,7 +1364,7 @@ export const registerOfertante = mutation({
       role: 'ofertante',
       cpf: '', // Will be filled during onboarding
       nome: args.nome,
-      telefone: telefoneE164,
+      phone: phoneE164,
       status: 'onboarding',
       criadoEm: now,
       atualizadoEm: now
@@ -1562,7 +1569,7 @@ export const createBeneficiary = mutation({
     }
 
     const now = Date.now()
-    const telefoneE164 = n.save()
+    const phoneE164 = n.save()
 
     // Create user
     const userId = await ctx.db.insert('users', {
@@ -1570,7 +1577,7 @@ export const createBeneficiary = mutation({
       cpf: cleanedCPF,
       nome: args.nome,
       searchName: normalizeName(args.nome),
-      telefone: telefoneE164,
+      phone: phoneE164,
       email: args.email,
       status: 'pending',
       criadoEm: now,
@@ -1654,12 +1661,12 @@ export const createOfertanteMinimal = mutation({
       return { success: false, error: 'Telefone inválido' }
     }
 
-    const telefoneE164 = n.save()
+    const phoneE164 = n.save()
 
     // Check for existing phone
     const existingUser = await ctx.db
       .query('users')
-      .withIndex('by_telefone', (q) => q.eq('telefone', telefoneE164))
+      .withIndex('phone', (q) => q.eq('phone', phoneE164))
       .first()
 
     if (existingUser) {
@@ -1673,7 +1680,7 @@ export const createOfertanteMinimal = mutation({
       cpf: '',
       nome: args.nome,
       searchName: normalizeName(args.nome),
-      telefone: telefoneE164,
+      phone: phoneE164,
       status: 'onboarding',
       criadoEm: now,
       atualizadoEm: now

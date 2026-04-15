@@ -1,65 +1,54 @@
-"use client";
+'use client'
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { Button } from "@/components/ui/button";
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { useQuery } from 'convex/react'
+import { api } from '@/convex/_generated/api'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Home, 
-  Plus, 
-  Eye, 
-  Edit, 
-  BarChart3, 
-  Users, 
-  CheckCircle2, 
-  Clock, 
+} from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Home,
+  Plus,
+  Eye,
+  Edit,
+  BarChart3,
+  Users,
+  CheckCircle2,
+  Clock,
   XCircle,
   Upload,
   FileText,
   AlertCircle,
   User
-} from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
+} from 'lucide-react'
+import { useAuth } from '@/lib/auth-context'
+import { Doc } from '@/convex/_generated/dataModel'
 
 export default function OfertanteDashboardPage() {
-  const router = useRouter();
-  const { user, isAuthenticated, isLoading } = useAuth();
-  const userWithProfile = useQuery(api.users.getCurrentUserWithProfile);
-  
-  const profile = userWithProfile?.profile;
+  const router = useRouter()
+
+  const query = useQuery(api.users.getCurrentUserWithProfile)
+  const user = query?.user
+  const profile = query?.profile as Doc<'ofertanteProfiles'>
 
   // Check authentication and onboarding
-  useEffect(() => {
-    if (!isLoading) {
-      if (!isAuthenticated) {
-        router.push("/login/ofertante");
-      } else if (user?.role !== "ofertante") {
-        router.push("/");
-      } else if (!profile?.onboardingCompleto) {
-        router.push("/ofertante/onboarding");
-      }
-    }
-  }, [isAuthenticated, isLoading, user, router, profile]);
 
   // Show loading while auth is loading or profile data is not yet available
-  const isProfileLoading = userWithProfile === undefined;
-  if (isLoading || isProfileLoading || !isAuthenticated || !user?.onboardingCompleto) {
+  if (!user || !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
-    );
+    )
   }
 
   return (
@@ -72,7 +61,9 @@ export default function OfertanteDashboardPage() {
           </p>
 
           <div className="mb-8">
-            <h2 className="mb-2 text-2xl font-bold md:text-3xl">Meus Imóveis</h2>
+            <h2 className="mb-2 text-2xl font-bold md:text-3xl">
+              Meus Imóveis
+            </h2>
             <p className="text-muted-foreground">
               Gerencie suas propriedades disponibilizadas na Aquisição Assistida
             </p>
@@ -182,7 +173,9 @@ export default function OfertanteDashboardPage() {
                 <CardContent>
                   <div className="text-center py-12">
                     <Home className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Nenhum imóvel cadastrado</h3>
+                    <h3 className="text-lg font-semibold mb-2">
+                      Nenhum imóvel cadastrado
+                    </h3>
                     <p className="text-muted-foreground mb-6 max-w-md mx-auto">
                       Cadastre seu primeiro imóvel para começar a participar da
                       Aquisição Assistida.
@@ -202,7 +195,8 @@ export default function OfertanteDashboardPage() {
                 <CardHeader>
                   <CardTitle>Documentos Pendentes</CardTitle>
                   <CardDescription>
-                    Faça upload dos documentos necessários para validação do seu cadastro
+                    Faça upload dos documentos necessários para validação do seu
+                    cadastro
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -214,7 +208,9 @@ export default function OfertanteDashboardPage() {
                       </div>
                       <div>
                         <p className="font-medium">RG ou CNH</p>
-                        <p className="text-sm text-muted-foreground">Documento de identidade</p>
+                        <p className="text-sm text-muted-foreground">
+                          Documento de identidade
+                        </p>
                       </div>
                     </div>
                     <Button variant="outline" size="sm">
@@ -231,7 +227,9 @@ export default function OfertanteDashboardPage() {
                       </div>
                       <div>
                         <p className="font-medium">Comprovante de Residência</p>
-                        <p className="text-sm text-muted-foreground">Conta de luz, água, etc.</p>
+                        <p className="text-sm text-muted-foreground">
+                          Conta de luz, água, etc.
+                        </p>
                       </div>
                     </div>
                     <Button variant="outline" size="sm">
@@ -248,7 +246,9 @@ export default function OfertanteDashboardPage() {
                       </div>
                       <div>
                         <p className="font-medium">Matrícula do Imóvel</p>
-                        <p className="text-sm text-muted-foreground">Certidão atualizada</p>
+                        <p className="text-sm text-muted-foreground">
+                          Certidão atualizada
+                        </p>
                       </div>
                     </div>
                     <Button variant="outline" size="sm">
@@ -265,7 +265,9 @@ export default function OfertanteDashboardPage() {
                       </div>
                       <div>
                         <p className="font-medium">Certidão Negativa de IPTU</p>
-                        <p className="text-sm text-muted-foreground">Certidão atualizada</p>
+                        <p className="text-sm text-muted-foreground">
+                          Certidão atualizada
+                        </p>
                       </div>
                     </div>
                     <Button variant="outline" size="sm">
@@ -294,15 +296,21 @@ export default function OfertanteDashboardPage() {
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm text-muted-foreground">CPF</p>
-                      <p className="font-medium">{user?.cpf || "Não informado"}</p>
+                      <p className="font-medium">
+                        {user?.cpf || 'Não informado'}
+                      </p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm text-muted-foreground">Telefone</p>
-                      <p className="font-medium">{user?.telefone}</p>
+                      <p className="font-medium">{user?.phone}</p>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">Data de Nascimento</p>
-                      <p className="font-medium">{profile?.dataNascimento || "Não informado"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Data de Nascimento
+                      </p>
+                      <p className="font-medium">
+                        {profile?.dataNascimento || 'Não informado'}
+                      </p>
                     </div>
                   </div>
 
@@ -310,12 +318,17 @@ export default function OfertanteDashboardPage() {
                     <h3 className="font-semibold mb-3">Endereço</h3>
                     <div className="space-y-1">
                       <p className="font-medium">
-                        {profile?.endereco || "Não informado"}
-                        {profile?.numero ? `, ${profile.numero}` : ""}
-                        {profile?.complemento ? ` - ${profile.complemento}` : ""}
+                        {profile?.endereco || 'Não informado'}
+                        {profile?.numero ? `, ${profile.numero}` : ''}
+                        {profile?.complemento
+                          ? ` - ${profile.complemento}`
+                          : ''}
                       </p>
                       <p className="text-muted-foreground">
-                        {profile?.bairro || ""} {profile?.cidade ? `- ${profile.cidade}/${profile.estado}` : ""}
+                        {profile?.bairro || ''}{' '}
+                        {profile?.cidade
+                          ? `- ${profile.cidade}/${profile.estado}`
+                          : ''}
                       </p>
                     </div>
                   </div>
@@ -344,13 +357,19 @@ export default function OfertanteDashboardPage() {
               Assistida ou problemas com seu cadastro.
             </p>
             <div className="text-sm space-y-1">
-              <p><strong>Telefone:</strong> (98) 3198-5300</p>
-              <p><strong>Email:</strong> secid@ma.gov.br</p>
-              <p><strong>Horário:</strong> Segunda a Sexta, 8h às 18h</p>
+              <p>
+                <strong>Telefone:</strong> (98) 3198-5300
+              </p>
+              <p>
+                <strong>Email:</strong> secid@ma.gov.br
+              </p>
+              <p>
+                <strong>Horário:</strong> Segunda a Sexta, 8h às 18h
+              </p>
             </div>
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }

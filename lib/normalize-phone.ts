@@ -103,7 +103,7 @@ interface PhoneNormalizer {
  */
 export const normalizePhone = (
   phone: string | undefined,
-  countryCode: 'BR' | 'US' = 'BR',
+  countryCode: 'BR' | 'US' | undefined = 'BR',
   defaultAreaCode?: string
 ): PhoneNormalizer => {
   const getDigits = (): string => {
@@ -128,7 +128,10 @@ export const normalizePhone = (
 
       // Handle 3-digit area code with leading 0 (trunk prefix)
       // Examples: 01598999728 -> 1598999728, 011999999999 -> 11999999999
-      if (digits.startsWith('0') && (digits.length === 11 || digits.length === 12)) {
+      if (
+        digits.startsWith('0') &&
+        (digits.length === 11 || digits.length === 12)
+      ) {
         digits = digits.slice(1) // Remove the leading 0
       }
 
@@ -138,7 +141,10 @@ export const normalizePhone = (
 
       // BR local number without area code (8 or 9 digits) + provided default DDD
       const areaCode = getDefaultAreaCodeDigits()
-      if ((digits.length === 9 || digits.length === 8) && areaCode.length === 2) {
+      if (
+        (digits.length === 9 || digits.length === 8) &&
+        areaCode.length === 2
+      ) {
         return `55${areaCode}${digits}`
       }
     } else if (countryCode === 'US') {
@@ -160,7 +166,10 @@ export const normalizePhone = (
 
     if (countryCode === 'BR') {
       // BR: 55 + 10 or 11 digits = 12-13 total
-      return normalized.startsWith('55') && (normalized.length === 12 || normalized.length === 13)
+      return (
+        normalized.startsWith('55') &&
+        (normalized.length === 12 || normalized.length === 13)
+      )
     } else if (countryCode === 'US') {
       // US: 1 + 10 digits = 11 total
       return normalized.startsWith('1') && normalized.length === 11
