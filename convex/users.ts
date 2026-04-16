@@ -524,10 +524,11 @@ export const updateBeneficiaryProfile = mutation({
     if (args.aceitaComunicacoes !== undefined)
       updates.aceitaComunicacoes = args.aceitaComunicacoes
 
-    // Personal fields (only admin can update these)
-    const isAdmin = actor.role === 'admin'
+    // Personal fields: admin may edit any beneficiary; beneficiaries may edit their own
+    const canEditPersonalFields =
+      actor.role === 'admin' || actor._id === args.userId
 
-    if (isAdmin) {
+    if (canEditPersonalFields) {
       if (args.rg !== undefined) updates.rg = args.rg
       if (args.nomeResponsavelFamiliar !== undefined)
         updates.nomeResponsavelFamiliar = args.nomeResponsavelFamiliar
@@ -700,7 +701,7 @@ export const updateUserBasicInfo = mutation({
     telefone: v.optional(v.string())
   },
   handler: async (ctx, args) => {
-    await verifySelfOrAdmin(ctx, args.userId)
+    const actor = await verifySelfOrAdmin(ctx, args.userId)
     const user = await ctx.db.get(args.userId)
     if (!user) {
       throw new Error('Usuário não encontrado')
@@ -710,9 +711,15 @@ export const updateUserBasicInfo = mutation({
       atualizadoEm: Date.now()
     }
 
-    if (args.nome !== undefined) updates.nome = args.nome
+    const selfBeneficiary =
+      user.role === 'beneficiary' && actor._id === args.userId
+
+    // Nome e telefone vêm do cadastro/importação; beneficiário não altera pelo próprio perfil
+    if (!selfBeneficiary) {
+      if (args.nome !== undefined) updates.nome = args.nome
+      if (args.telefone !== undefined) updates.phone = args.telefone
+    }
     if (args.email !== undefined) updates.email = args.email
-    if (args.telefone !== undefined) updates.phone = args.telefone
 
     await ctx.db.patch(args.userId, updates)
 

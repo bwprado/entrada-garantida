@@ -16,12 +16,17 @@ import {
 import { Input } from '@/components/ui/input'
 import { api } from '@/convex/_generated/api'
 import { Doc } from '@/convex/_generated/dataModel'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cepMaskOptions } from '@/lib/masks'
+import { normalizePhone } from '@/lib/normalize-phone'
+import { mergeRefs } from '@/lib/utils'
+import { formatCPF } from '@/lib/validation'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMaskito } from '@maskito/react'
 import { useMutation, useQuery } from 'convex/react'
+import { AlertCircle, ClipboardList, MapPin, User } from 'lucide-react'
 import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useFormState } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
@@ -29,8 +34,6 @@ const perfilBeneficiarioSchema = z.object({
   // Common fields (admin only)
   nome: z.string().min(3, 'Nome completo é obrigatório'),
   nomeSocial: z.string().optional(),
-  cpf: z.string().min(14, 'CPF inválido'),
-  telefone: z.string().min(14, 'Celular inválido'),
   email: z.string().email('E-mail inválido').optional().or(z.literal('')),
 
   // Address (editable by beneficiary)
@@ -96,17 +99,13 @@ export default function BeneficiarioPerfilPage() {
   const query = useQuery(api.users.getCurrentUserWithProfile)
   const user = query?.user as Doc<'users'>
   const profile = query?.profile as Doc<'beneficiaryProfiles'>
-  const properties = query?.properties as Doc<'properties'>[]
   const updateProfile = useMutation(api.users.updateBeneficiaryProfile)
-  const updateBasicInfo = useMutation(api.users.updateUserBasicInfo)
 
   const form = useForm<PerfilBeneficiarioFormData>({
     resolver: zodResolver(perfilBeneficiarioSchema),
     defaultValues: {
       nome: '',
       nomeSocial: '',
-      cpf: '',
-      telefone: '',
       email: '',
       cep: '',
       endereco: '',
@@ -140,14 +139,14 @@ export default function BeneficiarioPerfilPage() {
     }
   })
 
+  const { isDirty } = useFormState({ control: form.control })
+
   // Populate form when data is loaded
   useEffect(() => {
     if (user && profile) {
       form.reset({
         nome: user.nome,
         nomeSocial: user.nome || '',
-        cpf: user.cpf,
-        telefone: user.phone,
         email: user.email || '',
         cep: profile.cep,
         endereco: profile.endereco,
@@ -189,10 +188,8 @@ export default function BeneficiarioPerfilPage() {
         return
       }
 
-      // Update profile data (beneficiary can only edit specific fields)
       await updateProfile({
         userId: user._id,
-        // Address (editable by beneficiary)
         cep: data.cep,
         endereco: data.endereco,
         numero: data.numero,
@@ -201,22 +198,31 @@ export default function BeneficiarioPerfilPage() {
         cidade: data.cidade,
         estado: data.estado,
         empreendimento: data.empreendimento,
-        // Contact (editable by beneficiary)
         email: data.email || undefined,
         telefoneFixo: data.telefoneFixo,
         telefoneRecado: data.telefoneRecado,
         falarCom: data.falarCom,
-        aceitaComunicacoes: data.aceitaComunicacoes
+        aceitaComunicacoes: data.aceitaComunicacoes,
+        rg: data.rg,
+        nomeResponsavelFamiliar: data.nomeResponsavelFamiliar,
+        nomeMae: data.nomeMae,
+        nomePai: data.nomePai,
+        sexo: data.sexo,
+        identidadeGenero: data.identidadeGenero,
+        raca: data.raca,
+        deficiencias: data.deficiencias as Doc<'beneficiaryProfiles'>['deficiencias'],
+        profissao: data.profissao,
+        empregador: data.empregador,
+        ramoAtividade: data.ramoAtividade,
+        tipoRenda: data.tipoRenda,
+        rendaFamiliarFaixa: data.rendaFamiliarFaixa,
+        pessoasFamilia: data.pessoasFamilia,
+        mesesAluguelSocial: data.mesesAluguelSocial,
+        possuiIdosoFamilia: data.possuiIdosoFamilia,
+        chefiaFeminina: data.chefiaFeminina
       })
 
-      // Update basic info (only nomeSocial can be updated by beneficiary)
-      if (data.nomeSocial !== user.nome) {
-        await updateBasicInfo({
-          userId: user._id,
-          nomeSocial: data.nome || undefined
-        })
-      }
-
+      form.reset(data)
       toast.success('Perfil atualizado com sucesso!')
     } catch (error) {
       console.error('Erro ao atualizar perfil:', error)
@@ -246,126 +252,186 @@ export default function BeneficiarioPerfilPage() {
         backHref="/beneficiario/dashboard"
         backLabel="Voltar ao Dashboard"
       >
-        <div className="space-y-8">
-          <CommonFields control={form.control} isAdmin={false} />
-
-          <div className="border-t pt-6" />
-
-          <BeneficiaryFields control={form.control} isAdmin={false} />
-
-          <div className="border-t pt-6" />
-
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold">Endereço</h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* CEP */}
-              <FormField
-                control={form.control}
-                name="cep"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>CEP</FormLabel>
-                    <FormControl>
-                      <Input {...field} ref={cepRef} placeholder="00000-000" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Estado */}
-              <FormField
-                control={form.control}
-                name="estado"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Estado</FormLabel>
-                    <FormControl>
-                      <Input {...field} maxLength={2} placeholder="UF" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Cidade */}
-              <FormField
-                control={form.control}
-                name="cidade"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cidade</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Endereço */}
-              <FormField
-                control={form.control}
-                name="endereco"
-                render={({ field }) => (
-                  <FormItem className="md:col-span-2">
-                    <FormLabel>Logradouro</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Número */}
-              <FormField
-                control={form.control}
-                name="numero"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Número</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Bairro */}
-              <FormField
-                control={form.control}
-                name="bairro"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Bairro</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Complemento */}
-              <FormField
-                control={form.control}
-                name="complemento"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Complemento (opcional)</FormLabel>
-                    <FormControl>
-                      <Input {...field} value={field.value || ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+        {isDirty && (
+          <div
+            role="alert"
+            className="flex gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:border-amber-400/35 dark:bg-amber-400/10 dark:text-amber-50"
+          >
+            <AlertCircle
+              className="size-5 shrink-0 text-amber-600 dark:text-amber-300"
+              aria-hidden
+            />
+            <p>
+              Você tem alterações não salvas. Use{' '}
+              <span className="font-medium">Salvar Alterações</span> no fim do
+              formulário para guardá-las.
+            </p>
           </div>
-        </div>
+        )}
+
+        <Tabs defaultValue="basico" className="w-full">
+          <TabsList className="grid h-auto w-full grid-cols-1 gap-2 rounded-lg bg-muted p-1 text-muted-foreground sm:grid-cols-3">
+            <TabsTrigger
+              value="basico"
+              className="flex w-full items-center justify-center gap-2 py-2.5 sm:py-1.5"
+            >
+              <User className="size-4 shrink-0" aria-hidden />
+              <span>Dados básicos</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="cadastro"
+              className="flex w-full items-center justify-center gap-2 py-2.5 sm:py-1.5"
+            >
+              <ClipboardList className="size-4 shrink-0" aria-hidden />
+              <span>Cadastro</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="endereco"
+              className="flex w-full items-center justify-center gap-2 py-2.5 sm:py-1.5"
+            >
+              <MapPin className="size-4 shrink-0" aria-hidden />
+              <span>Endereço</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent
+            value="basico"
+            forceMount
+            className="mt-6 space-y-6 outline-none data-[state=inactive]:hidden"
+          >
+            <CommonFields
+              control={form.control as never}
+              isAdmin={false}
+              identifiersDisplay={{
+                cpf: formatCPF(user.cpf),
+                phone:
+                  normalizePhone(user.phone).display() || '—'
+              }}
+            />
+          </TabsContent>
+
+          <TabsContent
+            value="cadastro"
+            forceMount
+            className="mt-6 outline-none data-[state=inactive]:hidden"
+          >
+            <BeneficiaryFields control={form.control as never} />
+          </TabsContent>
+
+          <TabsContent
+            value="endereco"
+            forceMount
+            className="mt-6 outline-none data-[state=inactive]:hidden"
+          >
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold">Endereço</h3>
+
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                <FormField
+                  control={form.control}
+                  name="cep"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CEP</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          ref={mergeRefs(field.ref, cepRef)}
+                          placeholder="00000-000"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="estado"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Estado</FormLabel>
+                      <FormControl>
+                        <Input {...field} maxLength={2} placeholder="UF" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="cidade"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cidade</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="endereco"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Logradouro</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="numero"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Número</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="bairro"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bairro</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="complemento"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Complemento (opcional)</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </ProfileLayout>
     </Form>
   )

@@ -1,87 +1,95 @@
-"use client"
+'use client'
 
-import { Control } from "react-hook-form"
+import { Checkbox } from '@/components/ui/checkbox'
 import {
+  FormControl,
   FormField,
   FormItem,
   FormLabel,
-  FormControl,
-  FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
+  FormMessage
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { useMaskito } from "@maskito/react"
-import { rgMaskOptions } from "@/lib/masks"
+  SelectValue
+} from '@/components/ui/select'
+import { phoneMaskOptions, rgMaskOptions } from '@/lib/masks'
+import { mergeRefs } from '@/lib/utils'
+import { useMaskito } from '@maskito/react'
+import type { Control } from 'react-hook-form'
 
 const sexoOptions = [
-  { value: "feminino", label: "Feminino" },
-  { value: "masculino", label: "Masculino" },
-  { value: "nao_informado", label: "Prefiro não informar" },
+  { value: 'feminino', label: 'Feminino' },
+  { value: 'masculino', label: 'Masculino' },
+  { value: 'nao_informado', label: 'Prefiro não informar' }
 ]
 
 const racaOptions = [
-  { value: "branca", label: "Branca" },
-  { value: "preta", label: "Preta" },
-  { value: "parda", label: "Parda" },
-  { value: "amarela", label: "Amarela" },
-  { value: "indigena", label: "Indígena" },
-  { value: "nao_informado", label: "Prefiro não informar" },
+  { value: 'branca', label: 'Branca' },
+  { value: 'preta', label: 'Preta' },
+  { value: 'parda', label: 'Parda' },
+  { value: 'amarela', label: 'Amarela' },
+  { value: 'indigena', label: 'Indígena' },
+  { value: 'nao_informado', label: 'Prefiro não informar' }
 ]
 
 const identidadeGeneroOptions = [
-  { value: "cisgenero", label: "Cisgênero" },
-  { value: "transgenero", label: "Transgênero" },
-  { value: "nao_binario", label: "Não-binário" },
-  { value: "outro", label: "Outro" },
-  { value: "nao_informado", label: "Prefiro não informar" },
+  { value: 'cisgenero', label: 'Cisgênero' },
+  { value: 'transgenero', label: 'Transgênero' },
+  { value: 'nao_binario', label: 'Não-binário' },
+  { value: 'outro', label: 'Outro' },
+  { value: 'nao_informado', label: 'Prefiro não informar' }
 ]
 
 const deficienciaOptions = [
-  { value: "auditiva", label: "Auditiva" },
-  { value: "intelectual", label: "Intelectual" },
-  { value: "visual", label: "Visual" },
-  { value: "multipla", label: "Múltipla" },
-  { value: "psicossocial", label: "Psicossocial" },
-  { value: "fisica", label: "Física" },
+  { value: 'auditiva', label: 'Auditiva' },
+  { value: 'intelectual', label: 'Intelectual' },
+  { value: 'visual', label: 'Visual' },
+  { value: 'multipla', label: 'Múltipla' },
+  { value: 'psicossocial', label: 'Psicossocial' },
+  { value: 'fisica', label: 'Física' }
 ]
 
 const tipoRendaOptions = [
-  { value: "clt", label: "CLT" },
-  { value: "autonomo", label: "Autônomo" },
-  { value: "servidor_publico", label: "Servidor Público" },
-  { value: "aposentado", label: "Aposentado" },
-  { value: "bpc", label: "BPC" },
-  { value: "outros", label: "Outros" },
-  { value: "nao_informado", label: "Prefiro não informar" },
+  { value: 'clt', label: 'CLT' },
+  { value: 'autonomo', label: 'Autônomo' },
+  { value: 'servidor_publico', label: 'Servidor Público' },
+  { value: 'aposentado', label: 'Aposentado' },
+  { value: 'bpc', label: 'BPC' },
+  { value: 'outros', label: 'Outros' },
+  { value: 'nao_informado', label: 'Prefiro não informar' }
 ]
 
 const rendaFaixaOptions = [
-  { value: "ate_2", label: "Até 2 salários mínimos" },
-  { value: "2_4", label: "2 a 4 salários mínimos" },
-  { value: "4_6", label: "4 a 6 salários mínimos" },
-  { value: "6_8", label: "6 a 8 salários mínimos" },
-  { value: "acima_8", label: "Acima de 8 salários mínimos" },
+  { value: 'ate_2', label: 'Até 2 salários mínimos' },
+  { value: '2_4', label: '2 a 4 salários mínimos' },
+  { value: '4_6', label: '4 a 6 salários mínimos' },
+  { value: '6_8', label: '6 a 8 salários mínimos' },
+  { value: 'acima_8', label: 'Acima de 8 salários mínimos' }
 ]
 
 interface BeneficiaryFieldsProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- shared across forms with different shapes
   control: Control<any>
-  isAdmin?: boolean
+  /** When true, all fields are read-only (e.g. preview). Default: editable. */
+  readOnly?: boolean
 }
 
-export function BeneficiaryFields({ control, isAdmin = false }: BeneficiaryFieldsProps) {
+export function BeneficiaryFields({
+  control,
+  readOnly = false
+}: BeneficiaryFieldsProps) {
   const rgRef = useMaskito({ options: rgMaskOptions })
+  const telefoneFixoMaskRef = useMaskito({ options: phoneMaskOptions })
+  const telefoneRecadoMaskRef = useMaskito({ options: phoneMaskOptions })
 
   return (
     <div className="space-y-6">
       <h3 className="text-lg font-semibold">Dados Pessoais do Beneficiário</h3>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* RG */}
         <FormField
@@ -91,7 +99,7 @@ export function BeneficiaryFields({ control, isAdmin = false }: BeneficiaryField
             <FormItem>
               <FormLabel>RG</FormLabel>
               <FormControl>
-                <Input {...field} ref={rgRef} disabled={!isAdmin} />
+                <Input {...field} ref={rgRef} disabled={readOnly} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -106,7 +114,7 @@ export function BeneficiaryFields({ control, isAdmin = false }: BeneficiaryField
             <FormItem>
               <FormLabel>Responsável Familiar (opcional)</FormLabel>
               <FormControl>
-                <Input {...field} value={field.value || ""} />
+                <Input {...field} value={field.value || ''} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -121,7 +129,7 @@ export function BeneficiaryFields({ control, isAdmin = false }: BeneficiaryField
             <FormItem>
               <FormLabel>Nome da Mãe (opcional)</FormLabel>
               <FormControl>
-                <Input {...field} value={field.value || ""} />
+                <Input {...field} value={field.value || ''} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -136,7 +144,7 @@ export function BeneficiaryFields({ control, isAdmin = false }: BeneficiaryField
             <FormItem>
               <FormLabel>Nome do Pai (opcional)</FormLabel>
               <FormControl>
-                <Input {...field} value={field.value || ""} />
+                <Input {...field} value={field.value || ''} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -153,7 +161,7 @@ export function BeneficiaryFields({ control, isAdmin = false }: BeneficiaryField
               <Select
                 onValueChange={field.onChange}
                 defaultValue={field.value}
-                disabled={!isAdmin}
+                disabled={readOnly}
               >
                 <FormControl>
                   <SelectTrigger>
@@ -183,7 +191,7 @@ export function BeneficiaryFields({ control, isAdmin = false }: BeneficiaryField
               <Select
                 onValueChange={field.onChange}
                 defaultValue={field.value}
-                disabled={!isAdmin}
+                disabled={readOnly}
               >
                 <FormControl>
                   <SelectTrigger>
@@ -213,7 +221,7 @@ export function BeneficiaryFields({ control, isAdmin = false }: BeneficiaryField
               <Select
                 onValueChange={field.onChange}
                 defaultValue={field.value}
-                disabled={!isAdmin}
+                disabled={readOnly}
               >
                 <FormControl>
                   <SelectTrigger>
@@ -248,15 +256,15 @@ export function BeneficiaryFields({ control, isAdmin = false }: BeneficiaryField
                     <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                       <FormControl>
                         <Checkbox
-                          checked={field.value?.includes("nao_possui")}
+                          checked={field.value?.includes('nao_possui')}
                           onCheckedChange={(checked) => {
                             if (checked) {
-                              field.onChange(["nao_possui"])
+                              field.onChange(['nao_possui'])
                             } else {
                               field.onChange([])
                             }
                           }}
-                          disabled={!isAdmin}
+                          disabled={readOnly}
                         />
                       </FormControl>
                       <div className="space-y-1 leading-none">
@@ -278,18 +286,26 @@ export function BeneficiaryFields({ control, isAdmin = false }: BeneficiaryField
                               checked={field.value?.includes(option.value)}
                               onCheckedChange={(checked) => {
                                 const current = field.value || []
-                                const hasNaoPossui = current.includes("nao_possui")
-                                
+                                const hasNaoPossui =
+                                  current.includes('nao_possui')
+
                                 if (hasNaoPossui && checked) {
                                   // Remove "nao_possui" and add the disability
                                   field.onChange([option.value])
                                 } else if (checked) {
                                   field.onChange([...current, option.value])
                                 } else {
-                                  field.onChange(current.filter((v: string) => v !== option.value))
+                                  field.onChange(
+                                    current.filter(
+                                      (v: string) => v !== option.value
+                                    )
+                                  )
                                 }
                               }}
-                              disabled={!isAdmin || field.value?.includes("nao_possui")}
+                              disabled={
+                                readOnly ||
+                                field.value?.includes('nao_possui')
+                              }
                             />
                           </FormControl>
                           <div className="space-y-1 leading-none">
@@ -309,8 +325,10 @@ export function BeneficiaryFields({ control, isAdmin = false }: BeneficiaryField
         />
       </div>
 
-      <h3 className="text-lg font-semibold pt-4">Dados Profissionais e Financeiros</h3>
-      
+      <h3 className="text-lg font-semibold pt-4">
+        Dados Profissionais e Financeiros
+      </h3>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Profissão */}
         <FormField
@@ -320,7 +338,7 @@ export function BeneficiaryFields({ control, isAdmin = false }: BeneficiaryField
             <FormItem>
               <FormLabel>Profissão</FormLabel>
               <FormControl>
-                <Input {...field} disabled={!isAdmin} />
+                <Input {...field} disabled={readOnly} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -335,7 +353,7 @@ export function BeneficiaryFields({ control, isAdmin = false }: BeneficiaryField
             <FormItem>
               <FormLabel>Empregador (opcional)</FormLabel>
               <FormControl>
-                <Input {...field} value={field.value || ""} />
+                <Input {...field} value={field.value || ''} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -350,7 +368,7 @@ export function BeneficiaryFields({ control, isAdmin = false }: BeneficiaryField
             <FormItem>
               <FormLabel>Ramo de Atividade (opcional)</FormLabel>
               <FormControl>
-                <Input {...field} value={field.value || ""} />
+                <Input {...field} value={field.value || ''} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -367,7 +385,7 @@ export function BeneficiaryFields({ control, isAdmin = false }: BeneficiaryField
               <Select
                 onValueChange={field.onChange}
                 defaultValue={field.value}
-                disabled={!isAdmin}
+                disabled={readOnly}
               >
                 <FormControl>
                   <SelectTrigger>
@@ -397,7 +415,7 @@ export function BeneficiaryFields({ control, isAdmin = false }: BeneficiaryField
               <Select
                 onValueChange={field.onChange}
                 defaultValue={field.value}
-                disabled={!isAdmin}
+                disabled={readOnly}
               >
                 <FormControl>
                   <SelectTrigger>
@@ -429,8 +447,10 @@ export function BeneficiaryFields({ control, isAdmin = false }: BeneficiaryField
                   {...field}
                   type="number"
                   min={1}
-                  onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
-                  disabled={!isAdmin}
+                  onChange={(e) =>
+                    field.onChange(parseInt(e.target.value) || 1)
+                  }
+                  disabled={readOnly}
                 />
               </FormControl>
               <FormMessage />
@@ -450,8 +470,10 @@ export function BeneficiaryFields({ control, isAdmin = false }: BeneficiaryField
                   {...field}
                   type="number"
                   min={0}
-                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                  disabled={!isAdmin}
+                  onChange={(e) =>
+                    field.onChange(parseInt(e.target.value) || 0)
+                  }
+                  disabled={readOnly}
                 />
               </FormControl>
               <FormMessage />
@@ -461,7 +483,7 @@ export function BeneficiaryFields({ control, isAdmin = false }: BeneficiaryField
       </div>
 
       <h3 className="text-lg font-semibold pt-4">Composição Familiar</h3>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Possui Idoso */}
         <FormField
@@ -473,7 +495,7 @@ export function BeneficiaryFields({ control, isAdmin = false }: BeneficiaryField
                 <Checkbox
                   checked={field.value}
                   onCheckedChange={field.onChange}
-                  disabled={!isAdmin}
+                  disabled={readOnly}
                 />
               </FormControl>
               <div className="space-y-1 leading-none">
@@ -493,7 +515,7 @@ export function BeneficiaryFields({ control, isAdmin = false }: BeneficiaryField
                 <Checkbox
                   checked={field.value}
                   onCheckedChange={field.onChange}
-                  disabled={!isAdmin}
+                  disabled={readOnly}
                 />
               </FormControl>
               <div className="space-y-1 leading-none">
@@ -505,7 +527,7 @@ export function BeneficiaryFields({ control, isAdmin = false }: BeneficiaryField
       </div>
 
       <h3 className="text-lg font-semibold pt-4">Contato Adicional</h3>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Telefone Fixo */}
         <FormField
@@ -515,7 +537,14 @@ export function BeneficiaryFields({ control, isAdmin = false }: BeneficiaryField
             <FormItem>
               <FormLabel>Telefone Fixo (opcional)</FormLabel>
               <FormControl>
-                <Input {...field} value={field.value || ""} placeholder="(00) 0000-0000" />
+                <Input
+                  {...field}
+                  ref={mergeRefs(field.ref, telefoneFixoMaskRef)}
+                  value={field.value || ''}
+                  placeholder="(00) 00000-0000"
+                  inputMode="numeric"
+                  autoComplete="tel-national"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -530,7 +559,14 @@ export function BeneficiaryFields({ control, isAdmin = false }: BeneficiaryField
             <FormItem>
               <FormLabel>Telefone de Recado (opcional)</FormLabel>
               <FormControl>
-                <Input {...field} value={field.value || ""} placeholder="(00) 00000-0000" />
+                <Input
+                  {...field}
+                  ref={mergeRefs(field.ref, telefoneRecadoMaskRef)}
+                  value={field.value || ''}
+                  placeholder="(00) 00000-0000"
+                  inputMode="numeric"
+                  autoComplete="tel-national"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -545,7 +581,11 @@ export function BeneficiaryFields({ control, isAdmin = false }: BeneficiaryField
             <FormItem>
               <FormLabel>Falar com (opcional)</FormLabel>
               <FormControl>
-                <Input {...field} value={field.value || ""} placeholder="Nome do contato" />
+                <Input
+                  {...field}
+                  value={field.value || ''}
+                  placeholder="Nome do contato"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
