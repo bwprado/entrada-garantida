@@ -303,8 +303,7 @@ export function BeneficiaryFields({
                                 }
                               }}
                               disabled={
-                                readOnly ||
-                                field.value?.includes('nao_possui')
+                                readOnly || field.value?.includes('nao_possui')
                               }
                             />
                           </FormControl>
