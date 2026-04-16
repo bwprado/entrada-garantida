@@ -7,7 +7,9 @@ import {
   StaggerItem
 } from '@/components/animations'
 import { Header } from '@/components/header'
+import { ImoveisHeaderActions } from '@/components/imoveis-header-actions'
 import { Button } from '@/components/ui/button'
+import { getServerCurrentUser } from '@/lib/server-auth'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   ArrowRight,
@@ -20,10 +22,20 @@ import {
   UsersRound
 } from 'lucide-react'
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const user = await getServerCurrentUser()
+
   return (
     <div className="min-h-screen flex flex-col relative">
-      <Header floatingScrollExpand />
+      {user ? (
+        <Header
+          floatingScrollExpand
+          showLoginButton={false}
+          actions={<ImoveisHeaderActions />}
+        />
+      ) : (
+        <Header floatingScrollExpand />
+      )}
 
       {/* Hero: overlap header so the image reaches the viewport top (header stays z-50 on top). */}
       <section className="relative min-h-[calc(100dvh-5rem)] md:h-screen flex flex-col overflow-hidden">
