@@ -5,6 +5,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle
 } from '@/components/ui/card'
@@ -58,11 +59,14 @@ export default function LoginHubPage() {
                     CPF e celular cadastrados na Aquisição Assistida
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="h-full">
+                  <div></div>
+                </CardContent>
+                <CardFooter>
                   <Button asChild className="w-full shadow-brand-sm">
                     <Link href="/login/beneficiario">Entrar</Link>
                   </Button>
-                </CardContent>
+                </CardFooter>
               </Card>
             </StaggerItem>
 
@@ -72,7 +76,7 @@ export default function LoginHubPage() {
                 className="h-full hover:border-primary/40 transition-colors group"
               >
                 <CardHeader className="pb-4">
-                  <div className="w-14 h-14 bg-secondary/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-secondary/15 transition-colors">
+                  <div className="w-14 h-14 bg-secondary/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-secondary/15 transition-colors my-auto">
                     <Building2 className="w-7 h-7 text-secondary" />
                   </div>
                   <CardTitle className="text-xl tracking-tight">
@@ -82,11 +86,14 @@ export default function LoginHubPage() {
                     Proprietários que ofertam imóveis na Aquisição Assistida
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="h-full">
+                  <div></div>
+                </CardContent>
+                <CardFooter>
                   <Button asChild className="w-full shadow-brand-sm">
                     <Link href="/login/ofertante">Entrar</Link>
                   </Button>
-                </CardContent>
+                </CardFooter>
               </Card>
             </StaggerItem>
 
@@ -106,7 +113,10 @@ export default function LoginHubPage() {
                     Acesso SECID
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="h-full">
+                  <div></div>
+                </CardContent>
+                <CardFooter>
                   <Button
                     asChild
                     variant="secondary"
@@ -114,7 +124,7 @@ export default function LoginHubPage() {
                   >
                     <Link href="/login/admin">Entrar</Link>
                   </Button>
-                </CardContent>
+                </CardFooter>
               </Card>
             </StaggerItem>
           </StaggerContainer>

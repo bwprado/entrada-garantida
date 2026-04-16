@@ -50,6 +50,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useForm, type FieldPath, type UseFormReturn } from 'react-hook-form'
 import { z } from 'zod'
+import Image from 'next/image'
 
 type Step =
   | 'phone'
@@ -176,7 +177,8 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
 
   // Beneficiário: after session loads from phone/otp, advance to the right step
   useEffect(() => {
-    if (!user || user.role !== 'beneficiary' || variant !== 'beneficiary') return
+    if (!user || user.role !== 'beneficiary' || variant !== 'beneficiary')
+      return
     if (step !== 'phone' && step !== 'otp') return
 
     setUserData(user as Record<string, unknown>)
@@ -510,18 +512,29 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
   }
 
   return (
-    <div className="min-h-[calc(100vh-80px)] flex flex-col bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       <div className="flex-1 flex justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="flex flex-col gap-2 mb-4">
-            <Button variant="ghost" asChild className="self-start -ml-2">
+        <div className="w-full max-w-sm my-auto space-y-4">
+          <Image
+            src="/logo.svg"
+            alt="Aquisição Assistida"
+            width={150}
+            height={150}
+            className="mx-auto mb-8"
+          />
+          <div className="flex justify-between items-center gap-2">
+            <Button
+              variant="link"
+              asChild
+              className="text-sm text-muted-foreground"
+            >
               <Link href="/">
-                <ArrowLeft className="w-4 h-4 mr-2" />
+                <ArrowLeft className="w-4 h-4" />
                 Voltar para o início
               </Link>
             </Button>
             {hubHref ? (
-              <Button variant="link" asChild className="self-start h-auto p-0 text-sm">
+              <Button variant="link" asChild className="text-sm">
                 <Link href={hubHref}>Outros tipos de acesso</Link>
               </Button>
             ) : null}
@@ -640,9 +653,9 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
                     <div className="space-y-4">
                       <div className="p-4 bg-muted/50 rounded-lg">
                         <p className="text-sm text-muted-foreground">
-                          <Home className="w-4 h-4 inline mr-1" />
-                          É proprietário de um imóvel? Cadastre-se para ofertar
-                          sua propriedade na Aquisição Assistida.
+                          <Home className="w-4 h-4 inline mr-1" />É proprietário
+                          de um imóvel? Cadastre-se para ofertar sua propriedade
+                          na Aquisição Assistida.
                         </p>
                       </div>
                       <form
@@ -852,7 +865,9 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
                       name="otp"
                       render={({ field }) => (
                         <FormItem className="flex flex-col items-center">
-                          <FormLabel className="self-start">Código de 6 dígitos</FormLabel>
+                          <FormLabel className="self-start">
+                            Código de 6 dígitos
+                          </FormLabel>
                           <FormControl>
                             <InputOTP
                               maxLength={6}
@@ -1150,8 +1165,8 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
                       TERMO DE CIÊNCIA E MANIFESTAÇÃO DE INTERESSE
                     </h3>
                     <p className="mb-3">
-                      Ao participar da Aquisição Assistida, você
-                      declara estar ciente de que:
+                      Ao participar da Aquisição Assistida, você declara estar
+                      ciente de que:
                     </p>
                     <ul className="list-disc pl-5 space-y-2">
                       <li>
@@ -1191,8 +1206,7 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
                     <p className="mt-4 font-bold">
                       Ao aceitar este termo, você manifesta seu interesse em
                       participar da Aquisição Assistida e declara estar ciente
-                      de todas as
-                      regras acima.
+                      de todas as regras acima.
                     </p>
                   </div>
                   {error && <p className="text-sm text-destructive">{error}</p>}
