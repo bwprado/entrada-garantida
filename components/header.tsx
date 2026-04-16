@@ -5,7 +5,7 @@ import Link from 'next/link'
 
 import { MobileNav } from '@/components/mobile-nav'
 import { navLinks } from '@/components/header-nav-links'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { useScroll } from '@/hooks/use-scroll'
 import { cn } from '@/lib/utils'
 
@@ -44,9 +44,9 @@ export function Header({
   return (
     <header
       className={cn(
-        'sticky top-0 z-50 mx-auto w-full max-w-4xl md:rounded-md md:transition-all md:ease-out',
+        'sticky top-0 z-50 mx-auto w-full drop-shadow-sm bg-background/99 md:rounded-md md:transition-all md:ease-out',
         {
-          'border-border bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/50 md:top-2 md:max-w-3xl':
+          'border-border bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/50 md:top-2 md:max-w-3xl drop-shadow-lg':
             scrolled
         }
       )}
@@ -81,9 +81,13 @@ export function Header({
         <div className="hidden min-w-0 flex-1 items-center justify-end gap-2 md:flex">
           <div className="flex min-w-0 flex-wrap items-center justify-end">
             {navLinks.map((link) => (
-              <Button asChild key={link.label} variant="ghost">
-                <Link href={link.href}>{link.label}</Link>
-              </Button>
+              <Link
+                key={link.label}
+                href={link.href}
+                className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+              >
+                {link.label}
+              </Link>
             ))}
           </div>
           {desktopCtas}
