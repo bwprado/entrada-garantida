@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,15 +14,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { api } from "@/convex/_generated/api";
-import type { Doc } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/lib/auth-context";
-import { cepMaskOptions, cpfMaskOptions } from "@/lib/masks";
+import {
+  formatIsoDateToDataNascimentoBr,
+  parseDataNascimentoBrParaIso,
+} from "@/lib/date-br";
+import {
+  cepMaskOptions,
+  cpfMaskOptions,
+  dataNascimentoBrMaskOptions,
+} from "@/lib/masks";
+import { fetchAddressByCEP } from "@/lib/validation";
 import { useMaskito } from "@maskito/react";
 import { useQuery } from "convex/react";
 import { ArrowLeft, CheckCircle2, Loader2, MapPin, User } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+
+import type { Doc } from "@/convex/_generated/dataModel";
 
 type Step = 1 | 2 | 3;
 
@@ -40,6 +51,7 @@ export default function OfertanteOnboardingPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [isInitializing, setIsInitializing] = useState(true);
+  const [isFetchingCEP, setIsFetchingCEP] = useState(false);
 
   // Step 1: Personal Info
   const [nome, setNome] = useState("");
@@ -71,7 +83,10 @@ export default function OfertanteOnboardingPage() {
     }
 
     if (ofProfile) {
-      if (ofProfile.dataNascimento) setDataNascimento(ofProfile.dataNascimento);
+      if (ofProfile.dataNascimento) {
+        const br = formatIsoDateToDataNascimentoBr(ofProfile.dataNascimento);
+        setDataNascimento(br || ofProfile.dataNascimento);
+      }
       if (ofProfile.cep) setCep(ofProfile.cep);
       if (ofProfile.endereco) setEndereco(ofProfile.endereco);
       if (ofProfile.numero) setNumero(ofProfile.numero);
@@ -84,8 +99,44 @@ export default function OfertanteOnboardingPage() {
     setIsInitializing(false);
   }, [userWithProfile]);
 
+  useEffect(() => {
+    const fetchCEP = async () => {
+      const cepClean = cep.replace(/\D/g, "");
+      if (cepClean.length !== 8) return;
+      setIsFetchingCEP(true);
+      try {
+        const address = await fetchAddressByCEP(cepClean);
+        if (address) {
+          setEndereco(address.logradouro);
+          setBairro(address.bairro);
+          setCidade(address.cidade);
+          setEstado(address.estado);
+        }
+      } finally {
+        setIsFetchingCEP(false);
+      }
+    };
+    void fetchCEP();
+  }, [cep]);
+
   const cpfInputRef = useMaskito({ options: cpfMaskOptions });
   const cepInputRef = useMaskito({ options: cepMaskOptions });
+  const dataNascimentoInputRef = useMaskito({
+    options: dataNascimentoBrMaskOptions,
+  });
+
+  const formatDataNascimentoDisplay = (value: string) => {
+    const iso = parseDataNascimentoBrParaIso(value);
+    if (iso) {
+      const [y, m, d] = iso.split("-");
+      return `${d}/${m}/${y}`;
+    }
+    const legacy = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (legacy) {
+      return `${legacy[3]}/${legacy[2]}/${legacy[1]}`;
+    }
+    return value;
+  };
 
   const progress = ((currentStep - 1) / 2) * 100;
 
@@ -113,8 +164,8 @@ export default function OfertanteOnboardingPage() {
         setError("Informe um CPF válido");
         return;
       }
-      if (!dataNascimento) {
-        setError("Informe sua data de nascimento");
+      if (parseDataNascimentoBrParaIso(dataNascimento) === null) {
+        setError("Informe uma data de nascimento válida (DD-MM-AAAA)");
         return;
       }
       setCurrentStep(2);
@@ -138,6 +189,10 @@ export default function OfertanteOnboardingPage() {
       }
       if (!cidade.trim()) {
         setError("Informe a cidade");
+        return;
+      }
+      if (!estado.trim() || estado.length !== 2) {
+        setError("Informe a UF (estado) com 2 letras");
         return;
       }
       setCurrentStep(3);
@@ -167,10 +222,17 @@ export default function OfertanteOnboardingPage() {
       ? profileData
       : null;
 
+    const dataNascimentoIso = parseDataNascimentoBrParaIso(dataNascimento);
+    if (!dataNascimentoIso) {
+      setError("Data de nascimento inválida");
+      setIsLoading(false);
+      return;
+    }
+
     const result = await completeOnboarding({
       nome,
       cpf: cpf.replace(/\D/g, ""),
-      dataNascimento,
+      dataNascimento: dataNascimentoIso,
       // Include fields from profile that were saved during cadastro
       rg: ofertanteFromProfile?.rg || undefined,
       profissao: ofertanteFromProfile?.profissao || undefined,
@@ -191,12 +253,6 @@ export default function OfertanteOnboardingPage() {
     }
 
     setIsLoading(false);
-  };
-
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "";
-    const [year, month, day] = dateString.split("-");
-    return `${day}/${month}/${year}`;
   };
 
   const ofertanteProfileForUi = isOfertanteProfile(profile) ? profile : null;
@@ -297,11 +353,18 @@ export default function OfertanteOnboardingPage() {
                   <Label htmlFor="data-nascimento">Data de Nascimento *</Label>
                   <Input
                     id="data-nascimento"
-                    type="date"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="bday"
+                    placeholder="DD-MM-AAAA"
                     value={dataNascimento}
                     onChange={(e) => setDataNascimento(e.target.value)}
+                    ref={dataNascimentoInputRef}
                     required
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Formato brasileiro: dia, mês e ano
+                  </p>
                 </div>
 
                 <div className="pt-4">
@@ -330,15 +393,30 @@ export default function OfertanteOnboardingPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2 md:col-span-1">
                     <Label htmlFor="cep">CEP *</Label>
-                    <Input
-                      id="cep"
-                      type="text"
-                      placeholder="00000-000"
-                      value={cep}
-                      onChange={(e) => setCep(e.target.value)}
-                      ref={cepInputRef}
-                      required
-                    />
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="cep"
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="postal-code"
+                        placeholder="00000-000"
+                        value={cep}
+                        onChange={(e) => setCep(e.target.value)}
+                        ref={cepInputRef}
+                        aria-busy={isFetchingCEP}
+                        required
+                        className="flex-1"
+                      />
+                      {isFetchingCEP && (
+                        <Loader2
+                          className="size-5 shrink-0 animate-spin text-muted-foreground"
+                          aria-hidden
+                        />
+                      )}
+                    </div>
+                    {isFetchingCEP && (
+                      <p className="text-xs text-muted-foreground">Buscando endereço…</p>
+                    )}
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -403,8 +481,12 @@ export default function OfertanteOnboardingPage() {
                     <Input
                       id="estado"
                       type="text"
+                      maxLength={2}
+                      placeholder="UF"
                       value={estado}
-                      disabled
+                      onChange={(e) =>
+                        setEstado(e.target.value.toUpperCase().slice(0, 2))
+                      }
                     />
                   </div>
                 </div>
@@ -459,7 +541,9 @@ export default function OfertanteOnboardingPage() {
                       </div>
                       <div>
                         <span className="text-muted-foreground">Data de Nascimento:</span>{" "}
-                        <span className="font-medium">{formatDate(dataNascimento)}</span>
+                        <span className="font-medium">
+                          {formatDataNascimentoDisplay(dataNascimento)}
+                        </span>
                       </div>
                     </div>
                   </div>

@@ -1,32 +1,8 @@
-"use client"
+'use client'
 
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
-import { Controller, useForm, type DefaultValues } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useMutation } from "convex/react"
-import { useUploadFile } from "@convex-dev/r2/react"
-import { useMaskito } from "@maskito/react"
-import { toast } from "sonner"
-import { format, isValid } from "date-fns"
-import { ptBR } from "date-fns/locale"
-import {
-  ArrowLeft,
-  Calendar as CalendarIcon,
-  ChevronLeft,
-  ChevronRight,
-  X
-} from "lucide-react"
+import Link from 'next/link'
 
-import { api } from "@/convex/_generated/api"
-import { Button } from "@/components/ui/button"
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldLabel
-} from "@/components/ui/field"
+import { R2FileUploader } from '@/components/design/r2-file-uploader'
 import {
   FormFooter,
   FormHeader,
@@ -35,44 +11,65 @@ import {
   PreviousButton,
   StepFields,
   SubmitButton
-} from "@/components/multi-step-viewer"
-import { MultiStepFormProvider } from "@/hooks/use-multi-step-viewer"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+} from '@/components/multi-step-viewer'
+import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel
+} from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger
-} from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
+} from '@/components/ui/popover'
+import { Textarea } from '@/components/ui/textarea'
+import { api } from '@/convex/_generated/api'
+import { MultiStepFormProvider } from '@/hooks/use-multi-step-viewer'
+import { useAuth } from '@/lib/auth-context'
 import {
   brlCurrencyMaskOptions,
+  cepMaskOptions,
   formatBrlCurrency,
   parseBrlCurrency
-} from "@/lib/masks"
-import { cn, mergeRefs } from "@/lib/utils"
-import {
-  FileUpload,
-  FileUploadClear,
-  FileUploadDropzone,
-  FileUploadItem,
-  FileUploadList,
-  FileUploadTrigger
-} from "@/components/ui/file-upload"
-import { useAuth } from "@/lib/auth-context"
-import { uploadPropertyGallery } from "@/lib/property-upload"
+} from '@/lib/masks'
+import { uploadPropertyGallery } from '@/lib/property-upload'
 import {
   propertyOfertanteFormSchema,
   type PropertyOfertanteFormValues
-} from "@/lib/schemas/property-ofertante"
+} from '@/lib/schemas/property-ofertante'
+import { cn, mergeRefs } from '@/lib/utils'
+import { fetchAddressByCEP } from '@/lib/validation'
+import { useUploadFile } from '@convex-dev/r2/react'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useMaskito } from '@maskito/react'
+import { useMutation } from 'convex/react'
+import { format, isValid } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import {
+  ArrowLeft,
+  Calendar as CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  X
+} from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { Controller, useForm, type DefaultValues } from 'react-hook-form'
+import { toast } from 'sonner'
+import { Id } from '@/convex/_generated/dataModel'
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024
 const MAX_PHOTOS = 5
 
 function toValidDate(value: unknown): Date | undefined {
-  if (value == null || value === "") return undefined
+  if (value == null || value === '') return undefined
   if (value instanceof Date) return isValid(value) ? value : undefined
-  if (typeof value === "string" || typeof value === "number") {
+  if (typeof value === 'string' || typeof value === 'number') {
     const d = new Date(value)
     return isValid(d) ? d : undefined
   }
@@ -87,34 +84,93 @@ export default function NovoImovelPage() {
   const router = useRouter()
   const { user, isAuthenticated, isLoading } = useAuth()
   const [submitting, setSubmitting] = useState(false)
+  const [cep, setCep] = useState('')
+  const [isFetchingCEP, setIsFetchingCEP] = useState(false)
 
   const createProperty = useMutation(api.properties.create)
-  const addPropertyImage = useMutation(api.documents.addPropertyImage)
+  const addPropertyImages = useMutation(api.documents.addPropertyImages)
+  const deletePropertyImage = useMutation(
+    api.documents.deletePropertyImage
+  ).withOptimisticUpdate((localStore, args) => {
+    const currentFiles = localStore.getQuery(api.r2.getFileUrlAndMetadata, {
+      fileIds: form.getValues('filesIds') ?? []
+    })
+    if (currentFiles !== undefined) {
+      localStore.setQuery(
+        api.r2.getFileUrlAndMetadata,
+        { fileIds: form.getValues('filesIds') ?? [] },
+        currentFiles.filter((file) => file._id !== args.fileId)
+      )
+    }
+  })
+  const syncToFiles = useMutation(api.r2.syncToFiles)
   const uploadFile = useUploadFile(api.r2)
   const valorVendaMaskRef = useMaskito({ options: brlCurrencyMaskOptions })
+  const cepInputRef = useMaskito({ options: cepMaskOptions })
 
   const form = useForm<PropertyOfertanteFormValues>({
     resolver: zodResolver(propertyOfertanteFormSchema),
     defaultValues: {
-      titulo: "",
-      descricao: "",
-      endereco: "",
+      titulo: '',
+      descricao: '',
+      endereco: '',
       compartimentos: 1,
-      fotos: []
+      fotos: [],
+      filesIds: []
     } as DefaultValues<PropertyOfertanteFormValues>
   })
 
-  const { handleSubmit, control, reset } = form
+  const { handleSubmit, control, reset, setValue } = form
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated && user?.role === "ofertante" && !user.onboardingCompleto) {
-      router.push("/ofertante/onboarding")
+    if (
+      !isLoading &&
+      isAuthenticated &&
+      user?.role === 'ofertante' &&
+      !user.onboardingCompleto
+    ) {
+      router.push('/ofertante/onboarding')
     }
   }, [isAuthenticated, isLoading, user, router])
 
+  useEffect(() => {
+    const cepClean = cep.replace(/\D/g, '')
+    if (cepClean.length !== 8) return
+
+    let cancelled = false
+    setIsFetchingCEP(true)
+    void (async () => {
+      try {
+        const address = await fetchAddressByCEP(cepClean)
+        if (cancelled || !address) return
+
+        const cidadeUf =
+          address.cidade && address.estado
+            ? `${address.cidade}/${address.estado}`
+            : address.cidade || address.estado || ''
+
+        const parts = [address.logradouro, address.bairro, cidadeUf].filter(
+          (p) => (p ?? '').trim().length > 0
+        )
+        if (parts.length === 0) return
+        const line = parts.join(', ')
+        setValue('endereco', line, {
+          shouldDirty: true,
+          shouldValidate: true
+        })
+      } finally {
+        if (!cancelled) setIsFetchingCEP(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [cep, setValue])
+
   async function onSubmit(data: PropertyOfertanteFormValues) {
     if (!user) {
-      toast.error("Sessão inválida. Faça login novamente.")
+      toast.error('Sessão inválida. Faça login novamente.')
       return
     }
 
@@ -136,40 +192,70 @@ export default function NovoImovelPage() {
       })
 
       if (!result.success || !result.propertyId) {
-        toast.error(result.errors?.join(" ") ?? "Não foi possível criar o imóvel")
+        toast.error(
+          result.errors?.join(' ') ?? 'Não foi possível criar o imóvel'
+        )
         return
       }
 
       try {
-        await uploadPropertyGallery(
-          uploadFile,
-          fotos,
-          addPropertyImage,
-          result.propertyId
-        )
+        if (
+          form.getValues('filesIds') &&
+          form.getValues('filesIds')?.length > 0
+        ) {
+          await addPropertyImages({
+            filesIds: form.getValues('filesIds') ?? [],
+            propertyId: result.propertyId
+          })
+        }
       } catch (uploadErr) {
         console.error(uploadErr)
         toast.error(
-          "Imóvel salvo como rascunho, mas houve falha ao enviar algumas fotos. Tente adicionar imagens depois."
+          'Imóvel salvo como rascunho, mas houve falha ao enviar algumas fotos. Tente adicionar imagens depois.'
         )
-        router.push("/ofertante/dashboard")
+        router.push('/ofertante/dashboard')
         return
       }
 
-      toast.success("Imóvel cadastrado com sucesso")
+      toast.success('Imóvel cadastrado com sucesso')
+      setCep('')
       reset()
-      router.push("/ofertante/dashboard")
+      router.push('/ofertante/dashboard')
     } catch (e) {
       console.error(e)
-      toast.error(e instanceof Error ? e.message : "Erro ao salvar")
+      toast.error(e instanceof Error ? e.message : 'Erro ao salvar')
     } finally {
       setSubmitting(false)
     }
   }
 
+  const handleUploadFiles = async (files: File[]) => {
+    for (const file of files) {
+      const r2key = await uploadFile(file)
+
+      const fileId = await syncToFiles({
+        r2Key: r2key,
+        name: file.name,
+        contentType: file.type,
+        size: file.size
+      })
+
+      form.setValue('filesIds', [...(form.getValues('filesIds') ?? []), fileId])
+    }
+  }
+
+  const handleDeleteFile = async (fileId: Id<'files'>) => {
+    await deletePropertyImage({ fileId })
+    form.setValue(
+      'filesIds',
+      form.getValues('filesIds')?.filter((id) => id !== fileId) ?? []
+    )
+    toast.success('Arquivo excluído com sucesso')
+  }
+
   const stepsFields = [
     {
-      fields: ["titulo", "descricao", "endereco"] as const,
+      fields: ['titulo', 'descricao', 'endereco'] as const,
       component: (
         <>
           <Controller
@@ -187,7 +273,7 @@ export default function NovoImovelPage() {
                   onBlur={field.onBlur}
                   id="titulo"
                   type="text"
-                  value={field.value ?? ""}
+                  value={field.value ?? ''}
                   onChange={field.onChange}
                   aria-invalid={fieldState.invalid}
                   placeholder="Ex.: Apartamento 2 quartos — Centro"
@@ -213,7 +299,7 @@ export default function NovoImovelPage() {
                   onBlur={field.onBlur}
                   id="descricao"
                   rows={3}
-                  value={field.value ?? ""}
+                  value={field.value ?? ''}
                   onChange={field.onChange}
                   aria-invalid={fieldState.invalid}
                   placeholder="Destaques do imóvel..."
@@ -224,6 +310,34 @@ export default function NovoImovelPage() {
               </Field>
             )}
           />
+          <Field className="gap-1 col-span-full">
+            <FieldLabel htmlFor="imovel-cep">CEP</FieldLabel>
+            <div className="relative">
+              <Input
+                ref={cepInputRef}
+                id="imovel-cep"
+                type="text"
+                inputMode="numeric"
+                autoComplete="postal-code"
+                value={cep}
+                onChange={(e) => setCep(e.target.value)}
+                placeholder="00000-000"
+                aria-busy={isFetchingCEP}
+                className="pe-10"
+              />
+              {isFetchingCEP && (
+                <Loader2
+                  className="pointer-events-none absolute inset-e-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground"
+                  aria-hidden
+                />
+              )}
+            </div>
+            <FieldDescription>
+              Digite o CEP para preencher o endereço automaticamente (ViaCEP).
+              Ajuste o texto abaixo para incluir número e complemento, se
+              necessário.
+            </FieldDescription>
+          </Field>
           <Controller
             name="endereco"
             control={control}
@@ -239,7 +353,7 @@ export default function NovoImovelPage() {
                   onBlur={field.onBlur}
                   id="endereco"
                   type="text"
-                  value={field.value ?? ""}
+                  value={field.value ?? ''}
                   onChange={field.onChange}
                   aria-invalid={fieldState.invalid}
                   placeholder="Rua, número, bairro, cidade — UF"
@@ -254,7 +368,7 @@ export default function NovoImovelPage() {
       )
     },
     {
-      fields: ["compartimentos", "tamanho", "data_construcao"] as const,
+      fields: ['compartimentos', 'tamanho', 'data_construcao'] as const,
       component: (
         <>
           <Controller
@@ -280,12 +394,12 @@ export default function NovoImovelPage() {
                   step={1}
                   value={
                     field.value === undefined || field.value === null
-                      ? ""
+                      ? ''
                       : field.value
                   }
                   onChange={(e) => {
                     const v = e.target.value
-                    field.onChange(v === "" ? undefined : Number(v))
+                    field.onChange(v === '' ? undefined : Number(v))
                   }}
                   aria-invalid={fieldState.invalid}
                   placeholder="Total de ambientes (quartos, salas, cozinha...)"
@@ -321,12 +435,12 @@ export default function NovoImovelPage() {
                   step={0.01}
                   value={
                     field.value === undefined || field.value === null
-                      ? ""
+                      ? ''
                       : field.value
                   }
                   onChange={(e) => {
                     const v = e.target.value
-                    field.onChange(v === "" ? undefined : Number(v))
+                    field.onChange(v === '' ? undefined : Number(v))
                   }}
                   aria-invalid={fieldState.invalid}
                   placeholder="Área em metros quadrados"
@@ -356,14 +470,14 @@ export default function NovoImovelPage() {
                           variant="outline"
                           id="data_construcao"
                           className={cn(
-                            "w-full justify-start text-start font-normal active:scale-none",
-                            !selectedDate && "text-muted-foreground"
+                            'w-full justify-start text-start font-normal active:scale-none',
+                            !selectedDate && 'text-muted-foreground'
                           )}
                         >
                           <CalendarIcon className="size-4 shrink-0" />
                           {selectedDate ? (
                             <span>
-                              {format(selectedDate, "dd/MM/yyyy", {
+                              {format(selectedDate, 'dd/MM/yyyy', {
                                 locale: ptBR
                               })}
                             </span>
@@ -379,7 +493,7 @@ export default function NovoImovelPage() {
                             className="absolute end-1 top-1/2 -translate-y-1/2 rounded-full"
                             onClick={(e) => {
                               e.stopPropagation()
-                              form.resetField("data_construcao", {
+                              form.resetField('data_construcao', {
                                 defaultValue: undefined
                               })
                             }}
@@ -390,12 +504,12 @@ export default function NovoImovelPage() {
                       </div>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
+                      <Calendar
                         mode="single"
                         selected={selectedDate}
                         onSelect={(d) => {
                           if (d && isValid(d)) {
-                            form.setValue("data_construcao", d, {
+                            form.setValue('data_construcao', d, {
                               shouldDirty: true,
                               shouldValidate: true
                             })
@@ -417,7 +531,7 @@ export default function NovoImovelPage() {
       )
     },
     {
-      fields: ["matricula", "inscricao_imobiliaria", "valor_venda"] as const,
+      fields: ['matricula', 'inscricao_imobiliaria', 'valor_venda'] as const,
       component: (
         <>
           <Controller
@@ -428,7 +542,9 @@ export default function NovoImovelPage() {
                 data-invalid={fieldState.invalid}
                 className="gap-1 col-span-full"
               >
-                <FieldLabel htmlFor="matricula">Matrícula do imóvel *</FieldLabel>
+                <FieldLabel htmlFor="matricula">
+                  Matrícula do imóvel *
+                </FieldLabel>
                 <Input
                   ref={field.ref}
                   name={field.name}
@@ -437,7 +553,7 @@ export default function NovoImovelPage() {
                   type="text"
                   inputMode="text"
                   autoComplete="off"
-                  value={field.value ?? ""}
+                  value={field.value ?? ''}
                   onChange={field.onChange}
                   aria-invalid={fieldState.invalid}
                   placeholder="Número da matrícula"
@@ -465,7 +581,7 @@ export default function NovoImovelPage() {
                   onBlur={field.onBlur}
                   id="inscricao_imobiliaria"
                   type="text"
-                  value={field.value ?? ""}
+                  value={field.value ?? ''}
                   onChange={field.onChange}
                   aria-invalid={fieldState.invalid}
                   placeholder="Número da inscrição"
@@ -498,7 +614,7 @@ export default function NovoImovelPage() {
                     field.value !== null &&
                     !Number.isNaN(field.value)
                       ? formatBrlCurrency(field.value)
-                      : ""
+                      : ''
                   }
                   onChange={(e) => {
                     const n = parseBrlCurrency(e.target.value)
@@ -519,10 +635,10 @@ export default function NovoImovelPage() {
       )
     },
     {
-      fields: ["fotos"] as const,
+      fields: ['filesIds'] as const,
       component: (
         <Controller
-          name="fotos"
+          name="filesIds"
           control={control}
           render={({ field, fieldState }) => (
             <Field
@@ -531,39 +647,16 @@ export default function NovoImovelPage() {
             >
               <FieldLabel>Fotos do imóvel *</FieldLabel>
               <FieldDescription>
-                PNG, JPEG ou GIF. Até {MAX_PHOTOS} imagens, máx.{" "}
+                PNG, JPEG ou GIF. Até {MAX_PHOTOS} imagens, máx.{' '}
                 {MAX_PHOTO_BYTES / (1024 * 1024)} MB cada.
               </FieldDescription>
-              <FileUpload
-                value={field.value}
-                onValueChange={field.onChange}
-                accept="image/png,image/jpeg,image/gif"
-                maxFiles={MAX_PHOTOS}
-                maxSize={MAX_PHOTO_BYTES}
-                onFileValidate={(file) => {
-                  if (!file.type.startsWith("image/")) {
-                    return "Apenas imagens"
-                  }
-                  return null
-                }}
-              >
-                <FileUploadDropzone />
-                <div className="flex flex-wrap gap-2">
-                  <FileUploadTrigger />
-                  <FileUploadClear />
-                </div>
-                <FileUploadList>
-                  {field.value.map((file) => (
-                    <FileUploadItem
-                      key={`${file.name}-${file.size}-${file.lastModified}`}
-                      value={file}
-                    />
-                  ))}
-                </FileUploadList>
-              </FileUpload>
-              {fieldState.invalid && (
-                <FieldError errors={[fieldState.error]} />
-              )}
+              <R2FileUploader
+                multiple={true}
+                filesIds={field.value}
+                handleUploadFiles={handleUploadFiles}
+                handleDeleteFile={handleDeleteFile}
+              />
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}
         />
@@ -580,7 +673,7 @@ export default function NovoImovelPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+    <div className="min-h-screen flex flex-col bg-linear-to-br from-primary/5 via-background to-secondary/5">
       <div className="flex-1 py-6 px-4 sm:py-10">
         <div className="container mx-auto max-w-lg sm:max-w-xl">
           <Button variant="ghost" asChild className="mb-4 -ms-2">
@@ -604,7 +697,7 @@ export default function NovoImovelPage() {
             className="flex flex-col rounded-lg border bg-card p-4 sm:p-6 shadow-sm gap-4"
           >
             <MultiStepFormProvider
-              stepsFields={stepsFields}
+              stepsFields={[stepsFields.at(-1)]}
               onStepValidation={async (step) =>
                 form.trigger(step.fields as never)
               }
@@ -628,7 +721,7 @@ export default function NovoImovelPage() {
                         disabled={submitting}
                         className="bg-primary"
                       >
-                        {submitting ? "Salvando…" : "Salvar imóvel"}
+                        {submitting ? 'Salvando…' : 'Salvar imóvel'}
                       </SubmitButton>
                     </div>
                   </div>

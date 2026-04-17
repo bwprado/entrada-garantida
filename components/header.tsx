@@ -10,6 +10,7 @@ import { useScroll } from '@/hooks/use-scroll'
 import { cn } from '@/lib/utils'
 
 import type { ReactNode } from 'react'
+import { useAuth } from '@/lib/auth-context'
 
 export function Header({
   showLoginButton = true,
@@ -20,6 +21,7 @@ export function Header({
   actions?: ReactNode
   floatingScrollExpand?: boolean
 }) {
+  const { user } = useAuth()
   const scrolled = useScroll(10)
 
   const desktopCtas =
@@ -46,7 +48,7 @@ export function Header({
       className={cn(
         'sticky top-0 z-50 mx-auto w-full drop-shadow-sm bg-background/99 md:rounded-md md:transition-all md:ease-out',
         {
-          'border-border bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/50 md:top-2 md:max-w-3xl drop-shadow-lg':
+          'border-border border-2 bg-background/95 backdrop-blur-md supports-backdrop-filter:bg-background/50 md:top-2 md:max-w-3xl drop-shadow-lg':
             scrolled
         }
       )}

@@ -52,19 +52,28 @@ O sistema usa o componente `@convex-dev/r2` para armazenamento de arquivos.
 
 #### 4.2 Configurar CORS
 
-No bucket criado, vá em **Settings** > **CORS Policy** e adicione:
+Uploads pelo browser usam `PUT` na URL assinada do R2 (origem diferente), então o **navegador exige CORS no bucket**. Sem isso, o preflight `OPTIONS` falha com *No 'Access-Control-Allow-Origin' header*.
+
+No bucket, vá em **Settings** > **CORS Policy** > **Add CORS policy** (aba JSON) e use algo nesta linha:
 
 ```json
 [
   {
-    "AllowedOrigins": ["http://localhost:3000"],
-    "AllowedMethods": ["GET", "PUT"],
-    "AllowedHeaders": ["Content-Type"]
+    "AllowedOrigins": [
+      "http://localhost:3000",
+      "http://127.0.0.1:3000"
+    ],
+    "AllowedMethods": ["GET", "PUT", "HEAD"],
+    "AllowedHeaders": ["Content-Type", "x-amz-checksum-crc32", "x-amz-sdk-checksum-algorithm"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3600
   }
 ]
 ```
 
-Para produção, substitua `http://localhost:3000` pelo seu domínio.
+- Em produção, inclua também a origem exata do app (ex.: `https://seu-dominio.com`), sem barra final.
+- A origem no navegador tem de coincidir **exatamente** com uma entrada em `AllowedOrigins` (esquema, host e porta).
+- Após salvar, a propagação pode levar até ~30 s ([documentação R2 CORS](https://developers.cloudflare.com/r2/buckets/cors/)).
 
 #### 4.3 Criar API Token
 

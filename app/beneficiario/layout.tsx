@@ -11,7 +11,7 @@ export default async function BeneficiarioLayout({
   const user = await getServerCurrentUser()
   if (user && user.role !== 'beneficiary') redirect('/')
   return (
-    <div className="flex min-h-screen flex-col gap-4 bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+    <div className="flex min-h-screen flex-col gap-4 bg-linear-to-br from-primary/5 via-background to-secondary/5">
       {user ? (
         <Header showLoginButton={false} actions={<ImoveisHeaderActions />} />
       ) : (

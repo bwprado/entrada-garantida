@@ -1,6 +1,11 @@
 import Link from 'next/link'
 
-import { Button } from '@/components/ui/button'
+import {
+  AnimatedSection,
+  StaggerContainer,
+  StaggerItem
+} from '@/components/animations'
+import { Button, buttonVariants } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -9,25 +14,21 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/card'
-import {
-  AnimatedSection,
-  StaggerContainer,
-  StaggerItem
-} from '@/components/animations'
 import { ArrowLeft, Building2, Fingerprint, UsersRound } from 'lucide-react'
 
 export default function LoginHubPage() {
   return (
-    <div className="min-h-[calc(100dvh-5rem)] flex flex-col bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+    <div className="min-h-[calc(100dvh-5rem)] flex flex-col bg-linear-to-br from-primary/5 via-background to-secondary/5">
       <div className="flex-1 flex justify-center p-4 sm:p-6 lg:p-8">
         <div className="w-full max-w-3xl space-y-8">
           <AnimatedSection direction="down" delay={0}>
-            <Button variant="ghost" asChild className="self-start -ml-2">
-              <Link href="/">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Voltar para o início
-              </Link>
-            </Button>
+            <Link
+              href="/"
+              className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Voltar para o início
+            </Link>
           </AnimatedSection>
 
           <AnimatedSection className="text-center space-y-3" delay={0.1}>
@@ -63,7 +64,11 @@ export default function LoginHubPage() {
                   <div></div>
                 </CardContent>
                 <CardFooter>
-                  <Button asChild className="w-full shadow-brand-sm">
+                  <Button
+                    asChild
+                    variant="ghost"
+                    className="w-full bg-primary text-white shadow-brand-sm hover:bg-primary/15 hover:text-primary"
+                  >
                     <Link href="/login/beneficiario">Entrar</Link>
                   </Button>
                 </CardFooter>
@@ -73,7 +78,7 @@ export default function LoginHubPage() {
             <StaggerItem>
               <Card
                 variant="bordered"
-                className="h-full hover:border-primary/40 transition-colors group"
+                className="h-full hover:border-secondary/40 transition-colors group"
               >
                 <CardHeader className="pb-4">
                   <div className="w-14 h-14 bg-secondary/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-secondary/15 transition-colors my-auto">
@@ -90,7 +95,11 @@ export default function LoginHubPage() {
                   <div></div>
                 </CardContent>
                 <CardFooter>
-                  <Button asChild className="w-full shadow-brand-sm">
+                  <Button
+                    asChild
+                    variant="ghost"
+                    className="w-full bg-secondary text-white shadow-brand-sm hover:bg-secondary hover:text-secondary"
+                  >
                     <Link href="/login/ofertante">Entrar</Link>
                   </Button>
                 </CardFooter>
@@ -100,10 +109,10 @@ export default function LoginHubPage() {
             <StaggerItem>
               <Card
                 variant="bordered"
-                className="h-full hover:border-primary/40 transition-colors group"
+                className="h-full hover:border-accent/40 transition-colors group"
               >
                 <CardHeader className="pb-4">
-                  <div className="w-14 h-14 bg-accent/20 rounded-xl flex items-center justify-center mb-4 group-hover:bg-accent/25 transition-colors">
+                  <div className="w-14 h-14 bg-accent/30 rounded-xl flex items-center justify-center mb-4 group-hover:bg-accent/25 transition-colors">
                     <Fingerprint className="w-7 h-7 text-secondary" />
                   </div>
                   <CardTitle className="text-xl tracking-tight">
@@ -119,8 +128,8 @@ export default function LoginHubPage() {
                 <CardFooter>
                   <Button
                     asChild
-                    variant="secondary"
-                    className="w-full shadow-brand-sm"
+                    variant="ghost"
+                    className="w-full bg-accent/30 text-secondary shadow-brand-sm hover:bg-accent/25 hover:text-secondary"
                   >
                     <Link href="/login/admin">Entrar</Link>
                   </Button>

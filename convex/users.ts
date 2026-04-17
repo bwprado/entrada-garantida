@@ -5,11 +5,13 @@ import {
   QueryInitializer,
   paginationOptsValidator
 } from 'convex/server'
-import { v } from 'convex/values'
+import { ConvexError, v } from 'convex/values'
 import { normalizePhone } from '../lib/normalize-phone'
 import { DataModel, Doc, Id } from './_generated/dataModel'
+import type { MutationCtx } from './_generated/server'
 import { mutation, query } from './_generated/server'
 import { verifyAdmin, verifyLogin, verifySelfOrAdmin } from './authz'
+import { r2 } from './r2'
 import {
   adminNivelAcessoEnum,
   deficienciaEnum,
@@ -158,6 +160,30 @@ export const getById = query({
   handler: async (ctx, args): Promise<Doc<'users'> | null> => {
     await verifySelfOrAdmin(ctx, args.id)
     return await ctx.db.get(args.id)
+  }
+})
+
+/** Admin-only: beneficiary or ofertante user row + role profile (single round-trip). */
+export const getUserDetailForAdmin = query({
+  args: { userId: v.id('users') },
+  handler: async (ctx, args) => {
+    await verifyAdmin(ctx)
+    const user = await ctx.db.get(args.userId)
+    if (
+      !user ||
+      (user.role !== 'beneficiary' && user.role !== 'ofertante')
+    ) {
+      return null
+    }
+    if (user.role === 'beneficiary' && user.beneficiaryProfileId) {
+      const profile = await ctx.db.get(user.beneficiaryProfileId)
+      return { user, profile } as const
+    }
+    if (user.role === 'ofertante' && user.ofertanteProfileId) {
+      const profile = await ctx.db.get(user.ofertanteProfileId)
+      return { user, profile } as const
+    }
+    return { user, profile: null } as const
   }
 })
 
@@ -1735,5 +1761,146 @@ export const createOfertanteMinimal = mutation({
     })
 
     return { success: true, userId }
+  }
+})
+
+// ============ ADMIN DELETE USER ============
+
+async function deleteAllRefreshTokensForSession(
+  ctx: MutationCtx,
+  sessionId: Id<'authSessions'>
+) {
+  const tokens = await ctx.db
+    .query('authRefreshTokens')
+    .withIndex('sessionId', (q) => q.eq('sessionId', sessionId))
+    .collect()
+  for (const t of tokens) {
+    await ctx.db.delete(t._id)
+  }
+}
+
+async function deleteAuthRecordsForUser(
+  ctx: MutationCtx,
+  userId: Id<'users'>,
+  phone: string | undefined
+) {
+  const sessions = await ctx.db
+    .query('authSessions')
+    .withIndex('userId', (q) => q.eq('userId', userId))
+    .collect()
+
+  for (const session of sessions) {
+    await deleteAllRefreshTokensForSession(ctx, session._id)
+    const verifiers = await ctx.db
+      .query('authVerifiers')
+      .filter((q) => q.eq(q.field('sessionId'), session._id))
+      .collect()
+    for (const ver of verifiers) {
+      await ctx.db.delete(ver._id)
+    }
+    await ctx.db.delete(session._id)
+  }
+
+  const accounts = await ctx.db
+    .query('authAccounts')
+    .filter((q) => q.eq(q.field('userId'), userId))
+    .collect()
+
+  for (const account of accounts) {
+    const codes = await ctx.db
+      .query('authVerificationCodes')
+      .withIndex('accountId', (q) => q.eq('accountId', account._id))
+      .collect()
+    for (const c of codes) {
+      await ctx.db.delete(c._id)
+    }
+    await ctx.db.delete(account._id)
+  }
+
+  if (phone) {
+    const rate = await ctx.db
+      .query('authRateLimits')
+      .withIndex('identifier', (q) => q.eq('identifier', phone))
+      .first()
+    if (rate) {
+      await ctx.db.delete(rate._id)
+    }
+  }
+}
+
+async function deleteUserDocuments(ctx: MutationCtx, userId: Id<'users'>) {
+  const docs = await ctx.db
+    .query('documents')
+    .withIndex('by_user', (q) => q.eq('userId', userId))
+    .collect()
+  for (const doc of docs) {
+    await r2.deleteObject(ctx, doc.r2Key)
+    await ctx.db.delete(doc._id)
+  }
+}
+
+export const adminDeleteBeneficiary = mutation({
+  args: { userId: v.id('users') },
+  handler: async (ctx, args) => {
+    const actor = await verifyAdmin(ctx)
+    if (actor._id === args.userId) {
+      throw new ConvexError('Não é possível excluir o próprio usuário')
+    }
+    const user = await ctx.db.get(args.userId)
+    if (!user || user.role !== 'beneficiary') {
+      throw new ConvexError('Beneficiário não encontrado')
+    }
+
+    await deleteUserDocuments(ctx, args.userId)
+
+    const selections = await ctx.db
+      .query('selectionsHistory')
+      .withIndex('by_beneficiario', (q) => q.eq('beneficiarioId', args.userId))
+      .collect()
+    for (const s of selections) {
+      await ctx.db.delete(s._id)
+    }
+
+    if (user.beneficiaryProfileId) {
+      await ctx.db.delete(user.beneficiaryProfileId)
+    }
+
+    await deleteAuthRecordsForUser(ctx, args.userId, user.phone)
+
+    await ctx.db.delete(args.userId)
+  }
+})
+
+export const adminDeleteOfertante = mutation({
+  args: { userId: v.id('users') },
+  handler: async (ctx, args) => {
+    const actor = await verifyAdmin(ctx)
+    if (actor._id === args.userId) {
+      throw new ConvexError('Não é possível excluir o próprio usuário')
+    }
+    const user = await ctx.db.get(args.userId)
+    if (!user || user.role !== 'ofertante') {
+      throw new ConvexError('Ofertante não encontrado')
+    }
+
+    const owned = await ctx.db
+      .query('properties')
+      .withIndex('by_ofertante', (q) => q.eq('ofertanteId', args.userId))
+      .first()
+    if (owned !== null) {
+      throw new ConvexError(
+        'Não é possível excluir: existem imóveis cadastrados para este ofertante.'
+      )
+    }
+
+    await deleteUserDocuments(ctx, args.userId)
+
+    if (user.ofertanteProfileId) {
+      await ctx.db.delete(user.ofertanteProfileId)
+    }
+
+    await deleteAuthRecordsForUser(ctx, args.userId, user.phone)
+
+    await ctx.db.delete(args.userId)
   }
 })

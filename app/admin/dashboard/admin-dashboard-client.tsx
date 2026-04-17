@@ -56,6 +56,8 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { AddUserSheet } from './add-user-sheet'
+import { UserDetailSheet } from './user-detail-sheet'
+import type { Id } from '@/convex/_generated/dataModel'
 import { normalizePhone } from '@/lib/normalize-phone'
 
 export default function AdminDashboardClient() {
@@ -64,6 +66,9 @@ export default function AdminDashboardClient() {
   const [showResolveDialog, setShowResolveDialog] = useState(false)
   const [resolvingId, setResolvingId] = useState<string | null>(null)
   const [showAddUserSheet, setShowAddUserSheet] = useState(false)
+  const [detailSheetUserId, setDetailSheetUserId] =
+    useState<Id<'users'> | null>(null)
+  const [detailSheetPreviewNome, setDetailSheetPreviewNome] = useState('')
 
   // Beneficiary table state
   const [searchInput, setSearchInput] = useState('')
@@ -417,6 +422,10 @@ export default function AdminDashboardClient() {
                                   variant="outline"
                                   size="sm"
                                   className="bg-transparent"
+                                  onClick={() => {
+                                    setDetailSheetUserId(b._id)
+                                    setDetailSheetPreviewNome(b.nome)
+                                  }}
                                 >
                                   <Eye className="w-4 h-4 mr-2" />
                                   Ver Detalhes
@@ -679,6 +688,10 @@ export default function AdminDashboardClient() {
                                     variant="outline"
                                     size="sm"
                                     className="bg-transparent"
+                                    onClick={() => {
+                                      setDetailSheetUserId(o._id)
+                                      setDetailSheetPreviewNome(o.nome)
+                                    }}
                                   >
                                     <Eye className="w-4 h-4 mr-2" />
                                     Ver Detalhes
@@ -747,6 +760,10 @@ export default function AdminDashboardClient() {
                                       variant="outline"
                                       size="sm"
                                       className="bg-transparent"
+                                      onClick={() => {
+                                        setDetailSheetUserId(o._id)
+                                        setDetailSheetPreviewNome(o.nome)
+                                      }}
                                     >
                                       <Eye className="w-4 h-4 mr-2" />
                                       Ver Detalhes
@@ -973,6 +990,22 @@ export default function AdminDashboardClient() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <UserDetailSheet
+        open={detailSheetUserId !== null}
+        onOpenChange={(next) => {
+          if (!next) {
+            setDetailSheetUserId(null)
+            setDetailSheetPreviewNome('')
+          }
+        }}
+        userId={detailSheetUserId}
+        previewNome={detailSheetPreviewNome}
+        onDeleted={() => {
+          setDetailSheetUserId(null)
+          setDetailSheetPreviewNome('')
+        }}
+      />
 
       {/* Add User Sheet */}
       <AddUserSheet

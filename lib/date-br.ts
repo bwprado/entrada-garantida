@@ -20,3 +20,10 @@ export function parseDataNascimentoBrParaIso(value: string): string | null {
   if (year < 1900 || year > yMax) return null
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
 }
+
+/** ISO YYYY-MM-DD → masked display DD-MM-YYYY for profile prefill. */
+export function formatIsoDateToDataNascimentoBr(iso: string): string {
+  const m = iso.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m) return ""
+  return `${m[3]}-${m[2]}-${m[1]}`
+}

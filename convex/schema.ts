@@ -320,7 +320,7 @@ export const properties = defineTable({
       documentos: v.optional(v.string())
     })
   ),
-
+  filesIds: v.optional(v.array(v.id('files'))),
   criadoEm: v.number(),
   atualizadoEm: v.number(),
   validadoEm: v.optional(v.number()),
@@ -348,15 +348,6 @@ export const documents = defineTable({
   .index('by_user_and_tipo', ['userId', 'tipo'])
   .index('by_property_and_tipo', ['propertyId', 'tipo'])
 
-// Property images - thumbnails/gallery images
-export const propertyImages = defineTable({
-  propertyId: v.id('properties'),
-  r2Key: v.string(), // Key returned by R2 component
-  ordem: v.number(), // Display order
-  nomeOriginal: v.string(),
-  criadoEm: v.number()
-}).index('by_property', ['propertyId'])
-
 // Beneficiary selections history
 export const selectionsHistory = defineTable({
   beneficiarioId: v.id('users'),
@@ -368,14 +359,28 @@ export const selectionsHistory = defineTable({
   .index('by_beneficiario', ['beneficiarioId'])
   .index('by_property', ['propertyId'])
 
+export const files = defineTable({
+  r2Key: v.string(),
+  name: v.string(),
+  type: v.string(),
+  size: v.number(),
+  url: v.string(),
+  userId: v.id('users'),
+  propertyId: v.optional(v.id('properties')),
+  documentId: v.optional(v.id('documents'))
+})
+  .index('by_r2_key', ['r2Key'])
+  .index('by_property', ['propertyId'])
+  .index('by_document', ['documentId'])
+
 export default defineSchema({
   ...authTablesWithoutUsers,
   users,
+  files,
   beneficiaryProfiles,
   ofertanteProfiles,
   adminProfiles,
   properties,
   documents,
-  propertyImages,
   selectionsHistory
 })

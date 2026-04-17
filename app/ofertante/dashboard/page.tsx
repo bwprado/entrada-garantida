@@ -1,10 +1,7 @@
 'use client'
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useQuery } from 'convex/react'
-import { api } from '@/convex/_generated/api'
+
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -13,29 +10,25 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { api } from '@/convex/_generated/api'
+import { Doc } from '@/convex/_generated/dataModel'
+import { useQuery } from 'convex/react'
 import {
-  Home,
-  Plus,
-  Eye,
-  Edit,
+  AlertCircle,
   BarChart3,
-  Users,
   CheckCircle2,
   Clock,
-  XCircle,
-  Upload,
+  Edit,
   FileText,
-  AlertCircle,
-  User
+  Home,
+  Plus,
+  Upload,
+  User,
+  Users
 } from 'lucide-react'
-import { useAuth } from '@/lib/auth-context'
-import { Doc } from '@/convex/_generated/dataModel'
 
 export default function OfertanteDashboardPage() {
-  const router = useRouter()
-
   const query = useQuery(api.users.getCurrentUserWithProfile)
   const user = query?.user
   const profile = query?.profile as Doc<'ofertanteProfiles'>
@@ -180,9 +173,11 @@ export default function OfertanteDashboardPage() {
                       Cadastre seu primeiro imóvel para começar a participar da
                       Aquisição Assistida.
                     </p>
-                    <Button>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Cadastrar Imóvel
+                    <Button asChild>
+                      <Link href="/ofertante/imoveis/cadastro">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Cadastrar Imóvel
+                      </Link>
                     </Button>
                   </div>
                 </CardContent>
