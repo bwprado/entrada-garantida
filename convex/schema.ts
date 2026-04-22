@@ -291,6 +291,8 @@ export const properties = defineTable({
 
   titulo: v.string(),
   descricao: v.optional(v.string()),
+  /** 8 digits, no mask */
+  cep: v.optional(v.string()),
   endereco: v.string(),
   compartimentos: v.number(),
   tamanho: v.number(),

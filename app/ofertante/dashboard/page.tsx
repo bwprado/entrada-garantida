@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api } from '@/convex/_generated/api'
-import { Doc } from '@/convex/_generated/dataModel'
+import type { Doc } from '@/convex/_generated/dataModel'
 import { useQuery } from 'convex/react'
 import {
   AlertCircle,
@@ -28,10 +28,17 @@ import {
   Users
 } from 'lucide-react'
 
+import { OfertantePropertyListRow } from '@/components/ofertante/ofertante-property-list-row'
+
 export default function OfertanteDashboardPage() {
   const query = useQuery(api.users.getCurrentUserWithProfile)
   const user = query?.user
   const profile = query?.profile as Doc<'ofertanteProfiles'>
+
+  const myProperties = useQuery(
+    api.properties.getByOfertante,
+    user?._id ? { ofertanteId: user._id } : 'skip'
+  )
 
   // Check authentication and onboarding
 
@@ -43,6 +50,11 @@ export default function OfertanteDashboardPage() {
       </div>
     )
   }
+
+  const list = myProperties ?? []
+  const total = list.length
+  const aprovados = list.filter((p) => p.status === 'validated').length
+  const emAnalise = list.filter((p) => p.status === 'pending').length
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -71,7 +83,7 @@ export default function OfertanteDashboardPage() {
                     <p className="text-sm text-muted-foreground mb-1">
                       Total de Imóveis
                     </p>
-                    <p className="text-3xl font-bold">0</p>
+                    <p className="text-3xl font-bold">{total}</p>
                   </div>
                   <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
                     <Home className="w-6 h-6 text-primary" />
@@ -87,7 +99,9 @@ export default function OfertanteDashboardPage() {
                     <p className="text-sm text-muted-foreground mb-1">
                       Aprovados
                     </p>
-                    <p className="text-3xl font-bold text-secondary">0</p>
+                    <p className="text-3xl font-bold text-secondary">
+                      {aprovados}
+                    </p>
                   </div>
                   <div className="w-12 h-12 bg-secondary/10 rounded-lg flex items-center justify-center">
                     <CheckCircle2 className="w-6 h-6 text-secondary" />
@@ -103,7 +117,7 @@ export default function OfertanteDashboardPage() {
                     <p className="text-sm text-muted-foreground mb-1">
                       Em Análise
                     </p>
-                    <p className="text-3xl font-bold">0</p>
+                    <p className="text-3xl font-bold">{emAnalise}</p>
                   </div>
                   <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
                     <Clock className="w-6 h-6 text-primary" />
@@ -164,22 +178,37 @@ export default function OfertanteDashboardPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-12">
-                    <Home className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">
-                      Nenhum imóvel cadastrado
-                    </h3>
-                    <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                      Cadastre seu primeiro imóvel para começar a participar da
-                      Aquisição Assistida.
-                    </p>
-                    <Button asChild>
-                      <Link href="/ofertante/imoveis/cadastro">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Cadastrar Imóvel
-                      </Link>
-                    </Button>
-                  </div>
+                  {myProperties === undefined ? (
+                    <div className="flex justify-center py-12">
+                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    </div>
+                  ) : list.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Home className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">
+                        Nenhum imóvel cadastrado
+                      </h3>
+                      <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                        Cadastre seu primeiro imóvel para começar a participar da
+                        Aquisição Assistida.
+                      </p>
+                      <Button asChild>
+                        <Link href="/ofertante/imoveis/cadastro">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Cadastrar Imóvel
+                        </Link>
+                      </Button>
+                    </div>
+                  ) : (
+                    <ul className="space-y-3">
+                      {list.map((p) => (
+                        <OfertantePropertyListRow
+                          key={p._id}
+                          property={p}
+                        />
+                      ))}
+                    </ul>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

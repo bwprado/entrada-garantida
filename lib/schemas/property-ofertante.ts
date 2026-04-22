@@ -4,13 +4,20 @@ import { z } from 'zod'
 
 import { MAX_PROPERTY_PRICE } from '@/lib/property-limits'
 
-const MAX_PHOTO_BYTES = 5 * 1024 * 1024
 const MAX_PHOTOS = 5
-const ALLOWED_IMAGE = new Set(['image/png', 'image/jpeg', 'image/gif'])
+
+const cepDigits = (s: string) => s.replace(/\D/g, '')
 
 export const propertyOfertanteFormSchema = z.object({
   titulo: z.string().min(1, 'Informe o título'),
   descricao: z.string().optional(),
+  cep: z
+    .string()
+    .default('')
+    .refine(
+      (v) => cepDigits(v).length === 0 || cepDigits(v).length === 8,
+      'CEP deve ter 8 dígitos'
+    ),
   endereco: z.string().min(1, 'Informe o endereço'),
   compartimentos: z.coerce
     .number()
@@ -31,29 +38,10 @@ export const propertyOfertanteFormSchema = z.object({
       MAX_PROPERTY_PRICE,
       `Máximo R$ ${MAX_PROPERTY_PRICE.toLocaleString('pt-BR')}`
     ),
-  fotos: z
-    .array(z.instanceof(File))
+  filesIds: z
+    .array(zid('files'))
     .min(1, 'Adicione pelo menos uma foto')
     .max(MAX_PHOTOS, `No máximo ${MAX_PHOTOS} fotos`)
-    .superRefine((files, ctx) => {
-      for (const f of files) {
-        if (!ALLOWED_IMAGE.has(f.type)) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'Use apenas PNG, JPEG ou GIF'
-          })
-          return
-        }
-        if (f.size > MAX_PHOTO_BYTES) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'Cada arquivo deve ter no máximo 5 MB'
-          })
-          return
-        }
-      }
-    }),
-  filesIds: z.array(zid('files')).optional()
 })
 
 export type PropertyOfertanteFormValues = z.infer<

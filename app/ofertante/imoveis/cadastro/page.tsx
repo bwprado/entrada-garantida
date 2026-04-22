@@ -36,7 +36,6 @@ import {
   formatBrlCurrency,
   parseBrlCurrency
 } from '@/lib/masks'
-import { uploadPropertyGallery } from '@/lib/property-upload'
 import {
   propertyOfertanteFormSchema,
   type PropertyOfertanteFormValues
@@ -46,7 +45,7 @@ import { fetchAddressByCEP } from '@/lib/validation'
 import { useUploadFile } from '@convex-dev/r2/react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMaskito } from '@maskito/react'
-import { useMutation } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import { format, isValid } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
@@ -57,9 +56,14 @@ import {
   Loader2,
   X
 } from 'lucide-react'
-import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
-import { Controller, useForm, type DefaultValues } from 'react-hook-form'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useEffect, useState } from 'react'
+import {
+  Controller,
+  useForm,
+  useWatch,
+  type DefaultValues
+} from 'react-hook-form'
 import { toast } from 'sonner'
 import { Id } from '@/convex/_generated/dataModel'
 
@@ -80,14 +84,41 @@ function dateToUtcStartMs(d: Date): number {
   return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())
 }
 
-export default function NovoImovelPage() {
+function formatCepForInput(cep: string | undefined): string {
+  if (!cep) return ''
+  const d = cep.replace(/\D/g, '').slice(0, 8)
+  if (d.length <= 5) return d
+  return `${d.slice(0, 5)}-${d.slice(5)}`
+}
+
+const emptyFormDefaults: DefaultValues<PropertyOfertanteFormValues> = {
+  titulo: '',
+  descricao: '',
+  cep: '',
+  endereco: '',
+  compartimentos: 1,
+  filesIds: []
+} as DefaultValues<PropertyOfertanteFormValues>
+
+function ImovelCadastroPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const propertyIdParam = searchParams.get('propertyId') as
+    | Id<'properties'>
+    | null
+  const isEdit = Boolean(propertyIdParam)
+
   const { user, isAuthenticated, isLoading } = useAuth()
   const [submitting, setSubmitting] = useState(false)
-  const [cep, setCep] = useState('')
   const [isFetchingCEP, setIsFetchingCEP] = useState(false)
 
+  const existingProperty = useQuery(
+    api.properties.getByIdForOwner,
+    propertyIdParam ? { id: propertyIdParam } : 'skip'
+  )
+
   const createProperty = useMutation(api.properties.create)
+  const updateProperty = useMutation(api.properties.update)
   const addPropertyImages = useMutation(api.documents.addPropertyImages)
   const deletePropertyImage = useMutation(
     api.documents.deletePropertyImage
@@ -110,17 +141,12 @@ export default function NovoImovelPage() {
 
   const form = useForm<PropertyOfertanteFormValues>({
     resolver: zodResolver(propertyOfertanteFormSchema),
-    defaultValues: {
-      titulo: '',
-      descricao: '',
-      endereco: '',
-      compartimentos: 1,
-      fotos: [],
-      filesIds: []
-    } as DefaultValues<PropertyOfertanteFormValues>
+    defaultValues: emptyFormDefaults
   })
 
   const { handleSubmit, control, reset, setValue } = form
+
+  const cepWatched = useWatch({ control, name: 'cep', defaultValue: '' })
 
   useEffect(() => {
     if (
@@ -134,7 +160,7 @@ export default function NovoImovelPage() {
   }, [isAuthenticated, isLoading, user, router])
 
   useEffect(() => {
-    const cepClean = cep.replace(/\D/g, '')
+    const cepClean = (cepWatched ?? '').replace(/\D/g, '')
     if (cepClean.length !== 8) return
 
     let cancelled = false
@@ -166,7 +192,28 @@ export default function NovoImovelPage() {
     return () => {
       cancelled = true
     }
-  }, [cep, setValue])
+  }, [cepWatched, setValue])
+
+  useEffect(() => {
+    if (!isEdit) {
+      reset(emptyFormDefaults)
+      return
+    }
+    if (!existingProperty) return
+    reset({
+      titulo: existingProperty.titulo,
+      descricao: existingProperty.descricao ?? '',
+      cep: formatCepForInput(existingProperty.cep),
+      endereco: existingProperty.endereco,
+      compartimentos: existingProperty.compartimentos,
+      tamanho: existingProperty.tamanho,
+      data_construcao: new Date(existingProperty.dataConstrucao),
+      matricula: existingProperty.matricula,
+      inscricao_imobiliaria: existingProperty.inscricaoImobiliaria,
+      valor_venda: existingProperty.valorVenda,
+      filesIds: existingProperty.filesIds ?? []
+    })
+  }, [isEdit, existingProperty, reset])
 
   async function onSubmit(data: PropertyOfertanteFormValues) {
     if (!user) {
@@ -175,13 +222,58 @@ export default function NovoImovelPage() {
     }
 
     setSubmitting(true)
-    const { fotos, ...rest } = data
+    const { filesIds, ...rest } = data
 
     try {
+      if (isEdit && propertyIdParam) {
+        if (existingProperty && existingProperty.status !== 'draft') {
+          toast.error('Apenas imóveis em rascunho podem ser editados.')
+          return
+        }
+        if (!existingProperty) {
+          toast.error('Imóvel não encontrado.')
+          return
+        }
+        await updateProperty({
+          propertyId: existingProperty._id,
+          titulo: rest.titulo,
+          descricao: rest.descricao?.trim() ? rest.descricao : undefined,
+          cep: rest.cep ?? '',
+          endereco: rest.endereco,
+          compartimentos: rest.compartimentos,
+          tamanho: rest.tamanho,
+          dataConstrucao: dateToUtcStartMs(rest.data_construcao),
+          matricula: rest.matricula,
+          inscricaoImobiliaria: rest.inscricao_imobiliaria,
+          valorVenda: rest.valor_venda
+        })
+        try {
+          await addPropertyImages({
+            filesIds,
+            propertyId: existingProperty._id
+          })
+        } catch (uploadErr) {
+          console.error(uploadErr)
+          toast.error(
+            'Dados salvos, mas houve falha ao atualizar as fotos. Tente de novo no cadastro.'
+          )
+          router.push('/ofertante/dashboard')
+          return
+        }
+        toast.success('Imóvel atualizado com sucesso')
+        reset(emptyFormDefaults)
+        router.push('/ofertante/dashboard')
+        return
+      }
+
+      const cepDigitsCreate = (rest.cep ?? '').replace(/\D/g, '')
+      const cepArgCreate =
+        cepDigitsCreate.length === 8 ? cepDigitsCreate : undefined
       const result = await createProperty({
         ofertanteId: user._id,
         titulo: rest.titulo,
         descricao: rest.descricao?.trim() ? rest.descricao : undefined,
+        cep: cepArgCreate,
         endereco: rest.endereco,
         compartimentos: rest.compartimentos,
         tamanho: rest.tamanho,
@@ -199,15 +291,10 @@ export default function NovoImovelPage() {
       }
 
       try {
-        if (
-          form.getValues('filesIds') &&
-          form.getValues('filesIds')?.length > 0
-        ) {
-          await addPropertyImages({
-            filesIds: form.getValues('filesIds') ?? [],
-            propertyId: result.propertyId
-          })
-        }
+        await addPropertyImages({
+          filesIds,
+          propertyId: result.propertyId
+        })
       } catch (uploadErr) {
         console.error(uploadErr)
         toast.error(
@@ -218,7 +305,6 @@ export default function NovoImovelPage() {
       }
 
       toast.success('Imóvel cadastrado com sucesso')
-      setCep('')
       reset()
       router.push('/ofertante/dashboard')
     } catch (e) {
@@ -255,7 +341,7 @@ export default function NovoImovelPage() {
 
   const stepsFields = [
     {
-      fields: ['titulo', 'descricao', 'endereco'] as const,
+      fields: ['titulo', 'descricao', 'cep', 'endereco'] as const,
       component: (
         <>
           <Controller
@@ -310,34 +396,49 @@ export default function NovoImovelPage() {
               </Field>
             )}
           />
-          <Field className="gap-1 col-span-full">
-            <FieldLabel htmlFor="imovel-cep">CEP</FieldLabel>
-            <div className="relative">
-              <Input
-                ref={cepInputRef}
-                id="imovel-cep"
-                type="text"
-                inputMode="numeric"
-                autoComplete="postal-code"
-                value={cep}
-                onChange={(e) => setCep(e.target.value)}
-                placeholder="00000-000"
-                aria-busy={isFetchingCEP}
-                className="pe-10"
-              />
-              {isFetchingCEP && (
-                <Loader2
-                  className="pointer-events-none absolute inset-e-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground"
-                  aria-hidden
-                />
-              )}
-            </div>
-            <FieldDescription>
-              Digite o CEP para preencher o endereço automaticamente (ViaCEP).
-              Ajuste o texto abaixo para incluir número e complemento, se
-              necessário.
-            </FieldDescription>
-          </Field>
+          <Controller
+            name="cep"
+            control={control}
+            render={({ field, fieldState }) => (
+              <Field
+                data-invalid={fieldState.invalid}
+                className="gap-1 col-span-full"
+              >
+                <FieldLabel htmlFor="imovel-cep">CEP</FieldLabel>
+                <div className="relative">
+                  <Input
+                    ref={mergeRefs(field.ref, cepInputRef)}
+                    id="imovel-cep"
+                    name={field.name}
+                    onBlur={field.onBlur}
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="postal-code"
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    placeholder="00000-000"
+                    aria-busy={isFetchingCEP}
+                    aria-invalid={fieldState.invalid}
+                    className="pe-10"
+                  />
+                  {isFetchingCEP && (
+                    <Loader2
+                      className="pointer-events-none absolute inset-e-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground"
+                      aria-hidden
+                    />
+                  )}
+                </div>
+                <FieldDescription>
+                  Digite o CEP para preencher o endereço automaticamente
+                  (ViaCEP). Ajuste o texto abaixo para incluir número e
+                  complemento, se necessário.
+                </FieldDescription>
+                {fieldState.invalid && (
+                  <FieldError errors={[fieldState.error]} />
+                )}
+              </Field>
+            )}
+          />
           <Controller
             name="endereco"
             control={control}
@@ -672,6 +773,29 @@ export default function NovoImovelPage() {
     )
   }
 
+  if (isEdit && existingProperty === undefined) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    )
+  }
+
+  if (isEdit && existingProperty === null) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-4">
+        <p className="text-center text-muted-foreground">
+          Imóvel não encontrado ou você não tem permissão para editá-lo.
+        </p>
+        <Button asChild>
+          <Link href="/ofertante/dashboard">Voltar ao painel</Link>
+        </Button>
+      </div>
+    )
+  }
+
+  const canEdit = !isEdit || existingProperty?.status === 'draft'
+
   return (
     <div className="min-h-screen flex flex-col bg-linear-to-br from-primary/5 via-background to-secondary/5">
       <div className="flex-1 py-6 px-4 sm:py-10">
@@ -685,10 +809,19 @@ export default function NovoImovelPage() {
 
           <div className="mb-6">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-              Novo imóvel
+              {isEdit ? 'Editar imóvel' : 'Novo imóvel'}
             </h1>
             <p className="mt-2 text-sm sm:text-base text-muted-foreground leading-relaxed">
-              Preencha em etapas. Campos marcados com * são obrigatórios.
+              {isEdit && !canEdit ? (
+                <>
+                  Este imóvel não está em rascunho; os dados não podem ser
+                  alterados por aqui.
+                </>
+              ) : (
+                <>
+                  Preencha em etapas. Campos marcados com * são obrigatórios.
+                </>
+              )}
             </p>
           </div>
 
@@ -696,41 +829,66 @@ export default function NovoImovelPage() {
             onSubmit={handleSubmit(onSubmit)}
             className="flex flex-col rounded-lg border bg-card p-4 sm:p-6 shadow-sm gap-4"
           >
-            <MultiStepFormProvider
-              stepsFields={[stepsFields.at(-1)]}
-              onStepValidation={async (step) =>
-                form.trigger(step.fields as never)
-              }
-            >
-              <MultiStepFormContent>
-                <FormHeader />
-                <StepFields />
-                <FormFooter className="border-t pt-4 mt-2">
-                  <div className="flex flex-col gap-3 w-full sm:flex-row sm:justify-between sm:items-center">
-                    <PreviousButton>
-                      <ChevronLeft className="size-4" />
-                      Anterior
-                    </PreviousButton>
-                    <div className="flex flex-col gap-3 w-full sm:flex-row sm:ms-auto sm:w-auto">
-                      <NextButton>
-                        Próximo
-                        <ChevronRight className="size-4" />
-                      </NextButton>
-                      <SubmitButton
-                        type="submit"
-                        disabled={submitting}
-                        className="bg-primary"
-                      >
-                        {submitting ? 'Salvando…' : 'Salvar imóvel'}
-                      </SubmitButton>
+            {canEdit ? (
+              <MultiStepFormProvider
+                stepsFields={[...stepsFields]}
+                onStepValidation={async (step) =>
+                  form.trigger(step.fields as never)
+                }
+              >
+                <MultiStepFormContent>
+                  <FormHeader />
+                  <StepFields />
+                  <FormFooter className="border-t pt-4 mt-2">
+                    <div className="flex flex-col gap-3 w-full sm:flex-row sm:justify-between sm:items-center">
+                      <PreviousButton>
+                        <ChevronLeft className="size-4" />
+                        Anterior
+                      </PreviousButton>
+                      <div className="flex flex-col gap-3 w-full sm:flex-row sm:ms-auto sm:w-auto">
+                        <NextButton>
+                          Próximo
+                          <ChevronRight className="size-4" />
+                        </NextButton>
+                        <SubmitButton
+                          type="submit"
+                          disabled={submitting}
+                          className="bg-primary"
+                        >
+                          {submitting
+                            ? 'Salvando…'
+                            : isEdit
+                              ? 'Salvar alterações'
+                              : 'Salvar imóvel'}
+                        </SubmitButton>
+                      </div>
                     </div>
-                  </div>
-                </FormFooter>
-              </MultiStepFormContent>
-            </MultiStepFormProvider>
+                  </FormFooter>
+                </MultiStepFormContent>
+              </MultiStepFormProvider>
+            ) : (
+              <p className="text-sm text-muted-foreground py-4 text-center">
+                Use o painel para acompanhar o status ou o anúncio público, se
+                já aprovado.
+              </p>
+            )}
           </form>
         </div>
       </div>
     </div>
+  )
+}
+
+export default function NovoImovelPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      }
+    >
+      <ImovelCadastroPageInner />
+    </Suspense>
   )
 }

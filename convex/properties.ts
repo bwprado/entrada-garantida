@@ -1,7 +1,9 @@
+import { getAuthUserId } from '@convex-dev/auth/server'
 import { v } from 'convex/values'
 import { Doc, Id } from './_generated/dataModel'
 import { mutation, query } from './_generated/server'
 import {
+  ensurePropertyOwnerOrAdmin,
   verifyAdmin,
   verifyLogin,
   verifyPropertyOwnerOrAdmin,
@@ -28,6 +30,35 @@ export const getById = query({
   args: { id: v.id('properties') },
   handler: async (ctx, args): Promise<Doc<'properties'> | null> => {
     return await ctx.db.get(args.id)
+  }
+})
+
+/** Public catalog + owner preview: validated for everyone; else only owner, construtor, or admin. */
+export const getForPublicDetail = query({
+  args: { id: v.id('properties') },
+  handler: async (ctx, { id }): Promise<Doc<'properties'> | null> => {
+    const p = await ctx.db.get(id)
+    if (!p) return null
+    if (p.status === 'validated') return p
+    const userId = await getAuthUserId(ctx)
+    if (!userId) return null
+    const user = await ctx.db.get(userId)
+    if (!user) return null
+    if (user.role === 'admin') return p
+    if (p.ofertanteId === user._id || p.construtorId === user._id) return p
+    return null
+  }
+})
+
+/** Load a single property for the logged-in ofertante/construtor (or admin) who owns it. */
+export const getByIdForOwner = query({
+  args: { id: v.id('properties') },
+  handler: async (ctx, { id }): Promise<Doc<'properties'> | null> => {
+    const user = await verifyLogin(ctx)
+    const p = await ctx.db.get(id)
+    if (!p) return null
+    ensurePropertyOwnerOrAdmin(user, p)
+    return p
   }
 })
 
@@ -197,6 +228,7 @@ export const create = mutation({
     construtorId: v.optional(v.id('users')),
     titulo: v.string(),
     descricao: v.optional(v.string()),
+    cep: v.optional(v.string()),
     endereco: v.string(),
     compartimentos: v.number(),
     tamanho: v.number(),
@@ -255,12 +287,15 @@ export const create = mutation({
     }
 
     const now = Date.now()
+    const cepClean = args.cep?.replace(/\D/g, '') ?? ''
+    const cepToStore = cepClean.length === 8 ? cepClean : undefined
 
     const propertyId = await ctx.db.insert('properties', {
       ofertanteId: args.ofertanteId,
       construtorId: args.construtorId,
       titulo: args.titulo,
       descricao: args.descricao,
+      cep: cepToStore,
       endereco: args.endereco,
       compartimentos: args.compartimentos,
       tamanho: args.tamanho,
@@ -446,6 +481,7 @@ export const update = mutation({
     propertyId: v.id('properties'),
     titulo: v.optional(v.string()),
     descricao: v.optional(v.string()),
+    cep: v.optional(v.string()),
     endereco: v.optional(v.string()),
     compartimentos: v.optional(v.number()),
     tamanho: v.optional(v.number()),
@@ -480,6 +516,10 @@ export const update = mutation({
 
     if (args.titulo !== undefined) updates.titulo = args.titulo
     if (args.descricao !== undefined) updates.descricao = args.descricao
+    if (args.cep !== undefined) {
+      const clean = args.cep.replace(/\D/g, '')
+      updates.cep = clean.length === 8 ? clean : undefined
+    }
     if (args.endereco !== undefined) updates.endereco = args.endereco
     if (args.tamanho !== undefined) updates.tamanho = args.tamanho
     if (args.dataConstrucao !== undefined)

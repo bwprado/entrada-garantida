@@ -3,7 +3,7 @@
 import * as React from "react"
 
 export type StepFieldConfig = {
-  fields: string[]
+  fields: readonly string[]
   component: React.ReactNode
 }
 
