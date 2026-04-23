@@ -228,7 +228,9 @@ export default function ImoveisClient() {
                       id={property._id}
                       title={property.titulo}
                       location={property.endereco}
-                      imageSrc="/placeholder-property.jpg"
+                      imageSrc={
+                        property.coverImageUrl ?? '/placeholder-property.jpg'
+                      }
                       status={
                         property.status === 'validated'
                           ? 'Disponível'

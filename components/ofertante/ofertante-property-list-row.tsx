@@ -27,6 +27,12 @@ type StatusLabel = {
   variant: 'default' | 'secondary' | 'outline' | 'destructive'
 }
 
+function rejectionReasonDisplay(property: Doc<'properties'>): string | undefined {
+  const m = property.motivoRejeicao?.trim()
+  if (m) return m
+  return property.notasValidacao?.dadosPessoais?.trim() || undefined
+}
+
 function propertyStatusLabel(
   status: Doc<'properties'>['status']
 ): StatusLabel {
@@ -64,6 +70,7 @@ export function OfertantePropertyListRow({
   )
   const url = thumb?.[0]?.url
   const { label, variant } = propertyStatusLabel(p.status)
+  const motivoRejeicao = rejectionReasonDisplay(p)
   const editHref = `/ofertante/imoveis/cadastro?propertyId=${p._id}`
 
   async function handleSubmitForValidation() {
@@ -144,7 +151,7 @@ export function OfertantePropertyListRow({
                   </Link>
                 </Button>
               )}
-              {p.status === 'draft' && (
+              {(p.status === 'draft' || p.status === 'rejected') && (
                 <>
                   <Button
                     type="button"
@@ -197,10 +204,18 @@ export function OfertantePropertyListRow({
               </p>
             )}
             {p.status === 'rejected' && (
-              <p className="max-w-sm text-right text-xs text-destructive">
-                Cadastro indeferido. Ajuste o que for necessário com o apoio da
-                equipe.
-              </p>
+              <div className="max-w-sm text-right text-xs text-destructive space-y-1">
+                <p>Cadastro indeferido.</p>
+                {motivoRejeicao ? (
+                  <p className="whitespace-pre-wrap break-words text-foreground/90">
+                    {motivoRejeicao}
+                  </p>
+                ) : (
+                  <p className="text-destructive/90">
+                    Ajuste o que for necessário com o apoio da equipe.
+                  </p>
+                )}
+              </div>
             )}
             {p.status === 'selected' && (
               <p className="max-w-sm text-right text-xs text-muted-foreground">

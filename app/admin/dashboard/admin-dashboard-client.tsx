@@ -208,6 +208,16 @@ export default function AdminDashboardClient() {
                       <TrendingUp className="w-3 h-3 inline mr-1" />+
                       {pendingProperties?.length || 0} pendentes
                     </p>
+                    {(pendingProperties?.length ?? 0) > 0 && (
+                      <p className="mt-2">
+                        <Link
+                          href="/admin/imoveis"
+                          className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                        >
+                          Revisar fila de análise
+                        </Link>
+                      </p>
+                    )}
                   </div>
                   <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
                     <Building2 className="w-6 h-6 text-primary" />
@@ -842,67 +852,37 @@ export default function AdminDashboardClient() {
               </Card>
             </TabsContent>
 
-            {/* Imóveis Tab */}
+            {/* Imóveis Tab — listagem unificada em /admin/imoveis */}
             <TabsContent value="imoveis" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <CardTitle>Gestão de Imóveis</CardTitle>
                       <CardDescription>
-                        Aprove ou reprove imóveis cadastrados
+                        Consulte, filtre por status e abra a revisão de cada
+                        imóvel numa única tela.
                       </CardDescription>
                     </div>
+                    <Button asChild>
+                      <Link href="/admin/imoveis">
+                        Abrir imóveis
+                      </Link>
+                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    {properties?.slice(0, 2).map((p) => (
-                      <div
-                        key={p._id}
-                        className="flex flex-col md:flex-row gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="w-full md:w-24 h-24 bg-muted rounded-lg overflow-hidden flex-shrink-0">
-                          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                            <Home className="w-8 h-8 text-muted-foreground" />
-                          </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-4 mb-2">
-                            <div>
-                              <h4 className="font-semibold mb-1">{p.titulo}</h4>
-                              <p className="text-sm text-muted-foreground">
-                                {p.compartimentos} compart. • {p.tamanho} m²
-                              </p>
-                            </div>
-                            <Badge>{p.status}</Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                            {p.endereco}
-                          </p>
-                          <div className="flex items-center justify-between">
-                            <p className="text-lg font-bold text-primary">
-                              {formatCurrency(p.valorVenda)}
-                            </p>
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="bg-transparent"
-                              >
-                                <Eye className="w-4 h-4 mr-2" />
-                                Ver
-                              </Button>
-                              <Button size="sm" variant="default">
-                                <CheckCircle2 className="w-4 h-4 mr-2" />
-                                Aprovar
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Use busca e filtro de status em{' '}
+                    <Link
+                      href="/admin/imoveis"
+                      className="font-medium text-primary underline-offset-4 hover:underline"
+                    >
+                      /admin/imoveis
+                    </Link>
+                    . No painel, o card &quot;Imóveis cadastrados&quot; também
+                    oferece atalho quando há pendentes de análise.
+                  </p>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -1018,12 +998,4 @@ export default function AdminDashboardClient() {
       />
     </div>
   )
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    maximumFractionDigits: 0
-  }).format(value)
 }

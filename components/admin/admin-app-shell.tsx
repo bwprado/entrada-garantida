@@ -18,7 +18,13 @@ import {
   SidebarTrigger
 } from '@/components/ui/sidebar'
 import { useAuth } from '@/lib/auth-context'
-import { LayoutDashboard, LogOut, Shield, Upload } from 'lucide-react'
+import {
+  Building2,
+  LayoutDashboard,
+  LogOut,
+  Shield,
+  Upload
+} from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -29,11 +35,19 @@ const nav: Array<{
   label: string
   icon: typeof LayoutDashboard
   disabled?: boolean
+  /** If set, item is active when pathname starts with this (e.g. section routes). */
+  matchPrefix?: string
 }> = [
   {
     href: '/admin/dashboard',
     label: 'Painel',
     icon: LayoutDashboard
+  },
+  {
+    href: '/admin/imoveis',
+    label: 'Imóveis',
+    icon: Building2,
+    matchPrefix: '/admin/imoveis'
   },
   {
     href: '/admin/beneficiarios/upload',
@@ -92,9 +106,12 @@ export function AdminAppShell({ children }: { children: ReactNode }) {
                   const Icon = item.icon
                   const active =
                     !item.disabled &&
-                    (item.href === '/admin/dashboard'
-                      ? pathname === '/admin/dashboard'
-                      : pathname === item.href)
+                    (item.matchPrefix
+                      ? pathname === item.href ||
+                        pathname?.startsWith(`${item.matchPrefix}/`)
+                      : item.href === '/admin/dashboard'
+                        ? pathname === '/admin/dashboard'
+                        : pathname === item.href)
 
                   if (item.disabled) {
                     return (

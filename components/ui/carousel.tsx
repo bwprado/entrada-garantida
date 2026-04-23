@@ -6,7 +6,9 @@ import useEmblaCarousel, {
   type EmblaOptionsType
 } from "embla-carousel-react"
 
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 
 type CarouselApi = UseEmblaCarouselType[1]
 
@@ -85,7 +87,89 @@ export const CarouselItem = React.forwardRef<
 ))
 CarouselItem.displayName = "CarouselItem"
 
+export const CarouselPrevious = React.forwardRef<
+  HTMLButtonElement,
+  React.ComponentProps<typeof Button>
+>(({ className, variant = "outline", size = "icon", ...props }, ref) => {
+  const { api } = useCarousel()
+  const [canScrollPrev, setCanScrollPrev] = React.useState(false)
 
+  React.useEffect(() => {
+    if (!api) return
 
+    const update = () => setCanScrollPrev(api.canScrollPrev())
 
+    update()
+    api.on("select", update)
+    api.on("reInit", update)
+
+    return () => {
+      api.off("select", update)
+      api.off("reInit", update)
+    }
+  }, [api])
+
+  return (
+    <Button
+      ref={ref}
+      variant={variant}
+      size={size}
+      type="button"
+      className={cn(
+        "absolute size-8 rounded-full",
+        className
+      )}
+      disabled={!canScrollPrev}
+      onClick={() => api?.scrollPrev()}
+      {...props}
+    >
+      <ChevronLeft />
+      <span className="sr-only">Slide anterior</span>
+    </Button>
+  )
+})
+CarouselPrevious.displayName = "CarouselPrevious"
+
+export const CarouselNext = React.forwardRef<
+  HTMLButtonElement,
+  React.ComponentProps<typeof Button>
+>(({ className, variant = "outline", size = "icon", ...props }, ref) => {
+  const { api } = useCarousel()
+  const [canScrollNext, setCanScrollNext] = React.useState(false)
+
+  React.useEffect(() => {
+    if (!api) return
+
+    const update = () => setCanScrollNext(api.canScrollNext())
+
+    update()
+    api.on("select", update)
+    api.on("reInit", update)
+
+    return () => {
+      api.off("select", update)
+      api.off("reInit", update)
+    }
+  }, [api])
+
+  return (
+    <Button
+      ref={ref}
+      variant={variant}
+      size={size}
+      type="button"
+      className={cn(
+        "absolute size-8 rounded-full",
+        className
+      )}
+      disabled={!canScrollNext}
+      onClick={() => api?.scrollNext()}
+      {...props}
+    >
+      <ChevronRight />
+      <span className="sr-only">Próximo slide</span>
+    </Button>
+  )
+})
+CarouselNext.displayName = "CarouselNext"
 

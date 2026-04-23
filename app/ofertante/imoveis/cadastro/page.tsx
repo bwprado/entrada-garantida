@@ -41,6 +41,11 @@ import {
   type PropertyOfertanteFormValues
 } from '@/lib/schemas/property-ofertante'
 import { cn, mergeRefs } from '@/lib/utils'
+import {
+  PROPERTY_SALE_DOCUMENT_ITEMS,
+  PROPERTY_SALE_DOCUMENT_TIPOS,
+  type PropertySaleDocumentTipo
+} from '@/lib/property-sale-documents'
 import { fetchAddressByCEP } from '@/lib/validation'
 import { useUploadFile } from '@convex-dev/r2/react'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -53,6 +58,7 @@ import {
   Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
+  FileText,
   Loader2,
   X
 } from 'lucide-react'
@@ -100,6 +106,106 @@ const emptyFormDefaults: DefaultValues<PropertyOfertanteFormValues> = {
   filesIds: []
 } as DefaultValues<PropertyOfertanteFormValues>
 
+type StagedSaleDocMap = Partial<Record<PropertySaleDocumentTipo, Id<'files'>>>
+
+function PropertySaleDocumentRow({
+  tipo,
+  title,
+  description,
+  propertyId,
+  fileId,
+  mode,
+  uploadFile,
+  syncToFiles,
+  completeSaleDoc,
+  deleteSaleDoc,
+  deleteOrphanFile,
+  onStagedChange
+}: {
+  tipo: PropertySaleDocumentTipo
+  title: string
+  description: string
+  propertyId: Id<'properties'> | null
+  fileId: Id<'files'> | null | undefined
+  mode: 'edit' | 'create'
+  uploadFile: (file: File) => Promise<string>
+  syncToFiles: (args: {
+    r2Key: string
+    name: string
+    contentType: string
+    size: number
+  }) => Promise<Id<'files'>>
+  completeSaleDoc: (args: {
+    propertyId: Id<'properties'>
+    tipo: PropertySaleDocumentTipo
+    r2Key: string
+    nomeOriginal: string
+    contentType: string
+    size: number
+  }) => Promise<unknown>
+  deleteSaleDoc: (args: { fileId: Id<'files'> }) => Promise<unknown>
+  deleteOrphanFile: (args: { fileId: Id<'files'> }) => Promise<unknown>
+  onStagedChange: (
+    t: PropertySaleDocumentTipo,
+    id: Id<'files'> | undefined
+  ) => void
+}) {
+  const handleUploadFiles = async (files: File[]) => {
+    for (const file of files) {
+      const r2Key = await uploadFile(file)
+      if (mode === 'edit' && propertyId) {
+        await completeSaleDoc({
+          propertyId,
+          tipo,
+          r2Key,
+          nomeOriginal: file.name,
+          contentType: file.type || 'application/octet-stream',
+          size: file.size
+        })
+      } else {
+        const id = await syncToFiles({
+          r2Key,
+          name: file.name,
+          contentType: file.type || 'application/octet-stream',
+          size: file.size
+        })
+        onStagedChange(tipo, id)
+      }
+    }
+    toast.success('Documento enviado')
+  }
+
+  const handleDeleteFile = async (id: Id<'files'>) => {
+    if (mode === 'edit') {
+      await deleteSaleDoc({ fileId: id })
+    } else {
+      await deleteOrphanFile({ fileId: id })
+      onStagedChange(tipo, undefined)
+    }
+    toast.success('Arquivo excluído com sucesso')
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+          <FileText className="size-5 text-primary" />
+        </div>
+        <div>
+          <p className="font-medium">{title}</p>
+          <p className="text-sm text-muted-foreground">{description}</p>
+        </div>
+      </div>
+      <R2FileUploader
+        multiple={false}
+        filesIds={fileId ? [fileId] : []}
+        handleUploadFiles={handleUploadFiles}
+        handleDeleteFile={handleDeleteFile}
+      />
+    </div>
+  )
+}
+
 function ImovelCadastroPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -111,15 +217,31 @@ function ImovelCadastroPageInner() {
   const { user, isAuthenticated, isLoading } = useAuth()
   const [submitting, setSubmitting] = useState(false)
   const [isFetchingCEP, setIsFetchingCEP] = useState(false)
+  const [stagedSaleDocFileIds, setStagedSaleDocFileIds] =
+    useState<StagedSaleDocMap>({})
 
   const existingProperty = useQuery(
     api.properties.getByIdForOwner,
     propertyIdParam ? { id: propertyIdParam } : 'skip'
   )
 
+  const saleDocFileIds = useQuery(
+    api.documents.getPropertySaleDocumentFileIds,
+    isEdit && propertyIdParam ? { propertyId: propertyIdParam } : 'skip'
+  )
+
   const createProperty = useMutation(api.properties.create)
   const updateProperty = useMutation(api.properties.update)
   const addPropertyImages = useMutation(api.documents.addPropertyImages)
+  const completePropertySaleDocumentFromUpload = useMutation(
+    api.documents.completePropertySaleDocumentFromUpload
+  )
+  const deletePropertySaleDocumentByFileId = useMutation(
+    api.documents.deletePropertySaleDocumentByFileId
+  )
+  const attachPropertySaleDocumentFromUploadedFile = useMutation(
+    api.documents.attachPropertySaleDocumentFromUploadedFile
+  )
   const deletePropertyImage = useMutation(
     api.documents.deletePropertyImage
   ).withOptimisticUpdate((localStore, args) => {
@@ -197,6 +319,7 @@ function ImovelCadastroPageInner() {
   useEffect(() => {
     if (!isEdit) {
       reset(emptyFormDefaults)
+      setStagedSaleDocFileIds({})
       return
     }
     if (!existingProperty) return
@@ -226,12 +349,30 @@ function ImovelCadastroPageInner() {
 
     try {
       if (isEdit && propertyIdParam) {
-        if (existingProperty && existingProperty.status !== 'draft') {
-          toast.error('Apenas imóveis em rascunho podem ser editados.')
+        if (
+          existingProperty &&
+          existingProperty.status !== 'draft' &&
+          existingProperty.status !== 'rejected'
+        ) {
+          toast.error(
+            'Só é possível editar imóveis em rascunho ou com cadastro rejeitado.'
+          )
           return
         }
         if (!existingProperty) {
           toast.error('Imóvel não encontrado.')
+          return
+        }
+        if (saleDocFileIds === undefined) {
+          toast.error('Aguarde o carregamento da documentação do imóvel.')
+          return
+        }
+        if (
+          !PROPERTY_SALE_DOCUMENT_TIPOS.every((t) => Boolean(saleDocFileIds[t]))
+        ) {
+          toast.error(
+            'Envie os 5 documentos obrigatórios na última etapa (documentação para venda).'
+          )
           return
         }
         await updateProperty({
@@ -266,6 +407,17 @@ function ImovelCadastroPageInner() {
         return
       }
 
+      if (
+        !PROPERTY_SALE_DOCUMENT_TIPOS.every((t) =>
+          Boolean(stagedSaleDocFileIds[t])
+        )
+      ) {
+        toast.error(
+          'Envie os 5 documentos obrigatórios na última etapa (documentação para venda).'
+        )
+        return
+      }
+
       const cepDigitsCreate = (rest.cep ?? '').replace(/\D/g, '')
       const cepArgCreate =
         cepDigitsCreate.length === 8 ? cepDigitsCreate : undefined
@@ -291,6 +443,27 @@ function ImovelCadastroPageInner() {
       }
 
       try {
+        for (const tipo of PROPERTY_SALE_DOCUMENT_TIPOS) {
+          const fileId = stagedSaleDocFileIds[tipo]
+          if (!fileId) {
+            throw new Error(`Documento ausente: ${tipo}`)
+          }
+          await attachPropertySaleDocumentFromUploadedFile({
+            propertyId: result.propertyId,
+            tipo,
+            fileId
+          })
+        }
+      } catch (uploadErr) {
+        console.error(uploadErr)
+        toast.error(
+          'Imóvel salvo como rascunho, mas houve falha ao vincular a documentação. Abra o cadastro e tente de novo.'
+        )
+        router.push('/ofertante/dashboard')
+        return
+      }
+
+      try {
         await addPropertyImages({
           filesIds,
           propertyId: result.propertyId
@@ -306,6 +479,7 @@ function ImovelCadastroPageInner() {
 
       toast.success('Imóvel cadastrado com sucesso')
       reset()
+      setStagedSaleDocFileIds({})
       router.push('/ofertante/dashboard')
     } catch (e) {
       console.error(e)
@@ -762,6 +936,52 @@ function ImovelCadastroPageInner() {
           )}
         />
       )
+    },
+    {
+      fields: [] as const,
+      component: (
+        <div className="col-span-full flex flex-col gap-4">
+          <Field className="gap-1">
+            <FieldLabel>Documentação para venda *</FieldLabel>
+            <FieldDescription>
+              Arquivos obrigatórios para análise do programa. A certidão de
+              matrícula aqui é o arquivo (PDF ou imagem), não apenas o número
+              informado na etapa anterior.
+            </FieldDescription>
+          </Field>
+          {PROPERTY_SALE_DOCUMENT_ITEMS.map((item) => (
+            <PropertySaleDocumentRow
+              key={item.tipo}
+              tipo={item.tipo}
+              title={item.title}
+              description={item.description}
+              propertyId={isEdit && propertyIdParam ? propertyIdParam : null}
+              fileId={
+                isEdit
+                  ? (saleDocFileIds?.[item.tipo] ?? null)
+                  : stagedSaleDocFileIds[item.tipo]
+              }
+              mode={isEdit ? 'edit' : 'create'}
+              uploadFile={uploadFile}
+              syncToFiles={syncToFiles}
+              completeSaleDoc={completePropertySaleDocumentFromUpload}
+              deleteSaleDoc={deletePropertySaleDocumentByFileId}
+              deleteOrphanFile={deletePropertyImage}
+              onStagedChange={(t, id) => {
+                setStagedSaleDocFileIds((prev) => {
+                  const next = { ...prev }
+                  if (id === undefined) {
+                    delete next[t]
+                  } else {
+                    next[t] = id
+                  }
+                  return next
+                })
+              }}
+            />
+          ))}
+        </div>
+      )
     }
   ]
 
@@ -794,7 +1014,10 @@ function ImovelCadastroPageInner() {
     )
   }
 
-  const canEdit = !isEdit || existingProperty?.status === 'draft'
+  const canEdit =
+    !isEdit ||
+    existingProperty?.status === 'draft' ||
+    existingProperty?.status === 'rejected'
 
   return (
     <div className="min-h-screen flex flex-col bg-linear-to-br from-primary/5 via-background to-secondary/5">
@@ -814,8 +1037,8 @@ function ImovelCadastroPageInner() {
             <p className="mt-2 text-sm sm:text-base text-muted-foreground leading-relaxed">
               {isEdit && !canEdit ? (
                 <>
-                  Este imóvel não está em rascunho; os dados não podem ser
-                  alterados por aqui.
+                  Este imóvel está em análise ou já foi aprovado; os dados não
+                  podem ser alterados por aqui.
                 </>
               ) : (
                 <>
@@ -832,9 +1055,10 @@ function ImovelCadastroPageInner() {
             {canEdit ? (
               <MultiStepFormProvider
                 stepsFields={[...stepsFields]}
-                onStepValidation={async (step) =>
-                  form.trigger(step.fields as never)
-                }
+                onStepValidation={async (step) => {
+                  if (step.fields.length === 0) return true
+                  return form.trigger(step.fields as never)
+                }}
               >
                 <MultiStepFormContent>
                   <FormHeader />

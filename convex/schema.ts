@@ -326,7 +326,11 @@ export const properties = defineTable({
   criadoEm: v.number(),
   atualizadoEm: v.number(),
   validadoEm: v.optional(v.number()),
-  validadoPor: v.optional(v.id('users'))
+  validadoPor: v.optional(v.id('users')),
+  /** When status is rejected: reason shown to the ofertante (and audit). */
+  motivoRejeicao: v.optional(v.string()),
+  rejeitadoEm: v.optional(v.number()),
+  rejeitadoPor: v.optional(v.id('users'))
 })
   .index('by_ofertante', ['ofertanteId'])
   .index('by_construtor', ['construtorId'])

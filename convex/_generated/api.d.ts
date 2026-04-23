@@ -14,6 +14,7 @@ import type * as documents from "../documents.js";
 import type * as http from "../http.js";
 import type * as migrations from "../migrations.js";
 import type * as properties from "../properties.js";
+import type * as propertySaleDocuments from "../propertySaleDocuments.js";
 import type * as public_ from "../public.js";
 import type * as r2 from "../r2.js";
 import type * as twilio from "../twilio.js";
@@ -32,6 +33,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   migrations: typeof migrations;
   properties: typeof properties;
+  propertySaleDocuments: typeof propertySaleDocuments;
   public: typeof public_;
   r2: typeof r2;
   twilio: typeof twilio;

@@ -9,6 +9,11 @@ import {
   verifyPropertyOwnerOrAdmin,
   verifySelfOrAdmin
 } from './authz'
+import {
+  PROPERTY_SALE_DOCUMENT_TIPOS,
+  type PropertySaleDocumentTipo,
+  propertySaleDocumentTipo
+} from './propertySaleDocuments'
 import { r2 } from './r2'
 
 /** User-scoped ofertante checklist documents (no propertyId) */
@@ -149,6 +154,36 @@ export const getPropertyDocuments = query({
   }
 })
 
+/** Property documents with linked file row (one round-trip for admin/owner review). */
+export const getPropertyDocumentsWithFiles = query({
+  args: { propertyId: v.id('properties') },
+  handler: async (ctx, { propertyId }) => {
+    const property = await ctx.db.get(propertyId)
+    if (!property) {
+      throw new Error('Propriedade não encontrada')
+    }
+    await verifyPropertyOwnerOrAdmin(ctx, property)
+
+    const docs = await ctx.db
+      .query('documents')
+      .withIndex('by_property', (q) => q.eq('propertyId', propertyId))
+      .collect()
+
+    const out: Array<{
+      document: (typeof docs)[0]
+      file: Doc<'files'> | null
+    }> = []
+    for (const document of docs) {
+      const file = await ctx.db
+        .query('files')
+        .withIndex('by_document', (q) => q.eq('documentId', document._id))
+        .first()
+      out.push({ document, file: file ?? null })
+    }
+    return out
+  }
+})
+
 export const getPendingDocuments = query({
   args: {},
   handler: async (ctx) => {
@@ -222,6 +257,46 @@ export const getOfertanteDocumentFileIds = query({
         )
         .collect()
       const doc = rows.find((d) => d.propertyId === undefined)
+      if (!doc) continue
+
+      const file = await ctx.db
+        .query('files')
+        .withIndex('by_document', (q) => q.eq('documentId', doc._id))
+        .first()
+      if (file) {
+        out[tipo] = file._id
+      }
+    }
+
+    return out
+  }
+})
+
+/** File IDs for property-scoped sale checklist (R2 uploader preview). */
+export const getPropertySaleDocumentFileIds = query({
+  args: { propertyId: v.id('properties') },
+  handler: async (ctx, { propertyId }) => {
+    const property = await ctx.db.get(propertyId)
+    if (!property) {
+      throw new Error('Propriedade não encontrada')
+    }
+    await verifyPropertyOwnerOrAdmin(ctx, property)
+
+    const out: Record<PropertySaleDocumentTipo, Id<'files'> | null> = {
+      matricula: null,
+      iptu: null,
+      certidao_tributos: null,
+      certidao_indisponibilidade: null,
+      certidao_condominio: null
+    }
+
+    for (const tipo of PROPERTY_SALE_DOCUMENT_TIPOS) {
+      const doc = await ctx.db
+        .query('documents')
+        .withIndex('by_property_and_tipo', (q) =>
+          q.eq('propertyId', propertyId).eq('tipo', tipo)
+        )
+        .first()
       if (!doc) continue
 
       const file = await ctx.db
@@ -476,6 +551,255 @@ export const deleteOfertanteDocumentByFileId = mutation({
   }
 })
 
+/**
+ * Finishes a property-scoped sale document upload: replaces linked files,
+ * updates `documents`, inserts `files` row for previews.
+ */
+export const completePropertySaleDocumentFromUpload = mutation({
+  args: {
+    propertyId: v.id('properties'),
+    tipo: propertySaleDocumentTipo,
+    r2Key: v.string(),
+    nomeOriginal: v.string(),
+    contentType: v.string(),
+    size: v.number()
+  },
+  handler: async (ctx, args) => {
+    const actor = await verifyLogin(ctx)
+    if (
+      actor.role !== 'ofertante' &&
+      actor.role !== 'construtor' &&
+      actor.role !== 'admin'
+    ) {
+      throw new Error('Não autorizado')
+    }
+
+    const property = await ctx.db.get(args.propertyId)
+    if (!property) {
+      throw new Error('Propriedade não encontrada')
+    }
+    await verifyPropertyOwnerOrAdmin(ctx, property)
+
+    const ownerId = property.ofertanteId ?? property.construtorId
+    if (!ownerId) {
+      throw new Error('Propriedade sem ofertante ou construtor')
+    }
+
+    const now = Date.now()
+    const existing = await ctx.db
+      .query('documents')
+      .withIndex('by_property_and_tipo', (q) =>
+        q.eq('propertyId', args.propertyId).eq('tipo', args.tipo)
+      )
+      .first()
+
+    const deletedR2Keys = new Set<string>()
+
+    if (existing) {
+      const oldFiles = await ctx.db
+        .query('files')
+        .withIndex('by_document', (q) => q.eq('documentId', existing._id))
+        .collect()
+      for (const f of oldFiles) {
+        if (!deletedR2Keys.has(f.r2Key)) {
+          await r2.deleteObject(ctx, f.r2Key)
+          deletedR2Keys.add(f.r2Key)
+        }
+        await ctx.db.delete(f._id)
+      }
+      if (!deletedR2Keys.has(existing.r2Key)) {
+        await r2.deleteObject(ctx, existing.r2Key)
+        deletedR2Keys.add(existing.r2Key)
+      }
+
+      await ctx.db.patch(existing._id, {
+        r2Key: args.r2Key,
+        nomeOriginal: args.nomeOriginal,
+        status: 'pending' as const,
+        notaRejeicao: undefined,
+        atualizadoEm: now
+      })
+
+      const url = await r2.getUrl(args.r2Key)
+      await ctx.db.insert('files', {
+        r2Key: args.r2Key,
+        name: args.nomeOriginal,
+        type: args.contentType,
+        size: args.size,
+        url,
+        userId: ownerId,
+        documentId: existing._id
+      })
+    } else {
+      const documentId = await ctx.db.insert('documents', {
+        userId: ownerId,
+        propertyId: args.propertyId,
+        tipo: args.tipo,
+        r2Key: args.r2Key,
+        nomeOriginal: args.nomeOriginal,
+        status: 'pending',
+        criadoEm: now,
+        atualizadoEm: now
+      })
+      const url = await r2.getUrl(args.r2Key)
+      await ctx.db.insert('files', {
+        r2Key: args.r2Key,
+        name: args.nomeOriginal,
+        type: args.contentType,
+        size: args.size,
+        url,
+        userId: ownerId,
+        documentId
+      })
+    }
+
+    return { success: true as const }
+  }
+})
+
+/**
+ * After creating a property, links a `files` row (from syncToFiles after R2 upload)
+ * to a new `documents` row for sale checklist. Used when the imóvel did not exist yet.
+ */
+export const attachPropertySaleDocumentFromUploadedFile = mutation({
+  args: {
+    propertyId: v.id('properties'),
+    tipo: propertySaleDocumentTipo,
+    fileId: v.id('files')
+  },
+  handler: async (ctx, args) => {
+    const actor = await verifyLogin(ctx)
+    if (
+      actor.role !== 'ofertante' &&
+      actor.role !== 'construtor' &&
+      actor.role !== 'admin'
+    ) {
+      throw new Error('Não autorizado')
+    }
+
+    const property = await ctx.db.get(args.propertyId)
+    if (!property) {
+      throw new Error('Propriedade não encontrada')
+    }
+    await verifyPropertyOwnerOrAdmin(ctx, property)
+
+    const ownerId = property.ofertanteId ?? property.construtorId
+    if (!ownerId) {
+      throw new Error('Propriedade sem ofertante ou construtor')
+    }
+
+    const file = await ctx.db.get(args.fileId)
+    if (!file) {
+      throw new Error('Arquivo não encontrado')
+    }
+    if (file.documentId !== undefined) {
+      throw new Error('Arquivo já vinculado a um documento')
+    }
+    if (file.userId !== actor._id && actor.role !== 'admin') {
+      throw new Error('Permissão negada')
+    }
+
+    const now = Date.now()
+    const existing = await ctx.db
+      .query('documents')
+      .withIndex('by_property_and_tipo', (q) =>
+        q.eq('propertyId', args.propertyId).eq('tipo', args.tipo)
+      )
+      .first()
+
+    const deletedR2Keys = new Set<string>()
+
+    if (existing) {
+      const oldFiles = await ctx.db
+        .query('files')
+        .withIndex('by_document', (q) => q.eq('documentId', existing._id))
+        .collect()
+      for (const f of oldFiles) {
+        if (!deletedR2Keys.has(f.r2Key)) {
+          await r2.deleteObject(ctx, f.r2Key)
+          deletedR2Keys.add(f.r2Key)
+        }
+        await ctx.db.delete(f._id)
+      }
+      if (!deletedR2Keys.has(existing.r2Key)) {
+        await r2.deleteObject(ctx, existing.r2Key)
+      }
+      await ctx.db.delete(existing._id)
+    }
+
+    const documentId = await ctx.db.insert('documents', {
+      userId: ownerId,
+      propertyId: args.propertyId,
+      tipo: args.tipo,
+      r2Key: file.r2Key,
+      nomeOriginal: file.name,
+      status: 'pending',
+      criadoEm: now,
+      atualizadoEm: now
+    })
+
+    const url = await r2.getUrl(file.r2Key)
+    await ctx.db.patch(args.fileId, {
+      documentId,
+      userId: ownerId,
+      url
+    })
+
+    return { success: true as const, documentId }
+  }
+})
+
+export const deletePropertySaleDocumentByFileId = mutation({
+  args: { fileId: v.id('files') },
+  handler: async (ctx, args) => {
+    const actor = await verifyLogin(ctx)
+    const file = await ctx.db.get(args.fileId)
+    if (!file) {
+      throw new Error('Arquivo não encontrado')
+    }
+    if (!file.documentId) {
+      throw new Error('Arquivo não está vinculado a um documento')
+    }
+
+    const doc = await ctx.db.get(file.documentId)
+    if (!doc) {
+      await r2.deleteObject(ctx, file.r2Key)
+      await ctx.db.delete(args.fileId)
+      return { success: true as const }
+    }
+
+    await assertDocumentAccess(ctx, actor, doc)
+
+    if (
+      doc.propertyId === undefined ||
+      !PROPERTY_SALE_DOCUMENT_TIPOS.includes(doc.tipo as PropertySaleDocumentTipo)
+    ) {
+      throw new Error('Use outro fluxo para este arquivo')
+    }
+
+    const property = await ctx.db.get(doc.propertyId)
+    if (
+      property &&
+      property.checklistValidacao.documentos === 'approved' &&
+      (property.status === 'draft' || property.status === 'pending')
+    ) {
+      await ctx.db.patch(doc.propertyId, {
+        checklistValidacao: {
+          ...property.checklistValidacao,
+          documentos: 'pending'
+        },
+        atualizadoEm: Date.now()
+      })
+    }
+
+    await r2.deleteObject(ctx, doc.r2Key)
+    await ctx.db.delete(args.fileId)
+    await ctx.db.delete(doc._id)
+
+    return { success: true as const }
+  }
+})
+
 export const validateDocument = mutation({
   args: {
     documentId: v.id('documents'),
@@ -502,14 +826,7 @@ export const validateDocument = mutation({
         .withIndex('by_property', (q) => q.eq('propertyId', doc.propertyId))
         .collect()
 
-      const requiredTypes = [
-        'matricula',
-        'iptu',
-        'certidao_tributos',
-        'certidao_indisponibilidade',
-        'certidao_condominio'
-      ]
-      const requiredValidated = requiredTypes.every((t) =>
+      const requiredValidated = PROPERTY_SALE_DOCUMENT_TIPOS.every((t) =>
         allDocs.some((d) => d.tipo === t && d.status === 'validated')
       )
 
@@ -603,23 +920,15 @@ export const getDocumentStats = query({
       .withIndex('by_property', (q) => q.eq('propertyId', args.propertyId))
       .collect()
 
-    const requiredTypes = [
-      'matricula',
-      'iptu',
-      'certidao_tributos',
-      'certidao_indisponibilidade',
-      'certidao_condominio'
-    ]
-
     const stats = {
       total: docs.length,
       validated: docs.filter((d) => d.status === 'validated').length,
       pending: docs.filter((d) => d.status === 'pending').length,
       rejected: docs.filter((d) => d.status === 'rejected').length,
-      requiredMissing: requiredTypes.filter(
+      requiredMissing: PROPERTY_SALE_DOCUMENT_TIPOS.filter(
         (t) => !docs.some((d) => d.tipo === t)
       ),
-      allRequiredValidated: requiredTypes.every((t) =>
+      allRequiredValidated: PROPERTY_SALE_DOCUMENT_TIPOS.every((t) =>
         docs.some((d) => d.tipo === t && d.status === 'validated')
       )
     }

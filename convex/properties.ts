@@ -1,5 +1,7 @@
+import { R2 } from '@convex-dev/r2'
 import { getAuthUserId } from '@convex-dev/auth/server'
 import { v } from 'convex/values'
+import { components } from './_generated/api'
 import { Doc, Id } from './_generated/dataModel'
 import { mutation, query } from './_generated/server'
 import {
@@ -9,8 +11,13 @@ import {
   verifyPropertyOwnerOrAdmin,
   verifySelfOrAdmin
 } from './authz'
+import {
+  PROPERTY_SALE_DOCUMENT_TIPOS,
+  missingSaleDocumentMessage
+} from './propertySaleDocuments'
 import { MAX_PROPERTY_PRICE } from './schema'
 
+const r2 = new R2(components.r2)
 const MIN_COMPARTIMENTOS = 1
 
 function validateCompartimentos(n: number): {
@@ -73,14 +80,14 @@ export const getByIds = query({
 export const getUserSelectedProperties = query({
   args: { userId: v.id('users') },
   handler: async (ctx, args) => {
-    const user = await verifySelfOrAdmin(ctx, args.userId)
-    if (!user || user.role !== 'beneficiary' || !user?.beneficiaryProfileId) {
-      throw new Error('Usuário inválido')
+    await verifySelfOrAdmin(ctx, args.userId)
+    const user = await ctx.db.get(args.userId)
+    if (!user) return []
+    if (user.role !== 'beneficiary' || !user.beneficiaryProfileId) {
+      return []
     }
-    const profile = await ctx.db.get(user?.beneficiaryProfileId)
-    if (!profile) {
-      throw new Error('Beneficiário não encontrado')
-    }
+    const profile = await ctx.db.get(user.beneficiaryProfileId)
+    if (!profile) return []
     const properties = await Promise.all(
       profile.propriedadesInteresse?.map((id) => ctx.db.get(id)) || []
     )
@@ -122,7 +129,20 @@ export const getValidated = query({
       )
     }
 
-    return results
+    return await Promise.all(
+      results.map(async (p) => {
+        const firstId = p.filesIds?.[0]
+        if (!firstId) {
+          return { ...p, coverImageUrl: null as string | null }
+        }
+        const file = await ctx.db.get(firstId)
+        if (!file) {
+          return { ...p, coverImageUrl: null as string | null }
+        }
+        const coverImageUrl = await r2.getUrl(file.r2Key)
+        return { ...p, coverImageUrl }
+      })
+    )
   }
 })
 
@@ -164,6 +184,120 @@ export const getPendingValidation = query({
       .query('properties')
       .withIndex('by_status', (q) => q.eq('status', 'pending'))
       .collect()
+  }
+})
+
+const propertyStatusFilterArg = v.optional(
+  v.union(
+    v.literal('draft'),
+    v.literal('pending'),
+    v.literal('validated'),
+    v.literal('selected'),
+    v.literal('rejected'),
+    v.literal('sold')
+  )
+)
+
+/** All imóveis for admin with owner context, optional status index filter + text search. */
+export const getListForAdmin = query({
+  args: {
+    status: propertyStatusFilterArg,
+    searchQuery: v.optional(v.string())
+  },
+  handler: async (ctx, args) => {
+    await verifyAdmin(ctx)
+    let list: Doc<'properties'>[]
+    if (args.status) {
+      list = await ctx.db
+        .query('properties')
+        .withIndex('by_status', (q) => q.eq('status', args.status!))
+        .collect()
+    } else {
+      list = await ctx.db.query('properties').collect()
+    }
+
+    const q = args.searchQuery?.trim().toLowerCase()
+    if (q) {
+      list = list.filter(
+        (p) =>
+          p.titulo.toLowerCase().includes(q) ||
+          p.endereco.toLowerCase().includes(q) ||
+          p.matricula.toLowerCase().includes(q) ||
+          p.inscricaoImobiliaria.toLowerCase().includes(q)
+      )
+    }
+
+    list.sort((a, b) => b.atualizadoEm - a.atualizadoEm)
+
+    const withOwner: Array<{
+      property: Doc<'properties'>
+      ofertante: { nome: string; email: string | undefined; _id: Id<'users'> } | null
+      construtor: { nome: string; email: string | undefined; _id: Id<'users'> } | null
+    }> = []
+
+    for (const property of list) {
+      let ofertante: {
+        nome: string
+        email: string | undefined
+        _id: Id<'users'>
+      } | null = null
+      if (property.ofertanteId) {
+        const u = await ctx.db.get(property.ofertanteId)
+        if (u) {
+          ofertante = { nome: u.nome, email: u.email, _id: u._id }
+        }
+      }
+      let construtor: {
+        nome: string
+        email: string | undefined
+        _id: Id<'users'>
+      } | null = null
+      if (property.construtorId) {
+        const u = await ctx.db.get(property.construtorId)
+        if (u) {
+          construtor = { nome: u.nome, email: u.email, _id: u._id }
+        }
+      }
+      withOwner.push({ property, ofertante, construtor })
+    }
+
+    return withOwner
+  }
+})
+
+export const getForAdminReview = query({
+  args: { propertyId: v.id('properties') },
+  handler: async (ctx, { propertyId }) => {
+    await verifyAdmin(ctx)
+    const property = await ctx.db.get(propertyId)
+    if (!property) {
+      return null
+    }
+
+    let ofertante: {
+      nome: string
+      email: string | undefined
+      _id: Id<'users'>
+    } | null = null
+    if (property.ofertanteId) {
+      const u = await ctx.db.get(property.ofertanteId)
+      if (u) {
+        ofertante = { nome: u.nome, email: u.email, _id: u._id }
+      }
+    }
+    let construtor: {
+      nome: string
+      email: string | undefined
+      _id: Id<'users'>
+    } | null = null
+    if (property.construtorId) {
+      const u = await ctx.db.get(property.construtorId)
+      if (u) {
+        construtor = { nome: u.nome, email: u.email, _id: u._id }
+      }
+    }
+
+    return { property, ofertante, construtor } as const
   }
 })
 
@@ -329,8 +463,10 @@ export const submitForValidation = mutation({
     }
     await verifyPropertyOwnerOrAdmin(ctx, property)
 
-    if (property.status !== 'draft') {
-      throw new Error('Apenas propriedades em rascunho podem ser submetidas')
+    if (property.status !== 'draft' && property.status !== 'rejected') {
+      throw new Error(
+        'Apenas propriedades em rascunho ou rejeitadas podem ser submetidas'
+      )
     }
 
     if (property.valorVenda > MAX_PROPERTY_PRICE) {
@@ -344,9 +480,31 @@ export const submitForValidation = mutation({
       throw new Error(comp.errors.join('; '))
     }
 
+    const propertyDocs = await ctx.db
+      .query('documents')
+      .withIndex('by_property', (q) => q.eq('propertyId', args.propertyId))
+      .collect()
+    const missing = PROPERTY_SALE_DOCUMENT_TIPOS.filter(
+      (t) => !propertyDocs.some((d) => d.tipo === t)
+    )
+    if (missing.length > 0) {
+      throw new Error(missingSaleDocumentMessage(missing))
+    }
+
+    const now = Date.now()
+    const clearRejection =
+      property.status === 'rejected'
+        ? {
+            motivoRejeicao: undefined,
+            rejeitadoEm: undefined,
+            rejeitadoPor: undefined
+          }
+        : {}
+
     await ctx.db.patch(args.propertyId, {
       status: 'pending',
-      atualizadoEm: Date.now()
+      atualizadoEm: now,
+      ...clearRejection
     })
 
     return { success: true }
@@ -404,7 +562,10 @@ export const updateChecklistItem = mutation({
       await ctx.db.patch(args.propertyId, {
         status: 'validated',
         validadoEm: Date.now(),
-        validadoPor: args.adminId
+        validadoPor: args.adminId,
+        motivoRejeicao: undefined,
+        rejeitadoEm: undefined,
+        rejeitadoPor: undefined
       })
     }
 
@@ -440,7 +601,10 @@ export const approveAll = mutation({
       checklistValidacao: approvedChecklist,
       validadoEm: now,
       validadoPor: args.adminId,
-      atualizadoEm: now
+      atualizadoEm: now,
+      motivoRejeicao: undefined,
+      rejeitadoEm: undefined,
+      rejeitadoPor: undefined
     })
 
     return { success: true }
@@ -465,10 +629,9 @@ export const reject = mutation({
 
     await ctx.db.patch(args.propertyId, {
       status: 'rejected',
-      notasValidacao: {
-        ...property.notasValidacao,
-        dadosPessoais: property.notasValidacao?.dadosPessoais ?? args.motivo
-      },
+      motivoRejeicao: args.motivo,
+      rejeitadoEm: now,
+      rejeitadoPor: args.adminId,
       atualizadoEm: now
     })
 
@@ -497,8 +660,10 @@ export const update = mutation({
     }
     await verifyPropertyOwnerOrAdmin(ctx, property)
 
-    if (property.status !== 'draft') {
-      throw new Error('Apenas propriedades em rascunho podem ser editadas')
+    if (property.status !== 'draft' && property.status !== 'rejected') {
+      throw new Error(
+        'Apenas propriedades em rascunho ou rejeitadas podem ser editadas'
+      )
     }
 
     const updates: Partial<Doc<'properties'>> = {
@@ -582,18 +747,18 @@ export const softDelete = mutation({
     if (!property) {
       throw new Error('Propriedade não encontrada')
     }
-    await verifyPropertyOwnerOrAdmin(ctx, property)
+    const user = await verifyPropertyOwnerOrAdmin(ctx, property)
 
     if (property.status === 'draft') {
       await ctx.db.delete(args.propertyId)
     } else {
+      const now = Date.now()
       await ctx.db.patch(args.propertyId, {
         status: 'rejected',
-        notasValidacao: {
-          ...property.notasValidacao,
-          dadosPessoais: 'Removido pelo usuário'
-        },
-        atualizadoEm: Date.now()
+        motivoRejeicao: 'Removido pelo usuário',
+        rejeitadoEm: now,
+        rejeitadoPor: user._id,
+        atualizadoEm: now
       })
     }
 
