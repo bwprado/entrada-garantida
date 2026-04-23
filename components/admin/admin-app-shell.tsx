@@ -18,6 +18,7 @@ import {
   SidebarTrigger
 } from '@/components/ui/sidebar'
 import { useAuth } from '@/lib/auth-context'
+import { adminPaths } from '@/lib/app-links'
 import {
   Building2,
   LayoutDashboard,
@@ -39,23 +40,23 @@ const nav: Array<{
   matchPrefix?: string
 }> = [
   {
-    href: '/admin/dashboard',
+    href: adminPaths.dashboard,
     label: 'Painel',
     icon: LayoutDashboard
   },
   {
-    href: '/admin/imoveis',
+    href: adminPaths.imoveis,
     label: 'Imóveis',
     icon: Building2,
-    matchPrefix: '/admin/imoveis'
+    matchPrefix: adminPaths.imoveis
   },
   {
-    href: '/admin/beneficiarios/upload',
+    href: adminPaths.beneficiariosUpload,
     label: 'Upload beneficiários',
     icon: Upload
   },
   {
-    href: '/admin/dashboard',
+    href: adminPaths.dashboard,
     label: 'Administradores',
     icon: Shield,
     disabled: true
@@ -75,7 +76,7 @@ export function AdminAppShell({ children }: { children: ReactNode }) {
       <Sidebar collapsible="icon">
         <SidebarHeader className="border-b border-sidebar-border">
           <Link
-            href="/admin/dashboard"
+            href={adminPaths.dashboard}
             className="flex items-center gap-2 overflow-hidden rounded-md px-2 py-1.5 hover:bg-sidebar-accent/50"
           >
             <div className="relative size-9 shrink-0">
@@ -109,8 +110,8 @@ export function AdminAppShell({ children }: { children: ReactNode }) {
                     (item.matchPrefix
                       ? pathname === item.href ||
                         pathname?.startsWith(`${item.matchPrefix}/`)
-                      : item.href === '/admin/dashboard'
-                        ? pathname === '/admin/dashboard'
+                      : item.href === adminPaths.dashboard
+                        ? pathname === adminPaths.dashboard
                         : pathname === item.href)
 
                   if (item.disabled) {

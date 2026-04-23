@@ -10,6 +10,10 @@ import {
   HoverCardTrigger
 } from '@/components/ui/hover-card'
 import { useAuth } from '@/lib/auth-context'
+import {
+  getProfileHref,
+  getSelectedPropertiesHomeHref
+} from '@/lib/app-links'
 import { House, LogOut, UserRound } from 'lucide-react'
 
 function getInitials(value: string): string {
@@ -34,18 +38,6 @@ function getInitials(value: string): string {
   return normalized.slice(0, 2).toUpperCase()
 }
 
-function getAccountHref(role?: string): string {
-  if (role === 'admin') return '/admin/perfil'
-  if (role === 'ofertante') return '/ofertante/perfil'
-  return '/beneficiario/perfil'
-}
-
-function getSelectedPropertiesHref(role?: string): string {
-  if (role === 'admin') return '/admin/dashboard'
-  if (role === 'ofertante') return '/ofertante/dashboard'
-  return '/beneficiario/dashboard'
-}
-
 export function ImoveisHeaderActions() {
   const { user, logout, isLoading } = useAuth()
 
@@ -54,8 +46,8 @@ export function ImoveisHeaderActions() {
       ? 'Carregando usuário...'
       : (user?.nome ?? user?.phone ?? 'Usuário')
   const initials = getInitials(user?.nome ?? user?.phone ?? 'AA')
-  const accountHref = getAccountHref(user?.role)
-  const selectedPropertiesHref = getSelectedPropertiesHref(user?.role)
+  const accountHref = getProfileHref(user?.role)
+  const selectedPropertiesHref = getSelectedPropertiesHomeHref(user?.role)
 
   return (
     <HoverCard openDelay={120} closeDelay={80}>

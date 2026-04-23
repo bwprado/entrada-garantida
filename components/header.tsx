@@ -46,16 +46,19 @@ export function Header({
   return (
     <header
       className={cn(
-        'sticky top-0 z-50 mx-auto w-full drop-shadow-sm bg-background/99 md:rounded-md md:transition-all md:ease-out',
+        'sticky top-0 z-50 mx-auto box-border w-full max-w-full border-2 border-transparent',
+        'bg-background/99 drop-shadow-sm',
+        'transition-[max-width,top,background-color,border-color,backdrop-filter,filter] duration-300 ease-out',
+        'md:max-w-full md:rounded-md',
         {
-          'border-border border-2 bg-background/95 backdrop-blur-md supports-backdrop-filter:bg-background/50 md:top-2 md:max-w-3xl drop-shadow-lg':
+          'border-border bg-background/95 drop-shadow-lg backdrop-blur-md supports-backdrop-filter:bg-background/50 md:top-2 md:max-w-6xl':
             scrolled
         }
       )}
     >
       <nav
         className={cn(
-          'flex h-20 w-full items-center justify-between gap-2 px-4 md:h-18 md:transition-all md:ease-out',
+          'flex h-20 w-full items-center justify-between gap-2 px-4 transition-[padding] duration-300 ease-out md:h-18',
           {
             'md:px-2': scrolled
           }
