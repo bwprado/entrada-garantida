@@ -2,6 +2,8 @@ import Image from 'next/image'
 
 import { api } from '@/convex/_generated/api'
 import { Id } from '@/convex/_generated/dataModel'
+import { canUseImagePreview, FileTypeIconView } from '@/lib/file-type-icon'
+import { formatBytes } from '@/lib/utils'
 import { useQuery } from 'convex/react'
 import { Loader2, Trash, Upload, X } from 'lucide-react'
 import { useCallback, useState } from 'react'
@@ -67,9 +69,18 @@ export function R2FileUploader({
     })
   }, [])
 
+  const hasStoredFile = !multiple && (filesIds?.length ?? 0) > 0
+  const showUploadTrigger = multiple || (filesIds?.length ?? 0) === 0
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap gap-4">
+        {hasStoredFile && filesUrls === undefined && (
+          <div
+            className="size-24 shrink-0 animate-pulse rounded-md bg-muted"
+            aria-hidden
+          />
+        )}
         {filesUrls?.map((file) => (
           <FilePreviewCard
             key={file._id}
@@ -78,18 +89,23 @@ export function R2FileUploader({
           />
         ))}
       </div>
-      <Dialog open={open} onOpenChange={setOpen}>
+      {showUploadTrigger && (
+        <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger
           className={buttonVariants({ variant: 'outline', className: 'w-fit' })}
         >
           <Upload className="size-4" />
-          Enviar arquivos
+          {multiple ? 'Enviar arquivos' : 'Enviar arquivo'}
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Enviar arquivos</DialogTitle>
+            <DialogTitle>
+              {multiple ? 'Enviar arquivos' : 'Enviar arquivo'}
+            </DialogTitle>
             <DialogDescription>
-              Envie arquivos para o armazenamento R2.
+              {multiple
+                ? 'Envie arquivos para o armazenamento R2.'
+                : 'Envie um arquivo para o armazenamento R2.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -98,7 +114,8 @@ export function R2FileUploader({
             value={files}
             onValueChange={setFiles}
             onFileReject={onFileReject}
-            multiple
+            multiple={multiple}
+            maxFiles={multiple ? 2 : 1}
           >
             <FileUploadDropzone>
               <div className="flex flex-col items-center gap-1 text-center">
@@ -109,7 +126,8 @@ export function R2FileUploader({
                   Arraste e solte arquivos aqui
                 </p>
                 <p className="text-muted-foreground text-xs">
-                  Ou clique para navegar (máx. 2 arquivos, até 5MB cada)
+                  Ou clique para navegar (
+                  {multiple ? 'máx. 2 arquivos' : '1 arquivo'}, até 5MB cada)
                 </p>
               </div>
               <FileUploadTrigger asChild>
@@ -157,11 +175,12 @@ export function R2FileUploader({
               disabled={isUploading}
             >
               {isUploading ? <Loader2 className="size-4 animate-spin" /> : null}
-              Enviar arquivos
+              {multiple ? 'Enviar arquivos' : 'Enviar'}
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+        </Dialog>
+      )}
     </div>
   )
 }
@@ -170,11 +189,23 @@ function FilePreviewCard({
   file,
   handleDeleteFile
 }: {
-  file: { _id: Id<'files'>; r2Key: string; url: string; name: string }
+  file: {
+    _id: Id<'files'>
+    r2Key: string
+    url: string
+    name: string
+    type: string
+    size?: number
+  }
   handleDeleteFile: (fileId: Id<'files'>) => Promise<void>
 }) {
   const [hoverOpen, setHoverOpen] = useState(false)
   const [alertOpen, setAlertOpen] = useState(false)
+  const isImage = canUseImagePreview(file.type, file.name)
+  const ext = file.name.includes('.')
+    ? `.${file.name.split('.').pop()}`
+    : '—'
+  const tipoLabel = file.type?.trim() || 'Não informado'
 
   return (
     <HoverCard
@@ -185,13 +216,22 @@ function FilePreviewCard({
     >
       <HoverCardTrigger asChild>
         <div className="relative hover:outline-primary/50 hover:outline-2 hover:outline-offset-2 rounded-md p-1 size-24 aspect-square">
-          <Image
-            src={file.url}
-            alt="File"
-            sizes="100px"
-            fill
-            className="rounded-md overflow-hidden object-cover"
-          />
+          {isImage ? (
+            <Image
+              src={file.url}
+              alt=""
+              sizes="100px"
+              fill
+              className="rounded-md overflow-hidden object-cover"
+            />
+          ) : (
+            <FileTypeIconView
+              type={file.type}
+              name={file.name}
+              className="size-full overflow-hidden"
+              iconClassName="size-9"
+            />
+          )}
           <AlertDialog open={alertOpen} onOpenChange={setAlertOpen}>
             <AlertDialogTrigger asChild>
               <Button
@@ -220,17 +260,59 @@ function FilePreviewCard({
           </AlertDialog>
         </div>
       </HoverCardTrigger>
-      <HoverCardContent className="w-fit flex flex-col items-center justify-center">
-        <div className="size-80 relative">
-          <Image
-            src={file.url}
-            alt="File"
-            sizes="200px"
-            fill
-            className="rounded-md object-contain"
-          />
+      <HoverCardContent className="w-80 max-w-[min(100vw-2rem,20rem)] p-0">
+        <div className="flex max-h-[min(50vh,22rem)] flex-col">
+          {isImage ? (
+            <div className="relative aspect-video w-full shrink-0 bg-muted/40">
+              <Image
+                src={file.url}
+                alt=""
+                sizes="(max-width: 24rem) 100vw, 20rem"
+                fill
+                className="object-contain p-2"
+              />
+            </div>
+          ) : (
+            <div className="flex shrink-0 items-center justify-center border-b border-border/60 bg-muted/30 py-6">
+              <FileTypeIconView
+                type={file.type}
+                name={file.name}
+                className="h-32 w-40 border-border/80"
+                iconClassName="!size-16"
+              />
+            </div>
+          )}
+          <div className="space-y-2.5 p-3 text-sm" role="group" aria-label="Informações do arquivo">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Nome</p>
+              <p className="mt-0.5 break-words font-medium leading-snug text-foreground">
+                {file.name}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Tipo</p>
+                <p className="mt-0.5 break-all font-mono text-xs leading-snug text-foreground">
+                  {tipoLabel}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">
+                  Extensão
+                </p>
+                <p className="mt-0.5 font-mono text-xs text-foreground">
+                  {ext}
+                </p>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Tamanho</p>
+              <p className="mt-0.5 text-foreground tabular-nums">
+                {formatBytes(file.size ?? 0)}
+              </p>
+            </div>
+          </div>
         </div>
-        <p className="text-xs text-muted-foreground">{file.name}</p>
       </HoverCardContent>
     </HoverCard>
   )

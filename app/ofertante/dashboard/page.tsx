@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 
+import { R2FileUploader } from '@/components/design/r2-file-uploader'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -12,23 +13,109 @@ import {
 } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api } from '@/convex/_generated/api'
-import type { Doc } from '@/convex/_generated/dataModel'
-import { useQuery } from 'convex/react'
+import type { Doc, Id } from '@/convex/_generated/dataModel'
+import { useUploadFile } from '@convex-dev/r2/react'
+import { useMutation, useQuery } from 'convex/react'
 import {
   AlertCircle,
   BarChart3,
   CheckCircle2,
   Clock,
   Edit,
+  FileEdit,
   FileText,
   Home,
   Plus,
-  Upload,
   User,
   Users
 } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { OfertantePropertyListRow } from '@/components/ofertante/ofertante-property-list-row'
+
+type ChecklistDocTipo = 'rg' | 'comp_residencia' | 'matricula' | 'iptu'
+
+const OFERTANTE_CHECKLIST_DOCS: {
+  tipo: ChecklistDocTipo
+  title: string
+  description: string
+}[] = [
+  {
+    tipo: 'rg',
+    title: 'RG ou CNH',
+    description: 'Documento de identidade'
+  },
+  {
+    tipo: 'comp_residencia',
+    title: 'Comprovante de Residência',
+    description: 'Conta de luz, água, etc.'
+  },
+  {
+    tipo: 'matricula',
+    title: 'Matrícula do Imóvel',
+    description: 'Certidão atualizada'
+  },
+  {
+    tipo: 'iptu',
+    title: 'Certidão Negativa de IPTU',
+    description: 'Certidão atualizada'
+  }
+]
+
+function OfertanteChecklistDocRow({
+  title,
+  description,
+  tipo,
+  fileId
+}: {
+  title: string
+  description: string
+  tipo: ChecklistDocTipo
+  fileId: Id<'files'> | null | undefined
+}) {
+  const uploadFile = useUploadFile(api.r2)
+  const complete = useMutation(api.documents.completeOfertanteDocumentFromUpload)
+  const remove = useMutation(api.documents.deleteOfertanteDocumentByFileId)
+
+  const handleUploadFiles = async (files: File[]) => {
+    for (const file of files) {
+      const r2Key = await uploadFile(file)
+      await complete({
+        tipo,
+        r2Key,
+        nomeOriginal: file.name,
+        contentType: file.type || 'application/octet-stream',
+        size: file.size
+      })
+    }
+    toast.success('Documento enviado')
+  }
+
+  const handleDeleteFile = async (id: Id<'files'>) => {
+    await remove({ fileId: id })
+    toast.success('Arquivo excluído com sucesso')
+  }
+
+  return (
+    <div className="flex flex-col gap-3 p-4 border rounded-lg sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="w-10 h-10 shrink-0 bg-primary/10 rounded-lg flex items-center justify-center">
+          <FileText className="w-5 h-5 text-primary" />
+        </div>
+        <div>
+          <p className="font-medium">{title}</p>
+          <p className="text-sm text-muted-foreground">{description}</p>
+        </div>
+      </div>
+      <R2FileUploader
+        multiple={false}
+        filesIds={fileId ? [fileId] : []}
+        handleUploadFiles={handleUploadFiles}
+        handleDeleteFile={handleDeleteFile}
+      />
+    </div>
+  )
+}
 
 export default function OfertanteDashboardPage() {
   const query = useQuery(api.users.getCurrentUserWithProfile)
@@ -38,6 +125,11 @@ export default function OfertanteDashboardPage() {
   const myProperties = useQuery(
     api.properties.getByOfertante,
     user?._id ? { ofertanteId: user._id } : 'skip'
+  )
+
+  const ofertanteDocFileIds = useQuery(
+    api.documents.getOfertanteDocumentFileIds,
+    user?._id ? { userId: user._id } : 'skip'
   )
 
   // Check authentication and onboarding
@@ -55,6 +147,7 @@ export default function OfertanteDashboardPage() {
   const total = list.length
   const aprovados = list.filter((p) => p.status === 'validated').length
   const emAnalise = list.filter((p) => p.status === 'pending').length
+  const rascunhos = list.filter((p) => p.status === 'draft').length
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -75,7 +168,7 @@ export default function OfertanteDashboardPage() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
@@ -83,10 +176,10 @@ export default function OfertanteDashboardPage() {
                     <p className="text-sm text-muted-foreground mb-1">
                       Total de Imóveis
                     </p>
-                    <p className="text-3xl font-bold">{total}</p>
+                    <p className="text-3xl font-bold text-primary">{total}</p>
                   </div>
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <Home className="w-6 h-6 text-primary" />
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                    <Home className="h-6 w-6 text-primary" />
                   </div>
                 </div>
               </CardContent>
@@ -103,8 +196,8 @@ export default function OfertanteDashboardPage() {
                       {aprovados}
                     </p>
                   </div>
-                  <div className="w-12 h-12 bg-secondary/10 rounded-lg flex items-center justify-center">
-                    <CheckCircle2 className="w-6 h-6 text-secondary" />
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-secondary/10">
+                    <CheckCircle2 className="h-6 w-6 text-secondary" />
                   </div>
                 </div>
               </CardContent>
@@ -117,10 +210,30 @@ export default function OfertanteDashboardPage() {
                     <p className="text-sm text-muted-foreground mb-1">
                       Em Análise
                     </p>
-                    <p className="text-3xl font-bold">{emAnalise}</p>
+                    <p className="text-3xl font-bold text-amber-600 dark:text-amber-500">
+                      {emAnalise}
+                    </p>
                   </div>
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <Clock className="w-6 h-6 text-primary" />
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-amber-500/10">
+                    <Clock className="h-6 w-6 text-amber-600 dark:text-amber-500" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Rascunhos
+                    </p>
+                    <p className="text-3xl font-bold text-sky-600 dark:text-sky-400">
+                      {rascunhos}
+                    </p>
+                  </div>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-sky-500/10">
+                    <FileEdit className="h-6 w-6 text-sky-600 dark:text-sky-400" />
                   </div>
                 </div>
               </CardContent>
@@ -133,10 +246,12 @@ export default function OfertanteDashboardPage() {
                     <p className="text-sm text-muted-foreground mb-1">
                       Interessados
                     </p>
-                    <p className="text-3xl font-bold">0</p>
+                    <p className="text-3xl font-bold text-violet-600 dark:text-violet-400">
+                      0
+                    </p>
                   </div>
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <Users className="w-6 h-6 text-primary" />
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-violet-500/10">
+                    <Users className="h-6 w-6 text-violet-600 dark:text-violet-400" />
                   </div>
                 </div>
               </CardContent>
@@ -224,81 +339,21 @@ export default function OfertanteDashboardPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* RG Upload */}
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium">RG ou CNH</p>
-                        <p className="text-sm text-muted-foreground">
-                          Documento de identidade
-                        </p>
-                      </div>
+                  {ofertanteDocFileIds === undefined ? (
+                    <div className="flex justify-center py-8">
+                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                     </div>
-                    <Button variant="outline" size="sm">
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upload
-                    </Button>
-                  </div>
-
-                  {/* Comprovante de Residência */}
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Comprovante de Residência</p>
-                        <p className="text-sm text-muted-foreground">
-                          Conta de luz, água, etc.
-                        </p>
-                      </div>
-                    </div>
-                    <Button variant="outline" size="sm">
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upload
-                    </Button>
-                  </div>
-
-                  {/* Matrícula do Imóvel */}
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Matrícula do Imóvel</p>
-                        <p className="text-sm text-muted-foreground">
-                          Certidão atualizada
-                        </p>
-                      </div>
-                    </div>
-                    <Button variant="outline" size="sm">
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upload
-                    </Button>
-                  </div>
-
-                  {/* Certidão de IPTU */}
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Certidão Negativa de IPTU</p>
-                        <p className="text-sm text-muted-foreground">
-                          Certidão atualizada
-                        </p>
-                      </div>
-                    </div>
-                    <Button variant="outline" size="sm">
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upload
-                    </Button>
-                  </div>
+                  ) : (
+                    OFERTANTE_CHECKLIST_DOCS.map((row) => (
+                      <OfertanteChecklistDocRow
+                        key={row.tipo}
+                        title={row.title}
+                        description={row.description}
+                        tipo={row.tipo}
+                        fileId={ofertanteDocFileIds[row.tipo]}
+                      />
+                    ))
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

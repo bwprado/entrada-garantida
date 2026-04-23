@@ -11,6 +11,16 @@ import {
 } from './authz'
 import { r2 } from './r2'
 
+/** User-scoped ofertante checklist documents (no propertyId) */
+const ofertanteChecklistTipo = v.union(
+  v.literal('rg'),
+  v.literal('comp_residencia'),
+  v.literal('matricula'),
+  v.literal('iptu')
+)
+
+type OfertanteChecklistTipo = 'rg' | 'comp_residencia' | 'matricula' | 'iptu'
+
 async function assertDocumentAccess(
   ctx: QueryCtx | MutationCtx,
   actor: Doc<'users'>,
@@ -184,6 +194,49 @@ export const getUrlByKey = query({
   }
 })
 
+const OFERTANTE_TIPOS: OfertanteChecklistTipo[] = [
+  'rg',
+  'comp_residencia',
+  'matricula',
+  'iptu'
+]
+
+/** File IDs for user-level ofertante checklist documents (R2 uploader preview). */
+export const getOfertanteDocumentFileIds = query({
+  args: { userId: v.id('users') },
+  handler: async (ctx, { userId }) => {
+    await verifySelfOrAdmin(ctx, userId)
+
+    const out: Record<OfertanteChecklistTipo, Id<'files'> | null> = {
+      rg: null,
+      comp_residencia: null,
+      matricula: null,
+      iptu: null
+    }
+
+    for (const tipo of OFERTANTE_TIPOS) {
+      const rows = await ctx.db
+        .query('documents')
+        .withIndex('by_user_and_tipo', (q) =>
+          q.eq('userId', userId).eq('tipo', tipo)
+        )
+        .collect()
+      const doc = rows.find((d) => d.propertyId === undefined)
+      if (!doc) continue
+
+      const file = await ctx.db
+        .query('files')
+        .withIndex('by_document', (q) => q.eq('documentId', doc._id))
+        .first()
+      if (file) {
+        out[tipo] = file._id
+      }
+    }
+
+    return out
+  }
+})
+
 // ============ MUTATIONS ============
 
 // Create document record after upload
@@ -261,6 +314,165 @@ export const createDocumentRecord = mutation({
       criadoEm: now,
       atualizadoEm: now
     })
+  }
+})
+
+/**
+ * Finishes a user-scoped ofertante checklist upload: replaces linked files,
+ * updates `documents`, inserts `files` row for previews, clears pending flag.
+ */
+export const completeOfertanteDocumentFromUpload = mutation({
+  args: {
+    tipo: ofertanteChecklistTipo,
+    r2Key: v.string(),
+    nomeOriginal: v.string(),
+    contentType: v.string(),
+    size: v.number()
+  },
+  handler: async (ctx, args) => {
+    const user = await verifyLogin(ctx)
+    if (user.role !== 'ofertante') {
+      throw new Error('Apenas ofertantes podem enviar estes documentos')
+    }
+
+    const userId = user._id
+    const now = Date.now()
+    const rows = await ctx.db
+      .query('documents')
+      .withIndex('by_user_and_tipo', (q) =>
+        q.eq('userId', userId).eq('tipo', args.tipo)
+      )
+      .collect()
+    const existing = rows.find((d) => d.propertyId === undefined) ?? null
+
+    const deletedR2Keys = new Set<string>()
+
+    if (existing) {
+      const oldFiles = await ctx.db
+        .query('files')
+        .withIndex('by_document', (q) => q.eq('documentId', existing._id))
+        .collect()
+      for (const f of oldFiles) {
+        if (!deletedR2Keys.has(f.r2Key)) {
+          await r2.deleteObject(ctx, f.r2Key)
+          deletedR2Keys.add(f.r2Key)
+        }
+        await ctx.db.delete(f._id)
+      }
+      if (!deletedR2Keys.has(existing.r2Key)) {
+        await r2.deleteObject(ctx, existing.r2Key)
+        deletedR2Keys.add(existing.r2Key)
+      }
+
+      await ctx.db.patch(existing._id, {
+        r2Key: args.r2Key,
+        nomeOriginal: args.nomeOriginal,
+        status: 'pending' as const,
+        notaRejeicao: undefined,
+        atualizadoEm: now
+      })
+
+      const url = await r2.getUrl(args.r2Key)
+      await ctx.db.insert('files', {
+        r2Key: args.r2Key,
+        name: args.nomeOriginal,
+        type: args.contentType,
+        size: args.size,
+        url,
+        userId,
+        documentId: existing._id
+      })
+    } else {
+      const documentId = await ctx.db.insert('documents', {
+        userId,
+        tipo: args.tipo,
+        r2Key: args.r2Key,
+        nomeOriginal: args.nomeOriginal,
+        status: 'pending',
+        criadoEm: now,
+        atualizadoEm: now
+      })
+      const url = await r2.getUrl(args.r2Key)
+      await ctx.db.insert('files', {
+        r2Key: args.r2Key,
+        name: args.nomeOriginal,
+        type: args.contentType,
+        size: args.size,
+        url,
+        userId,
+        documentId
+      })
+    }
+
+    if (user.ofertanteProfileId) {
+      const profile = await ctx.db.get(user.ofertanteProfileId)
+      if (profile?.documentosPendentes?.length) {
+        const next = profile.documentosPendentes.filter((k) => k !== args.tipo)
+        if (next.length !== profile.documentosPendentes.length) {
+          await ctx.db.patch(user.ofertanteProfileId, {
+            documentosPendentes: next.length > 0 ? next : undefined,
+            atualizadoEm: now
+          })
+        }
+      }
+    }
+
+    return { success: true as const }
+  }
+})
+
+export const deleteOfertanteDocumentByFileId = mutation({
+  args: { fileId: v.id('files') },
+  handler: async (ctx, args) => {
+    const user = await verifyLogin(ctx)
+    if (user.role !== 'ofertante') {
+      throw new Error('Apenas ofertantes podem excluir estes documentos')
+    }
+
+    const file = await ctx.db.get(args.fileId)
+    if (!file) {
+      throw new Error('Arquivo não encontrado')
+    }
+    if (file.userId !== user._id) {
+      throw new Error('Permissão negada')
+    }
+    if (!file.documentId) {
+      throw new Error('Arquivo não está vinculado a um documento')
+    }
+
+    const doc = await ctx.db.get(file.documentId)
+    if (!doc) {
+      await r2.deleteObject(ctx, file.r2Key)
+      await ctx.db.delete(args.fileId)
+      return { success: true as const }
+    }
+    if (doc.userId !== user._id) {
+      throw new Error('Permissão negada')
+    }
+    if (doc.propertyId !== undefined) {
+      throw new Error('Use outro fluxo para documentos vinculados a imóvel')
+    }
+    if (!OFERTANTE_TIPOS.includes(doc.tipo as OfertanteChecklistTipo)) {
+      throw new Error('Tipo de documento inválido para exclusão')
+    }
+
+    await r2.deleteObject(ctx, doc.r2Key)
+    await ctx.db.delete(args.fileId)
+    await ctx.db.delete(doc._id)
+
+    if (user.ofertanteProfileId) {
+      const key = doc.tipo as OfertanteChecklistTipo
+      const profile = await ctx.db.get(user.ofertanteProfileId)
+      const list = profile?.documentosPendentes ?? []
+      if (!list.includes(key)) {
+        await ctx.db.patch(user.ofertanteProfileId, {
+          documentosPendentes: [...list, key],
+          atualizadoEm: Date.now()
+        })
+      }
+    }
+
+    return { success: true as const }
   }
 })
 

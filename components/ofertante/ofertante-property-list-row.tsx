@@ -1,14 +1,25 @@
 'use client'
 
-import Link from 'next/link'
 import Image from 'next/image'
+import Link from 'next/link'
+import { useState } from 'react'
+import { toast } from 'sonner'
 
-import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { api } from '@/convex/_generated/api'
 import { Doc } from '@/convex/_generated/dataModel'
-import { useQuery } from 'convex/react'
-import { Home, Pencil, ExternalLink } from 'lucide-react'
+import { useMutation, useQuery } from 'convex/react'
+import { ExternalLink, Home, Loader2, Pencil, Send } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type StatusLabel = {
@@ -42,6 +53,10 @@ export function OfertantePropertyListRow({
 }: {
   property: Doc<'properties'>
 }) {
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const submitForValidation = useMutation(api.properties.submitForValidation)
+
   const firstId = p.filesIds?.[0]
   const thumb = useQuery(
     api.r2.getFileUrlAndMetadata,
@@ -50,6 +65,20 @@ export function OfertantePropertyListRow({
   const url = thumb?.[0]?.url
   const { label, variant } = propertyStatusLabel(p.status)
   const editHref = `/ofertante/imoveis/cadastro?propertyId=${p._id}`
+
+  async function handleSubmitForValidation() {
+    setIsSubmitting(true)
+    try {
+      await submitForValidation({ propertyId: p._id })
+      toast.success('Imóvel enviado para análise')
+      setConfirmOpen(false)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Não foi possível enviar'
+      toast.error(msg)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <li
@@ -99,23 +128,88 @@ export function OfertantePropertyListRow({
           <Badge variant={variant} className="w-fit">
             {label}
           </Badge>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" size="sm" asChild>
-              <Link href={editHref}>
-                <Pencil className="mr-1.5 size-3.5" />
-                Editar
-              </Link>
-            </Button>
-            {p.status === 'validated' ? (
-              <Button variant="outline" size="sm" asChild>
-                <Link href={`/imoveis/${p._id}`}>
-                  <ExternalLink className="mr-1.5 size-3.5" />
-                  Ver anúncio
+          <div className="flex flex-col gap-2 sm:items-end">
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="secondary" size="sm" asChild>
+                <Link href={editHref}>
+                  <Pencil className="mr-1.5 size-3.5" />
+                  Editar
                 </Link>
               </Button>
-            ) : (
-              <p className="w-full text-xs text-muted-foreground sm:text-right">
-                Anúncio disponível após aprovação
+              {p.status === 'validated' && (
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/imoveis/${p._id}`}>
+                    <ExternalLink className="mr-1.5 size-3.5" />
+                    Ver anúncio
+                  </Link>
+                </Button>
+              )}
+              {p.status === 'draft' && (
+                <>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setConfirmOpen(true)}
+                  >
+                    <Send className="mr-1.5 size-3.5" />
+                    Enviar para análise
+                  </Button>
+                  <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          Enviar imóvel para análise?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Após o envio, a equipe irá analisar o cadastro. A
+                          edição dos dados pelo formulário fica limitada às
+                          regras do sistema para imóveis que não estão mais em
+                          rascunho.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isSubmitting}>
+                          Cancelar
+                        </AlertDialogCancel>
+                        <Button
+                          type="button"
+                          disabled={isSubmitting}
+                          onClick={() => void handleSubmitForValidation()}
+                        >
+                          {isSubmitting ? (
+                            <>
+                              <Loader2 className="mr-2 size-4 animate-spin" />
+                              Enviando…
+                            </>
+                          ) : (
+                            'Confirmar envio'
+                          )}
+                        </Button>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </>
+              )}
+            </div>
+            {p.status === 'pending' && (
+              <p className="max-w-sm text-right text-xs text-muted-foreground">
+                Aguardando análise da equipe.
+              </p>
+            )}
+            {p.status === 'rejected' && (
+              <p className="max-w-sm text-right text-xs text-destructive">
+                Cadastro indeferido. Ajuste o que for necessário com o apoio da
+                equipe.
+              </p>
+            )}
+            {p.status === 'selected' && (
+              <p className="max-w-sm text-right text-xs text-muted-foreground">
+                Imóvel vinculado a um processo de seleção.
+              </p>
+            )}
+            {p.status === 'sold' && (
+              <p className="max-w-sm text-right text-xs text-muted-foreground">
+                Imóvel vendido pelo programa.
               </p>
             )}
           </div>
