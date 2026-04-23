@@ -231,8 +231,16 @@ export const getListForAdmin = query({
 
     const withOwner: Array<{
       property: Doc<'properties'>
-      ofertante: { nome: string; email: string | undefined; _id: Id<'users'> } | null
-      construtor: { nome: string; email: string | undefined; _id: Id<'users'> } | null
+      ofertante: {
+        nome: string
+        email: string | undefined
+        _id: Id<'users'>
+      } | null
+      construtor: {
+        nome: string
+        email: string | undefined
+        _id: Id<'users'>
+      } | null
     }> = []
 
     for (const property of list) {
