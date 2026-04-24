@@ -957,13 +957,16 @@ function ImovelCadastroPageInner() {
               <FieldLabel>Fotos do imóvel *</FieldLabel>
               <FieldDescription>
                 PNG, JPEG ou GIF. Até {MAX_PROPERTY_PHOTOS} imagens, máx.{' '}
-                {MAX_PHOTO_BYTES / (1024 * 1024)} MB cada.
+                {MAX_PHOTO_BYTES / (1024 * 1024)} MB cada. A primeira foto é a
+                capa do anúncio; arraste as miniaturas para reordenar.
               </FieldDescription>
               <R2FileUploader
                 multiple={true}
                 filesIds={field.value}
                 totalFileSlots={MAX_PROPERTY_PHOTOS}
                 perPickMaxFiles={MAX_PROPERTY_PHOTOS}
+                reorderable
+                onReorderIds={(ids) => field.onChange(ids)}
                 handleUploadFiles={handleUploadFiles}
                 handleDeleteFile={handleDeleteFile}
               />

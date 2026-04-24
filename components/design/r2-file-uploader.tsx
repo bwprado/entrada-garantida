@@ -42,12 +42,20 @@ import {
   AlertDialogCancel,
   AlertDialogAction
 } from '../ui/alert-dialog'
+import {
+  Sortable,
+  SortableContent,
+  SortableItem,
+  SortableOverlay
+} from '../ui/sortable'
 
 export function R2FileUploader({
   multiple = false,
   filesIds = [],
   totalFileSlots,
   perPickMaxFiles,
+  reorderable = false,
+  onReorderIds,
   handleUploadFiles,
   handleDeleteFile
 }: {
@@ -57,6 +65,9 @@ export function R2FileUploader({
   totalFileSlots?: number
   /** Max files per open-file dialog when `multiple` (defaults: 2 without total cap, else `totalFileSlots`). */
   perPickMaxFiles?: number
+  /** When `multiple`, drag thumbnails to reorder; first photo is the listing cover. */
+  reorderable?: boolean
+  onReorderIds?: (next: Id<'files'>[]) => void
   handleUploadFiles: (files: File[]) => Promise<void>
   handleDeleteFile: (fileId: Id<'files'>) => Promise<void>
 }) {
@@ -94,23 +105,95 @@ export function R2FileUploader({
       : (perPickMaxFiles ?? 2)
     : 1
 
+  const orderedIds = filesIds ?? []
+  const usePhotoReorder =
+    Boolean(multiple && reorderable && onReorderIds && orderedIds.length > 0)
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-4">
-        {hasStoredFile && filesUrls === undefined && (
-          <div
-            className="size-24 shrink-0 animate-pulse rounded-md bg-muted"
-            aria-hidden
-          />
-        )}
-        {filesUrls?.map((file) => (
-          <FilePreviewCard
-            key={file._id}
-            file={file}
-            handleDeleteFile={handleDeleteFile}
-          />
-        ))}
-      </div>
+      {usePhotoReorder ? (
+        <Sortable
+          value={orderedIds}
+          getItemValue={(id) => id}
+          onValueChange={(next) => onReorderIds?.(next as Id<'files'>[])}
+          orientation="mixed"
+        >
+          <SortableContent className="flex flex-wrap gap-4">
+            {orderedIds.map((id) => {
+                const file = filesUrls?.find((f) => f._id === id)
+                const isCover = id === orderedIds[0]
+                return (
+                  <SortableItem
+                    key={id}
+                    value={id}
+                    asHandle
+                    className="shrink-0 touch-manipulation"
+                  >
+                    {file ? (
+                      <FilePreviewCard
+                        file={file}
+                        handleDeleteFile={handleDeleteFile}
+                        isCover={isCover}
+                      />
+                    ) : (
+                      <div
+                        className="size-24 shrink-0 animate-pulse rounded-md bg-muted"
+                        aria-hidden
+                      />
+                    )}
+                  </SortableItem>
+                )
+              })}
+            </SortableContent>
+            <SortableOverlay className="z-50">
+              {({ value }) => {
+                const f = filesUrls?.find((x) => x._id === value)
+                if (!f) {
+                  return (
+                    <div className="size-24 rounded-md border bg-muted shadow-lg" />
+                  )
+                }
+                const overlayImage = canUseImagePreview(f.type, f.name)
+                return (
+                  <div className="pointer-events-none relative size-24 overflow-hidden rounded-md border bg-background shadow-lg">
+                    {overlayImage ? (
+                      <Image
+                        src={f.url}
+                        alt=""
+                        sizes="100px"
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <FileTypeIconView
+                        type={f.type}
+                        name={f.name}
+                        className="size-full"
+                        iconClassName="size-9"
+                      />
+                    )}
+                  </div>
+                )
+              }}
+            </SortableOverlay>
+        </Sortable>
+      ) : (
+        <div className="flex flex-wrap gap-4">
+          {hasStoredFile && filesUrls === undefined && (
+            <div
+              className="size-24 shrink-0 animate-pulse rounded-md bg-muted"
+              aria-hidden
+            />
+          )}
+          {filesUrls?.map((file) => (
+            <FilePreviewCard
+              key={file._id}
+              file={file}
+              handleDeleteFile={handleDeleteFile}
+            />
+          ))}
+        </div>
+      )}
       {showUploadTrigger && (
         <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger
@@ -212,7 +295,8 @@ export function R2FileUploader({
 
 function FilePreviewCard({
   file,
-  handleDeleteFile
+  handleDeleteFile,
+  isCover = false
 }: {
   file: {
     _id: Id<'files'>
@@ -223,6 +307,7 @@ function FilePreviewCard({
     size?: number
   }
   handleDeleteFile: (fileId: Id<'files'>) => Promise<void>
+  isCover?: boolean
 }) {
   const [hoverOpen, setHoverOpen] = useState(false)
   const [alertOpen, setAlertOpen] = useState(false)
@@ -241,6 +326,11 @@ function FilePreviewCard({
     >
       <HoverCardTrigger asChild>
         <div className="relative hover:outline-primary/50 hover:outline-2 hover:outline-offset-2 rounded-md p-1 size-24 aspect-square">
+          {isCover ? (
+            <span className="pointer-events-none absolute inset-x-0 top-0 z-1 rounded-t-md bg-primary px-0.5 py-0.5 text-center text-[10px] font-medium leading-tight text-primary-foreground">
+              Capa do anúncio
+            </span>
+          ) : null}
           {isImage ? (
             <Image
               src={file.url}
@@ -260,9 +350,11 @@ function FilePreviewCard({
           <AlertDialog open={alertOpen} onOpenChange={setAlertOpen}>
             <AlertDialogTrigger asChild>
               <Button
+                type="button"
                 variant="ghost"
                 size="icon"
-                className="size-7 absolute top-0 right-0"
+                className="absolute right-0 top-0 z-10 size-7"
+                onPointerDown={(e) => e.stopPropagation()}
               >
                 <Trash />
               </Button>
