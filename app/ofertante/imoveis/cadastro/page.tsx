@@ -179,8 +179,14 @@ function PropertySaleDocumentRow({
     if (mode === 'edit') {
       await deleteSaleDoc({ fileId: id })
     } else {
-      await deleteOrphanFile({ fileId: id })
       onStagedChange(tipo, undefined)
+      try {
+        await deleteOrphanFile({ fileId: id })
+      } catch (e) {
+        onStagedChange(tipo, id)
+        toast.error(e instanceof Error ? e.message : 'Erro ao excluir arquivo')
+        return
+      }
     }
     toast.success('Arquivo excluído com sucesso')
   }
@@ -245,14 +251,28 @@ function ImovelCadastroPageInner() {
   const deletePropertyImage = useMutation(
     api.documents.deletePropertyImage
   ).withOptimisticUpdate((localStore, args) => {
-    const currentFiles = localStore.getQuery(api.r2.getFileUrlAndMetadata, {
-      fileIds: form.getValues('filesIds') ?? []
+    const nextIds = (form.getValues('filesIds') ?? []).filter(
+      (id) => id !== args.fileId
+    )
+    const prevIds = [...nextIds, args.fileId]
+    const fromList = localStore.getQuery(api.r2.getFileUrlAndMetadata, {
+      fileIds: prevIds
     })
-    if (currentFiles !== undefined) {
+    if (fromList !== undefined) {
       localStore.setQuery(
         api.r2.getFileUrlAndMetadata,
-        { fileIds: form.getValues('filesIds') ?? [] },
-        currentFiles.filter((file) => file._id !== args.fileId)
+        { fileIds: nextIds },
+        fromList.filter((file) => file._id !== args.fileId)
+      )
+    }
+    const fromSingle = localStore.getQuery(api.r2.getFileUrlAndMetadata, {
+      fileIds: [args.fileId]
+    })
+    if (fromSingle !== undefined) {
+      localStore.setQuery(
+        api.r2.getFileUrlAndMetadata,
+        { fileIds: [] },
+        []
       )
     }
   })
@@ -515,12 +535,16 @@ function ImovelCadastroPageInner() {
   }
 
   const handleDeleteFile = async (fileId: Id<'files'>) => {
-    await deletePropertyImage({ fileId })
-    form.setValue(
-      'filesIds',
-      form.getValues('filesIds')?.filter((id) => id !== fileId) ?? []
-    )
-    toast.success('Arquivo excluído com sucesso')
+    const prevIds = form.getValues('filesIds') ?? []
+    const nextIds = prevIds.filter((id) => id !== fileId)
+    form.setValue('filesIds', nextIds)
+    try {
+      await deletePropertyImage({ fileId })
+      toast.success('Arquivo excluído com sucesso')
+    } catch (e) {
+      form.setValue('filesIds', prevIds)
+      toast.error(e instanceof Error ? e.message : 'Erro ao excluir arquivo')
+    }
   }
 
   const stepsFields = [

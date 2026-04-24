@@ -57,20 +57,15 @@ export const getFileUrlAndMetadata = query({
   args: { fileIds: v.array(v.id('files')) },
   handler: async (ctx, { fileIds }) => {
     const files = await Promise.all(fileIds.map((id) => ctx.db.get(id)))
-    if (!files) {
-      throw new Error('Arquivos não encontrados')
-    }
+    const existing = files.filter(
+      (f): f is NonNullable<typeof f> => f !== null
+    )
 
     const filesWithUrls = await Promise.all(
-      files.map(async (file) => {
-        if (!file) {
-          throw new Error('Arquivo não encontrado')
-        }
-        return {
-          ...file,
-          url: await r2.getUrl(file.r2Key)
-        }
-      })
+      existing.map(async (file) => ({
+        ...file,
+        url: await r2.getUrl(file.r2Key)
+      }))
     )
 
     return filesWithUrls
