@@ -3,7 +3,7 @@ import { getAuthUserId } from '@convex-dev/auth/server'
 import { v } from 'convex/values'
 import { components } from './_generated/api'
 import { Doc, Id } from './_generated/dataModel'
-import { mutation, query } from './_generated/server'
+import { mutation, type MutationCtx, query } from './_generated/server'
 import {
   ensurePropertyOwnerOrAdmin,
   verifyAdmin,
@@ -192,6 +192,7 @@ const propertyStatusFilterArg = v.optional(
     v.literal('draft'),
     v.literal('pending'),
     v.literal('validated'),
+    v.literal('paused'),
     v.literal('selected'),
     v.literal('rejected'),
     v.literal('sold')
@@ -316,6 +317,7 @@ export const getAllForAdmin = query({
         v.literal('draft'),
         v.literal('pending'),
         v.literal('validated'),
+        v.literal('paused'),
         v.literal('selected'),
         v.literal('rejected'),
         v.literal('sold')
@@ -546,7 +548,11 @@ export const updateChecklistItem = mutation({
       throw new Error('Propriedade não encontrada')
     }
 
-    if (property.status !== 'pending' && property.status !== 'validated') {
+    if (
+      property.status !== 'pending' &&
+      property.status !== 'validated' &&
+      property.status !== 'paused'
+    ) {
       throw new Error('Propriedade não está pendente de validação')
     }
 
@@ -566,7 +572,7 @@ export const updateChecklistItem = mutation({
 
     const allApproved = Object.values(checklist).every((s) => s === 'approved')
 
-    if (allApproved && property.status === 'pending') {
+    if (allApproved && (property.status === 'pending' || property.status === 'paused')) {
       await ctx.db.patch(args.propertyId, {
         status: 'validated',
         validadoEm: Date.now(),
@@ -578,6 +584,134 @@ export const updateChecklistItem = mutation({
     }
 
     return { success: true, allApproved }
+  }
+})
+
+async function clearPropertyFromBeneficiaryWishlists(
+  ctx: MutationCtx,
+  propertyId: Id<'properties'>,
+  now: number
+): Promise<void> {
+  const profiles = await ctx.db.query('beneficiaryProfiles').collect()
+  for (const profile of profiles) {
+    const list = profile.propriedadesInteresse ?? []
+    if (!list.some((id) => id === propertyId)) continue
+    const next = list.filter((id) => id !== propertyId)
+    await ctx.db.patch(profile._id, {
+      propriedadesInteresse: next.length > 0 ? next : undefined,
+      atualizadoEm: now
+    })
+  }
+  const openSelections = await ctx.db
+    .query('selectionsHistory')
+    .withIndex('by_property', (q) => q.eq('propertyId', propertyId))
+    .filter((q) => q.eq(q.field('removidoEm'), undefined))
+    .collect()
+  for (const row of openSelections) {
+    await ctx.db.patch(row._id, { removidoEm: now })
+  }
+}
+
+export const pauseListing = mutation({
+  args: { propertyId: v.id('properties') },
+  handler: async (ctx, { propertyId }) => {
+    await verifyAdmin(ctx)
+    const property = await ctx.db.get(propertyId)
+    if (!property) {
+      throw new Error('Propriedade não encontrada')
+    }
+    if (property.status !== 'validated') {
+      throw new Error('Só é possível pausar anúncios validados')
+    }
+    const now = Date.now()
+    await ctx.db.patch(propertyId, { status: 'paused', atualizadoEm: now })
+    return { success: true as const }
+  }
+})
+
+export const resumeListing = mutation({
+  args: { propertyId: v.id('properties') },
+  handler: async (ctx, { propertyId }) => {
+    await verifyAdmin(ctx)
+    const property = await ctx.db.get(propertyId)
+    if (!property) {
+      throw new Error('Propriedade não encontrada')
+    }
+    if (property.status !== 'paused') {
+      throw new Error('Este anúncio não está pausado')
+    }
+    const now = Date.now()
+    await ctx.db.patch(propertyId, { status: 'validated', atualizadoEm: now })
+    return { success: true as const }
+  }
+})
+
+export const adminInvalidateListing = mutation({
+  args: {
+    propertyId: v.id('properties'),
+    adminId: v.id('users'),
+    motivo: v.string()
+  },
+  handler: async (ctx, args) => {
+    await verifyAdmin(ctx)
+    if (args.motivo.trim().length < 3) {
+      throw new Error('Informe o motivo (mín. 3 caracteres)')
+    }
+    const property = await ctx.db.get(args.propertyId)
+    if (!property) {
+      throw new Error('Propriedade não encontrada')
+    }
+    const now = Date.now()
+    await clearPropertyFromBeneficiaryWishlists(ctx, args.propertyId, now)
+    await ctx.db.patch(args.propertyId, {
+      status: 'rejected',
+      motivoRejeicao: args.motivo.trim(),
+      rejeitadoEm: now,
+      rejeitadoPor: args.adminId,
+      atualizadoEm: now
+    })
+    return { success: true as const }
+  }
+})
+
+export const reopenToPending = mutation({
+  args: { propertyId: v.id('properties') },
+  handler: async (ctx, { propertyId }) => {
+    await verifyAdmin(ctx)
+    const property = await ctx.db.get(propertyId)
+    if (!property) {
+      throw new Error('Propriedade não encontrada')
+    }
+    if (
+      property.status !== 'validated' &&
+      property.status !== 'paused' &&
+      property.status !== 'rejected'
+    ) {
+      throw new Error(
+        'Só é possível reabrir anúncios validados, pausados ou rejeitados'
+      )
+    }
+    const now = Date.now()
+    const pendingChecklist = {
+      dadosPessoais: 'pending' as const,
+      localizacao: 'pending' as const,
+      construcao: 'pending' as const,
+      cartorio: 'pending' as const,
+      preco: 'pending' as const,
+      documentos: 'pending' as const
+    }
+    await ctx.db.patch(propertyId, {
+      status: 'pending',
+      checklistValidacao: pendingChecklist,
+      notasValidacao: undefined,
+      validadoEm: undefined,
+      validadoPor: undefined,
+      motivoRejeicao: undefined,
+      rejeitadoEm: undefined,
+      rejeitadoPor: undefined,
+      atualizadoEm: now
+    })
+    return { success: true as const }
   }
 })
 

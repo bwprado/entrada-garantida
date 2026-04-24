@@ -31,6 +31,7 @@ const STATUS_OPTIONS: {
   { value: 'draft', label: 'Rascunho' },
   { value: 'pending', label: 'Em análise' },
   { value: 'validated', label: 'Validado' },
+  { value: 'paused', label: 'Pausado' },
   { value: 'selected', label: 'Selecionado' },
   { value: 'rejected', label: 'Rejeitado' },
   { value: 'sold', label: 'Vendido' }
@@ -44,6 +45,8 @@ function statusBadgeClass(status: Doc<'properties'>['status']): string {
       return 'bg-amber-500/15 text-amber-900 dark:text-amber-200'
     case 'validated':
       return 'bg-emerald-500/15 text-emerald-900 dark:text-emerald-200'
+    case 'paused':
+      return 'bg-sky-500/15 text-sky-900 dark:text-sky-200'
     case 'selected':
       return 'bg-primary/15 text-primary'
     case 'rejected':

@@ -28,6 +28,8 @@ function propertyStatusLabel(status: string): string {
   switch (status) {
     case 'validated':
       return 'Disponível'
+    case 'paused':
+      return 'Pausado'
     case 'pending':
       return 'Em análise'
     case 'draft':

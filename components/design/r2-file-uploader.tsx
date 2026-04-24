@@ -46,11 +46,17 @@ import {
 export function R2FileUploader({
   multiple = false,
   filesIds = [],
+  totalFileSlots,
+  perPickMaxFiles,
   handleUploadFiles,
   handleDeleteFile
 }: {
   multiple?: boolean
   filesIds?: Id<'files'>[] | undefined
+  /** When set with `multiple`, hides add when count reaches cap and caps picker batch size. */
+  totalFileSlots?: number
+  /** Max files per open-file dialog when `multiple` (defaults: 2 without total cap, else `totalFileSlots`). */
+  perPickMaxFiles?: number
   handleUploadFiles: (files: File[]) => Promise<void>
   handleDeleteFile: (fileId: Id<'files'>) => Promise<void>
 }) {
@@ -69,8 +75,24 @@ export function R2FileUploader({
     })
   }, [])
 
-  const hasStoredFile = !multiple && (filesIds?.length ?? 0) > 0
-  const showUploadTrigger = multiple || (filesIds?.length ?? 0) === 0
+  const storedCount = filesIds?.length ?? 0
+  const hasStoredFile = !multiple && storedCount > 0
+  const remainingSlots =
+    multiple && totalFileSlots !== undefined
+      ? Math.max(0, totalFileSlots - storedCount)
+      : Number.POSITIVE_INFINITY
+  const showUploadTrigger = multiple
+    ? totalFileSlots === undefined || storedCount < totalFileSlots
+    : storedCount === 0
+
+  const pickerMaxFiles = multiple
+    ? totalFileSlots !== undefined
+      ? Math.min(
+          perPickMaxFiles ?? totalFileSlots,
+          Math.max(0, remainingSlots)
+        )
+      : (perPickMaxFiles ?? 2)
+    : 1
 
   return (
     <div className="flex flex-col gap-4">
@@ -115,7 +137,7 @@ export function R2FileUploader({
             onValueChange={setFiles}
             onFileReject={onFileReject}
             multiple={multiple}
-            maxFiles={multiple ? 2 : 1}
+            maxFiles={pickerMaxFiles}
           >
             <FileUploadDropzone>
               <div className="flex flex-col items-center gap-1 text-center">
@@ -127,7 +149,10 @@ export function R2FileUploader({
                 </p>
                 <p className="text-muted-foreground text-xs">
                   Ou clique para navegar (
-                  {multiple ? 'máx. 2 arquivos' : '1 arquivo'}, até 5MB cada)
+                  {multiple
+                    ? `máx. ${pickerMaxFiles} arquivo${pickerMaxFiles === 1 ? '' : 's'}`
+                    : '1 arquivo'}
+                  , até 5MB cada)
                 </p>
               </div>
               <FileUploadTrigger asChild>

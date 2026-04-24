@@ -46,6 +46,7 @@ import {
   PROPERTY_SALE_DOCUMENT_TIPOS,
   type PropertySaleDocumentTipo
 } from '@/lib/property-sale-documents'
+import { MAX_PROPERTY_PHOTOS } from '@/lib/property-limits'
 import { fetchAddressByCEP } from '@/lib/validation'
 import { useUploadFile } from '@convex-dev/r2/react'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -74,7 +75,6 @@ import { toast } from 'sonner'
 import { Id } from '@/convex/_generated/dataModel'
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024
-const MAX_PHOTOS = 5
 
 function toValidDate(value: unknown): Date | undefined {
   if (value == null || value === '') return undefined
@@ -490,7 +490,17 @@ function ImovelCadastroPageInner() {
   }
 
   const handleUploadFiles = async (files: File[]) => {
-    for (const file of files) {
+    const current = form.getValues('filesIds') ?? []
+    const room = MAX_PROPERTY_PHOTOS - current.length
+    if (room <= 0) {
+      toast.message(`Limite de ${MAX_PROPERTY_PHOTOS} fotos atingido`)
+      return
+    }
+    const batch = files.slice(0, room)
+    if (files.length > batch.length) {
+      toast.message(`Só é possível adicionar mais ${room} foto(s)`)
+    }
+    for (const file of batch) {
       const r2key = await uploadFile(file)
 
       const fileId = await syncToFiles({
@@ -922,12 +932,14 @@ function ImovelCadastroPageInner() {
             >
               <FieldLabel>Fotos do imóvel *</FieldLabel>
               <FieldDescription>
-                PNG, JPEG ou GIF. Até {MAX_PHOTOS} imagens, máx.{' '}
+                PNG, JPEG ou GIF. Até {MAX_PROPERTY_PHOTOS} imagens, máx.{' '}
                 {MAX_PHOTO_BYTES / (1024 * 1024)} MB cada.
               </FieldDescription>
               <R2FileUploader
                 multiple={true}
                 filesIds={field.value}
+                totalFileSlots={MAX_PROPERTY_PHOTOS}
+                perPickMaxFiles={MAX_PROPERTY_PHOTOS}
                 handleUploadFiles={handleUploadFiles}
                 handleDeleteFile={handleDeleteFile}
               />

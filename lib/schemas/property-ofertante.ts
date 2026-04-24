@@ -2,9 +2,7 @@ import { zid } from 'convex-helpers/server/zod3'
 import { isValid } from 'date-fns'
 import { z } from 'zod'
 
-import { MAX_PROPERTY_PRICE } from '@/lib/property-limits'
-
-const MAX_PHOTOS = 5
+import { MAX_PROPERTY_PHOTOS, MAX_PROPERTY_PRICE } from '@/lib/property-limits'
 
 const cepDigits = (s: string) => s.replace(/\D/g, '')
 
@@ -41,7 +39,10 @@ export const propertyOfertanteFormSchema = z.object({
   filesIds: z
     .array(zid('files'))
     .min(1, 'Adicione pelo menos uma foto')
-    .max(MAX_PHOTOS, `No máximo ${MAX_PHOTOS} fotos`)
+    .max(
+      MAX_PROPERTY_PHOTOS,
+      `No máximo ${MAX_PROPERTY_PHOTOS} fotos`
+    )
 })
 
 export type PropertyOfertanteFormValues = z.infer<

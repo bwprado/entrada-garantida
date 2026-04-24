@@ -15,6 +15,7 @@ import {
   propertySaleDocumentTipo
 } from './propertySaleDocuments'
 import { r2 } from './r2'
+import { MAX_PROPERTY_PHOTOS } from './schema'
 
 /** User-scoped ofertante checklist documents (no propertyId) */
 const ofertanteChecklistTipo = v.union(
@@ -951,6 +952,10 @@ export const addPropertyImages = mutation({
       throw new Error('Propriedade não encontrada')
     }
     ensurePropertyOwnerOrAdmin(actor, property)
+
+    if (args.filesIds.length > MAX_PROPERTY_PHOTOS) {
+      throw new Error(`No máximo ${MAX_PROPERTY_PHOTOS} fotos por imóvel`)
+    }
 
     return await ctx.db.patch(args.propertyId, {
       filesIds: args.filesIds,

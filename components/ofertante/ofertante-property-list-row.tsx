@@ -43,6 +43,8 @@ function propertyStatusLabel(
       return { label: 'Em análise', variant: 'default' }
     case 'validated':
       return { label: 'Aprovado', variant: 'default' }
+    case 'paused':
+      return { label: 'Pausado', variant: 'secondary' }
     case 'selected':
       return { label: 'Selecionado', variant: 'default' }
     case 'rejected':
@@ -201,6 +203,11 @@ export function OfertantePropertyListRow({
             {p.status === 'pending' && (
               <p className="max-w-sm text-right text-xs text-muted-foreground">
                 Aguardando análise da equipe.
+              </p>
+            )}
+            {p.status === 'paused' && (
+              <p className="max-w-sm text-right text-xs text-muted-foreground">
+                Anúncio pausado temporariamente pela equipe.
               </p>
             )}
             {p.status === 'rejected' && (

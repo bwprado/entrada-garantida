@@ -7,6 +7,9 @@ const { users: _, ...authTablesWithoutUsers } = authTables
 // Price ceiling constant
 export const MAX_PROPERTY_PRICE = 200000
 
+/** Max listing images per property (keep in sync with lib/property-limits). */
+export const MAX_PROPERTY_PHOTOS = 10
+
 // User roles
 export const userRoleEnum = v.union(
   v.literal('admin'),
@@ -53,6 +56,7 @@ export const propertyStatusEnum = v.union(
   v.literal('draft'),
   v.literal('pending'),
   v.literal('validated'),
+  v.literal('paused'),
   v.literal('selected'),
   v.literal('rejected'),
   v.literal('sold')
