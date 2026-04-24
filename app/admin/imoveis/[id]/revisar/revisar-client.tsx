@@ -47,7 +47,9 @@ import {
   Users
 } from 'lucide-react'
 
-function parsePropertyId(raw: string | string[] | undefined): Id<'properties'> | null {
+function parsePropertyId(
+  raw: string | string[] | undefined
+): Id<'properties'> | null {
   if (typeof raw === 'string' && raw.length > 0) {
     return raw as Id<'properties'>
   }
@@ -113,7 +115,9 @@ export function RevisarClient() {
   const rejectMut = useMutation(api.properties.reject)
   const pauseListing = useMutation(api.properties.pauseListing)
   const resumeListing = useMutation(api.properties.resumeListing)
-  const adminInvalidateListing = useMutation(api.properties.adminInvalidateListing)
+  const adminInvalidateListing = useMutation(
+    api.properties.adminInvalidateListing
+  )
   const reopenToPending = useMutation(api.properties.reopenToPending)
 
   const [rejectOpen, setRejectOpen] = useState(false)
@@ -125,9 +129,7 @@ export function RevisarClient() {
   const [busy, setBusy] = useState(false)
 
   if (propertyId === null) {
-    return (
-      <p className="text-center text-muted-foreground">Link inválido.</p>
-    )
+    return <p className="text-center text-muted-foreground">Link inválido.</p>
   }
 
   if (review === undefined || docRows === undefined) {
@@ -152,9 +154,7 @@ export function RevisarClient() {
   const canResume = p.status === 'paused'
   const canInvalidate = p.status === 'validated' || p.status === 'paused'
   const canReopen =
-    p.status === 'validated' ||
-    p.status === 'paused' ||
-    p.status === 'rejected'
+    p.status === 'validated' || p.status === 'paused' || p.status === 'rejected'
   const owner =
     ofertante != null ? ofertante : construtor != null ? construtor : null
   const ownerLabel = ofertante != null ? 'Ofertante' : 'Construtor'
@@ -240,7 +240,9 @@ export function RevisarClient() {
         adminId: user._id,
         motivo: t
       })
-      toast.success('Publicação invalidada; interesses dos beneficiários foram removidos.')
+      toast.success(
+        'Publicação invalidada; interesses dos beneficiários foram removidos.'
+      )
       setInvalidateOpen(false)
       setMotivoInvalidate('')
     } catch (e) {
@@ -275,7 +277,8 @@ export function RevisarClient() {
           <p className="text-muted-foreground mt-1">{p.endereco}</p>
           {owner && (
             <p className="text-sm text-muted-foreground mt-2">
-              {ownerLabel}: <span className="text-foreground">{owner.nome}</span>
+              {ownerLabel}:{' '}
+              <span className="text-foreground">{owner.nome}</span>
               {owner.email ? (
                 <>
                   {' '}
@@ -311,65 +314,71 @@ export function RevisarClient() {
             </Button>
           </div>
         )}
-        {!isPending && user?._id && (canPause || canResume || canInvalidate || canReopen) && (
-          <div className="flex max-w-xl flex-col gap-2 sm:items-end">
-            <p className="text-sm text-muted-foreground text-right">
-              Status: <strong className="text-foreground">{p.status}</strong>
-            </p>
-            <div className="flex flex-wrap justify-end gap-2">
-              {canPause && (
-                <Button
-                  variant="outline"
-                  className="gap-1.5"
-                  disabled={busy}
-                  onClick={() => void handlePause()}
-                >
-                  <Pause className="size-4" />
-                  Pausar
-                </Button>
-              )}
-              {canResume && (
-                <Button
-                  variant="outline"
-                  className="gap-1.5"
-                  disabled={busy}
-                  onClick={() => void handleResume()}
-                >
-                  <Play className="size-4" />
-                  Retomar
-                </Button>
-              )}
-              {canInvalidate && (
-                <Button
-                  variant="destructive"
-                  className="gap-1.5"
-                  disabled={busy}
-                  onClick={() => setInvalidateOpen(true)}
-                >
-                  <Ban className="size-4" />
-                  Invalidar publicação
-                </Button>
-              )}
-              {canReopen && (
-                <Button
-                  variant="secondary"
-                  className="gap-1.5"
-                  disabled={busy}
-                  onClick={() => setReopenOpen(true)}
-                >
-                  <RotateCcw className="size-4" />
-                  Reabrir para análise
-                </Button>
-              )}
+        {!isPending &&
+          user?._id &&
+          (canPause || canResume || canInvalidate || canReopen) && (
+            <div className="flex max-w-xl flex-col gap-2 sm:items-end">
+              <p className="text-sm text-muted-foreground text-right">
+                Status: <strong className="text-foreground">{p.status}</strong>
+              </p>
+              <div className="flex flex-wrap justify-end gap-2">
+                {canPause && (
+                  <Button
+                    variant="outline"
+                    className="gap-1.5"
+                    disabled={busy}
+                    onClick={() => void handlePause()}
+                  >
+                    <Pause className="size-4" />
+                    Pausar
+                  </Button>
+                )}
+                {canResume && (
+                  <Button
+                    variant="outline"
+                    className="gap-1.5"
+                    disabled={busy}
+                    onClick={() => void handleResume()}
+                  >
+                    <Play className="size-4" />
+                    Retomar
+                  </Button>
+                )}
+                {canInvalidate && (
+                  <Button
+                    variant="destructive"
+                    className="gap-1.5"
+                    disabled={busy}
+                    onClick={() => setInvalidateOpen(true)}
+                  >
+                    <Ban className="size-4" />
+                    Invalidar publicação
+                  </Button>
+                )}
+                {canReopen && (
+                  <Button
+                    variant="secondary"
+                    className="gap-1.5"
+                    disabled={busy}
+                    onClick={() => setReopenOpen(true)}
+                  >
+                    <RotateCcw className="size-4" />
+                    Reabrir para análise
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
-        )}
-        {!isPending && !(user?._id && (canPause || canResume || canInvalidate || canReopen)) && (
-          <p className="text-sm text-amber-700 dark:text-amber-400 max-w-md text-right">
-            Status atual: <strong>{p.status}</strong> — ações de aprovação
-            ficam disponíveis apenas para imóveis em análise.
-          </p>
-        )}
+          )}
+        {!isPending &&
+          !(
+            user?._id &&
+            (canPause || canResume || canInvalidate || canReopen)
+          ) && (
+            <p className="text-sm text-amber-700 dark:text-amber-400 max-w-md text-right">
+              Status atual: <strong>{p.status}</strong> — ações de aprovação
+              ficam disponíveis apenas para imóveis em análise.
+            </p>
+          )}
       </div>
 
       <Card>
@@ -471,7 +480,9 @@ export function RevisarClient() {
                       </TableCell>
                       <TableCell>{selection.ordemPreferencia}</TableCell>
                       <TableCell className="text-muted-foreground">
-                        {new Date(selection.selecionadoEm).toLocaleString('pt-BR')}
+                        {new Date(selection.selecionadoEm).toLocaleString(
+                          'pt-BR'
+                        )}
                       </TableCell>
                     </TableRow>
                   )
@@ -497,15 +508,16 @@ export function RevisarClient() {
                     href={u ?? '#'}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="relative aspect-[4/3] overflow-hidden rounded-md border bg-muted"
+                    className="relative aspect-4/3 overflow-hidden rounded-md border bg-muted"
                   >
                     {u ? (
                       <Image
                         src={u}
                         alt=""
                         fill
+                        loading="eager"
                         className="object-cover"
-                        sizes="(max-width:768px) 50vw, 200px"
+                        sizes="300px"
                       />
                     ) : (
                       <div className="flex h-full items-center justify-center">
@@ -687,9 +699,9 @@ export function RevisarClient() {
           <AlertDialogHeader>
             <AlertDialogTitle>Reabrir para análise?</AlertDialogTitle>
             <AlertDialogDescription>
-              O imóvel voltará para <strong>em análise</strong> e a checklist
-              de validação será resetada. Use quando precisar corrigir a
-              validação sem rejeitar o cadastro ao ofertante.
+              O imóvel voltará para <strong>em análise</strong> e a checklist de
+              validação será resetada. Use quando precisar corrigir a validação
+              sem rejeitar o cadastro ao ofertante.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
