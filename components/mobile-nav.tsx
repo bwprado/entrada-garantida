@@ -14,10 +14,10 @@ import {
   SheetTrigger
 } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
-import { LogInIcon, Menu, UserPlusIcon, X } from 'lucide-react'
+import { LogInIcon, Menu, X } from 'lucide-react'
 
 type MobileNavProps = {
-  /** Replaces default “Entrar / Cadastro” stack in the drawer footer */
+  /** Replaces default “Acessar sistema” CTA in the drawer footer */
   footer?: React.ReactNode
 }
 
@@ -128,20 +128,12 @@ export function MobileNav({ footer }: MobileNavProps) {
               </div>
               <div className="flex flex-col gap-2">
                 {footer ?? (
-                  <>
-                    <Button asChild className="w-full" variant="outline">
-                      <Link href="/login" onClick={close}>
-                        <LogInIcon className="size-4 shrink-0" aria-hidden />
-                        Acessar sistema
-                      </Link>
-                    </Button>
-                    <Button asChild className="w-full">
-                      <Link href="/ofertante/cadastro" onClick={close}>
-                        <UserPlusIcon className="size-4 shrink-0" aria-hidden />
-                        Cadastro ofertante
-                      </Link>
-                    </Button>
-                  </>
+                  <Button asChild className="w-full shadow-brand-md">
+                    <Link href="/login" onClick={close}>
+                      <LogInIcon className="size-4 shrink-0" aria-hidden />
+                      Acessar sistema
+                    </Link>
+                  </Button>
                 )}
               </div>
             </SheetFooter>

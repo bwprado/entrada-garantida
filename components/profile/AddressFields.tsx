@@ -9,6 +9,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { mergeRefs } from "@/lib/utils"
 import { useMaskito } from "@maskito/react"
 import { cepMaskOptions } from "@/lib/masks"
 
@@ -35,7 +36,11 @@ export function AddressFields({ control, prefix = "" }: AddressFieldsProps) {
             <FormItem>
               <FormLabel>CEP</FormLabel>
               <FormControl>
-                <Input {...field} ref={cepRef} placeholder="00000-000" />
+                <Input
+                  {...field}
+                  ref={mergeRefs(field.ref, cepRef)}
+                  placeholder="00000-000"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

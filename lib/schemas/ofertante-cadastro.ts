@@ -59,7 +59,7 @@ export const ofertanteProfileSchema = z.object({
     .min(1, "Informe a data de nascimento")
     .refine(
       (v) => parseDataNascimentoBrParaIso(v) !== null,
-      "Use uma data válida (DD-MM-AAAA)"
+      "Use uma data válida (DD/MM/AAAA)"
     ),
   profissao: z
     .string({ required_error: "Profissão é obrigatória" })

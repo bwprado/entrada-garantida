@@ -1,8 +1,8 @@
 /**
- * Parse birth date typed as DD-MM-YYYY (Brazilian day-first order) to ISO YYYY-MM-DD.
+ * Parse birth date typed as DD/MM/AAAA or DD-MM-AAAA (day first) to ISO YYYY-MM-DD.
  */
 export function parseDataNascimentoBrParaIso(value: string): string | null {
-  const m = value.trim().match(/^(\d{2})-(\d{2})-(\d{4})$/)
+  const m = value.trim().match(/^(\d{2})[/-](\d{2})[/-](\d{4})$/)
   if (!m) return null
   const day = Number(m[1])
   const month = Number(m[2])
@@ -21,9 +21,9 @@ export function parseDataNascimentoBrParaIso(value: string): string | null {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
 }
 
-/** ISO YYYY-MM-DD → masked display DD-MM-YYYY for profile prefill. */
+/** ISO YYYY-MM-DD → display DD/MM/AAAA for forms and masks. */
 export function formatIsoDateToDataNascimentoBr(iso: string): string {
   const m = iso.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/)
   if (!m) return ""
-  return `${m[3]}-${m[2]}-${m[1]}`
+  return `${m[3]}/${m[2]}/${m[1]}`
 }

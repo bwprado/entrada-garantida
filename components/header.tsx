@@ -28,14 +28,9 @@ export function Header({
     actions != null ? (
       <div className="flex items-center gap-2">{actions}</div>
     ) : showLoginButton ? (
-      <>
-        <Button asChild size="sm" variant="outline">
-          <Link href="/login">Acessar sistema</Link>
-        </Button>
-        <Button asChild size="sm" className="shadow-brand-md">
-          <Link href="/ofertante/cadastro">Cadastro ofertante</Link>
-        </Button>
-      </>
+      <Button asChild size="sm" className="shadow-brand-md">
+        <Link href="/login">Acessar sistema</Link>
+      </Button>
     ) : null
 
   const mobileDrawerFooter =

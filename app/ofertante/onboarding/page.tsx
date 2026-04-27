@@ -24,7 +24,8 @@ import {
   cpfMaskOptions,
   dataNascimentoBrMaskOptions,
 } from "@/lib/masks";
-import { fetchAddressByCEP } from "@/lib/validation";
+import { normalizePhone } from "@/lib/normalize-phone";
+import { fetchAddressByCEP, formatCPF } from "@/lib/validation";
 import { useMaskito } from "@maskito/react";
 import { useQuery } from "convex/react";
 import { ArrowLeft, CheckCircle2, Loader2, MapPin, User } from "lucide-react";
@@ -165,7 +166,7 @@ export default function OfertanteOnboardingPage() {
         return;
       }
       if (parseDataNascimentoBrParaIso(dataNascimento) === null) {
-        setError("Informe uma data de nascimento válida (DD-MM-AAAA)");
+        setError("Informe uma data de nascimento válida (DD/MM/AAAA)");
         return;
       }
       setCurrentStep(2);
@@ -256,6 +257,12 @@ export default function OfertanteOnboardingPage() {
   };
 
   const ofertanteProfileForUi = isOfertanteProfile(profile) ? profile : null;
+  const summaryPhoneE164 =
+    userWithProfile?.user?.phone ?? user?.phone ?? undefined;
+  const summaryPhoneDisplay = summaryPhoneE164
+    ? normalizePhone(summaryPhoneE164).display()
+    : "—";
+
   const hasProfileData = !!(
     user?.cpf ||
     ofertanteProfileForUi?.dataNascimento ||
@@ -356,7 +363,7 @@ export default function OfertanteOnboardingPage() {
                     type="text"
                     inputMode="numeric"
                     autoComplete="bday"
-                    placeholder="DD-MM-AAAA"
+                    placeholder="DD/MM/AAAA"
                     value={dataNascimento}
                     onChange={(e) => setDataNascimento(e.target.value)}
                     ref={dataNascimentoInputRef}
@@ -537,10 +544,18 @@ export default function OfertanteOnboardingPage() {
                       </div>
                       <div>
                         <span className="text-muted-foreground">CPF:</span>{" "}
-                        <span className="font-medium">{cpf}</span>
+                        <span className="font-medium">{formatCPF(cpf)}</span>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Data de Nascimento:</span>{" "}
+                        <span className="text-muted-foreground">Celular:</span>{" "}
+                        <span className="font-medium">
+                          {summaryPhoneDisplay}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">
+                          Data de Nascimento:
+                        </span>{" "}
                         <span className="font-medium">
                           {formatDataNascimentoDisplay(dataNascimento)}
                         </span>

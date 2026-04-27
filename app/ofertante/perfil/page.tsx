@@ -4,7 +4,12 @@ import { AddressFields, CommonFields, OfertanteFields, ProfileLayout } from "@/c
 import { Form } from "@/components/ui/form"
 import { api } from "@/convex/_generated/api"
 import { Doc } from "@/convex/_generated/dataModel"
-import { parseDataNascimentoBrParaIso } from "@/lib/date-br"
+import {
+  formatIsoDateToDataNascimentoBr,
+  parseDataNascimentoBrParaIso,
+} from "@/lib/date-br"
+import { normalizePhone } from "@/lib/normalize-phone"
+import { formatCep, formatCPF } from "@/lib/validation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery } from "convex/react"
 import { useEffect } from "react"
@@ -13,21 +18,19 @@ import { toast } from "sonner"
 import { z } from "zod"
 
 const perfilOfertanteSchema = z.object({
-  // Common fields
+  // Common fields (CPF/celular shown read-only via identifiersDisplay)
   nome: z.string().min(3, "Nome completo é obrigatório"),
   nomeSocial: z.string().optional(),
-  cpf: z.string().min(14, "CPF inválido"),
-  telefone: z.string().min(14, "Celular inválido"),
   email: z.string().email("E-mail inválido").optional().or(z.literal("")),
 
   // Ofertante fields
-  rg: z.string().min(3, "RG é obrigatório"),
+  rg: z.string(),
   dataNascimento: z
     .string()
     .min(1, "Data de nascimento é obrigatória")
     .refine(
       (v) => parseDataNascimentoBrParaIso(v) !== null,
-      "Use uma data válida (DD-MM-AAAA)"
+      "Use uma data válida (DD/MM/AAAA)"
     ),
   estadoCivil: z.enum([
     "solteiro",
@@ -37,7 +40,10 @@ const perfilOfertanteSchema = z.object({
     "uniao_estavel",
     "separado",
   ]),
-  profissao: z.string().min(2, "Profissão é obrigatória"),
+  profissao: z.union([
+    z.literal(""),
+    z.string().min(2, "Profissão muito curta"),
+  ]),
 
   // Address
   cep: z.string().min(9, "CEP inválido"),
@@ -64,8 +70,6 @@ export default function OfertantePerfilPage() {
     defaultValues: {
       nome: "",
       nomeSocial: "",
-      cpf: "",
-      telefone: "",
       email: "",
       rg: "",
       dataNascimento: "",
@@ -88,14 +92,14 @@ export default function OfertantePerfilPage() {
       form.reset({
         nome: user.nome,
         nomeSocial: user.nome || "",
-        cpf: user.cpf,
-        telefone: user.phone,
         email: user.email || "",
-        rg: profile.rg,
-        dataNascimento: profile.dataNascimento,
+        rg: profile.rg ?? "",
+        dataNascimento:
+          formatIsoDateToDataNascimentoBr(profile.dataNascimento) ||
+          profile.dataNascimento,
         estadoCivil: profile.estadoCivil,
-        profissao: profile.profissao,
-        cep: profile.cep,
+        profissao: profile.profissao ?? "",
+        cep: formatCep(profile.cep),
         endereco: profile.endereco,
         numero: profile.numero,
         complemento: profile.complemento || "",
@@ -113,6 +117,14 @@ export default function OfertantePerfilPage() {
         return
       }
 
+      const dataNascimentoIso = parseDataNascimentoBrParaIso(
+        data.dataNascimento
+      )
+      if (!dataNascimentoIso) {
+        toast.error("Data de nascimento inválida")
+        return
+      }
+
       // Update profile data
       await updateProfile({
         userId: user._id,
@@ -124,10 +136,10 @@ export default function OfertantePerfilPage() {
         cidade: data.cidade,
         estado: data.estado,
         email: data.email || undefined,
-        rg: data.rg,
-        dataNascimento: data.dataNascimento,
+        rg: data.rg.trim(),
+        dataNascimento: dataNascimentoIso,
         estadoCivil: data.estadoCivil,
-        profissao: data.profissao,
+        profissao: data.profissao.trim() || undefined,
       })
 
       // Update basic info (only nomeSocial can be updated by user)
@@ -168,15 +180,21 @@ export default function OfertantePerfilPage() {
         backLabel="Voltar ao Dashboard"
       >
         <div className="space-y-8">
-          <CommonFields control={form.control} />
+          <CommonFields
+            control={form.control as never}
+            identifiersDisplay={{
+              cpf: formatCPF(user.cpf),
+              phone: normalizePhone(user.phone).display() || "—",
+            }}
+          />
           
           <div className="border-t pt-6" />
           
-          <OfertanteFields control={form.control} />
+          <OfertanteFields control={form.control as never} />
           
           <div className="border-t pt-6" />
           
-          <AddressFields control={form.control} />
+          <AddressFields control={form.control as never} />
         </div>
       </ProfileLayout>
     </Form>

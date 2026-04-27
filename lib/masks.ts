@@ -82,15 +82,15 @@ export const cepMaskOptions: MaskitoOptions = {
   plugins: [...reactIntegrationPlugins]
 }
 
-/** Birth date: DD-MM-YYYY (day-month-year, Brazilian order). */
+/** Birth date: DD/MM/AAAA (day-month-year, Brazilian order). */
 export const dataNascimentoBrMaskOptions: MaskitoOptions = {
   mask: [
     /\d/,
     /\d/,
-    '-',
+    '/',
     /\d/,
     /\d/,
-    '-',
+    '/',
     /\d/,
     /\d/,
     /\d/,

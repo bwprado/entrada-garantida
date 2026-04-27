@@ -14,6 +14,15 @@ export function formatCPF(cpfString: string): string {
   return cpfString
 }
 
+/** CEP for display: 8 digits → 00000-000 */
+export function formatCep(cep: string): string {
+  const cleaned = cep.replace(/\D/g, '')
+  if (cleaned.length === 8) {
+    return cleaned.replace(/(\d{5})(\d{3})/, '$1-$2')
+  }
+  return cep
+}
+
 // CEP auto-completion via ViaCEP
 export async function fetchAddressByCEP(cep: string): Promise<{
   logradouro: string

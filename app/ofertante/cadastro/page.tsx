@@ -351,7 +351,7 @@ export default function OfertanteCadastroPage() {
                     type="text"
                     inputMode="numeric"
                     autoComplete="bday"
-                    placeholder="DD-MM-AAAA"
+                    placeholder="DD/MM/AAAA"
                     aria-invalid={fieldState.invalid}
                     name={field.name}
                     onBlur={field.onBlur}
@@ -359,7 +359,7 @@ export default function OfertanteCadastroPage() {
                     onChange={field.onChange}
                   />
                   <FieldDescription>
-                    Formato DD-MM-AAAA (dia-mês-ano).
+                    Formato DD/MM/AAAA (dia-mês-ano).
                   </FieldDescription>
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />

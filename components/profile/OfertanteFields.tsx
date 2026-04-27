@@ -16,8 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { mergeRefs } from "@/lib/utils"
 import { useMaskito } from "@maskito/react"
-import { dataNascimentoBrMaskOptions, rgMaskOptions } from "@/lib/masks"
+import { dataNascimentoBrMaskOptions } from "@/lib/masks"
 
 const estadoCivilOptions = [
   { value: "solteiro", label: "Solteiro(a)" },
@@ -33,7 +34,6 @@ interface OfertanteFieldsProps {
 }
 
 export function OfertanteFields({ control }: OfertanteFieldsProps) {
-  const rgRef = useMaskito({ options: rgMaskOptions })
   const dataNascRef = useMaskito({ options: dataNascimentoBrMaskOptions })
 
   return (
@@ -47,9 +47,9 @@ export function OfertanteFields({ control }: OfertanteFieldsProps) {
           name="rg"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>RG</FormLabel>
+              <FormLabel>RG (opcional)</FormLabel>
               <FormControl>
-                <Input {...field} ref={rgRef} />
+                <Input {...field} value={field.value ?? ""} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -64,10 +64,10 @@ export function OfertanteFields({ control }: OfertanteFieldsProps) {
             <FormItem>
               <FormLabel>Data de Nascimento</FormLabel>
               <FormControl>
-                <Input 
-                  {...field} 
-                  ref={dataNascRef} 
-                  placeholder="DD-MM-AAAA"
+                <Input
+                  {...field}
+                  ref={mergeRefs(field.ref, dataNascRef)}
+                  placeholder="DD/MM/AAAA"
                 />
               </FormControl>
               <FormMessage />

@@ -31,6 +31,9 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
+import { formatIsoDateToDataNascimentoBr } from '@/lib/date-br'
+import { normalizePhone } from '@/lib/normalize-phone'
+import { formatCPF } from '@/lib/validation'
 import { OfertantePropertyListRow } from '@/components/ofertante/ofertante-property-list-row'
 
 type ChecklistDocTipo = 'rg' | 'comp_residencia' | 'matricula' | 'iptu'
@@ -376,19 +379,29 @@ export default function OfertanteDashboardPage() {
                     <div className="space-y-1">
                       <p className="text-sm text-muted-foreground">CPF</p>
                       <p className="font-medium">
-                        {user?.cpf || 'Não informado'}
+                        {user?.cpf
+                          ? formatCPF(user.cpf)
+                          : 'Não informado'}
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">Telefone</p>
-                      <p className="font-medium">{user?.phone}</p>
+                      <p className="text-sm text-muted-foreground">Celular</p>
+                      <p className="font-medium">
+                        {user?.phone
+                          ? normalizePhone(user.phone).display()
+                          : 'Não informado'}
+                      </p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm text-muted-foreground">
                         Data de Nascimento
                       </p>
                       <p className="font-medium">
-                        {profile?.dataNascimento || 'Não informado'}
+                        {profile?.dataNascimento
+                          ? formatIsoDateToDataNascimentoBr(
+                              profile.dataNascimento
+                            ) || profile.dataNascimento
+                          : 'Não informado'}
                       </p>
                     </div>
                   </div>
