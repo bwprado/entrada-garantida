@@ -1,6 +1,6 @@
 import type { Doc } from '@/convex/_generated/dataModel'
 import type { LucideIcon } from 'lucide-react'
-import { Home, LayoutDashboard, PlusCircle } from 'lucide-react'
+import { LayoutDashboard, PlusCircle } from 'lucide-react'
 
 export type AppUserRole = Doc<'users'>['role']
 
@@ -49,11 +49,6 @@ export function getOfertanteActionLinks(): readonly OfertanteActionLink[] {
       label: 'Novo imóvel',
       href: '/ofertante/imoveis/cadastro',
       icon: PlusCircle
-    },
-    {
-      label: 'Ver imóveis',
-      href: '/imoveis',
-      icon: Home
     }
   ]
 }
