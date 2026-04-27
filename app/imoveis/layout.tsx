@@ -1,5 +1,5 @@
+import { AuthenticatedHeaderActions } from '@/components/authenticated-header-actions'
 import { Header } from '@/components/header'
-import { ImoveisHeaderActions } from '@/components/imoveis-header-actions'
 import { getServerCurrentUser } from '@/lib/server-auth'
 
 export default async function ImoveisLayout({
@@ -12,7 +12,10 @@ export default async function ImoveisLayout({
   return (
     <div className="min-h-screen flex flex-col gap-4 bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       {user ? (
-        <Header showLoginButton={false} actions={<ImoveisHeaderActions />} />
+        <Header
+          showLoginButton={false}
+          actions={<AuthenticatedHeaderActions />}
+        />
       ) : (
         <Header />
       )}

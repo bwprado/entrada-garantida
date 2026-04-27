@@ -6,8 +6,8 @@ import {
   StaggerContainer,
   StaggerItem
 } from '@/components/animations'
+import { AuthenticatedHeaderActions } from '@/components/authenticated-header-actions'
 import { Header } from '@/components/header'
-import { ImoveisHeaderActions } from '@/components/imoveis-header-actions'
 import { Button } from '@/components/ui/button'
 import { getServerCurrentUser } from '@/lib/server-auth'
 import { Card, CardContent } from '@/components/ui/card'
@@ -31,7 +31,7 @@ export default async function LandingPage() {
         <Header
           floatingScrollExpand
           showLoginButton={false}
-          actions={<ImoveisHeaderActions />}
+          actions={<AuthenticatedHeaderActions />}
         />
       ) : (
         <Header floatingScrollExpand />

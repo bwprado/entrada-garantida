@@ -52,3 +52,11 @@ export function getOfertanteActionLinks(): readonly OfertanteActionLink[] {
     }
   ]
 }
+
+/** Outline header CTAs shown next to the avatar menu, per role. */
+export function getHeaderQuickActionLinks(
+  role: AppUserRole | string | undefined
+): readonly OfertanteActionLink[] {
+  if (role === 'ofertante') return getOfertanteActionLinks()
+  return []
+}
