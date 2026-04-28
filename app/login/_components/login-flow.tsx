@@ -754,9 +754,6 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
                             </FormItem>
                           )}
                         />
-                        {error && (
-                          <p className="text-sm text-destructive">{error}</p>
-                        )}
                         <Button
                           type="submit"
                           className="w-full"
