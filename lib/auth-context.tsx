@@ -4,6 +4,7 @@ import { api } from '@/convex/_generated/api'
 import type { Doc } from '@/convex/_generated/dataModel'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { useConvexAuth, useMutation, useQuery } from 'convex/react'
+import { getUserErrorMessage } from '@/lib/convex-error'
 import {
   createContext,
   useCallback,
@@ -27,12 +28,6 @@ function providerIdForPersona(p: LoginPersona): string {
     default:
       return 'phone_ofertante'
   }
-}
-
-function errorMessage(err: unknown): string {
-  if (err instanceof Error) return err.message
-  if (typeof err === 'string') return err
-  return 'Erro inesperado'
 }
 
 type AuthContextValue = {
@@ -164,7 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         return await assertMutation({ cpf, telefone })
       } catch (e) {
-        return { success: false as const, error: errorMessage(e) }
+        return { success: false as const, error: getUserErrorMessage(e) }
       }
     },
     [assertMutation]
@@ -184,7 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           telefoneMascarado: n.display()
         }
       } catch (e) {
-        return { success: false as const, error: errorMessage(e) }
+        return { success: false as const, error: getUserErrorMessage(e) }
       }
     },
     [signIn]
@@ -201,7 +196,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await signIn(providerIdForPersona(persona), { phone, code })
         return { success: true as const }
       } catch (e) {
-        return { success: false as const, error: errorMessage(e) }
+        return { success: false as const, error: getUserErrorMessage(e) }
       }
     },
     [signIn]
@@ -219,7 +214,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         return { success: true as const }
       } catch (e) {
-        return { success: false as const, error: errorMessage(e) }
+        return { success: false as const, error: getUserErrorMessage(e) }
       }
     },
     [registerOfertanteMutation]
@@ -230,7 +225,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await acceptTermsMutation({})
       return { success: true as const }
     } catch (e) {
-      return { success: false as const, error: errorMessage(e) }
+      return { success: false as const, error: getUserErrorMessage(e) }
     }
   }, [acceptTermsMutation])
 
@@ -239,7 +234,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await confirmDataMutation({})
       return { success: true as const }
     } catch (e) {
-      return { success: false as const, error: errorMessage(e) }
+      return { success: false as const, error: getUserErrorMessage(e) }
     }
   }, [confirmDataMutation])
 
@@ -249,7 +244,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await reportDataErrorMutation({ mensagem })
         return { success: true as const }
       } catch (e) {
-        return { success: false as const, error: errorMessage(e) }
+        return { success: false as const, error: getUserErrorMessage(e) }
       }
     },
     [reportDataErrorMutation]
@@ -288,7 +283,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         return { success: true as const }
       } catch (e) {
-        return { success: false as const, error: errorMessage(e) }
+        return { success: false as const, error: getUserErrorMessage(e) }
       }
     },
     [completeOfertanteOnboardingMutation]

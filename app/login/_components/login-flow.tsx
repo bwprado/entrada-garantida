@@ -247,6 +247,17 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
     }
   }
 
+  const showAuthError = (
+    message: string,
+    field?: FieldPath<LoginFormValues>
+  ) => {
+    setError(message)
+    toast.error(message)
+    if (field) {
+      form.setError(field, { message })
+    }
+  }
+
   const handleRequestOTP = async () => {
     setIsLoading(true)
     setError('')
@@ -285,7 +296,7 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
         setStep('otp')
         setCountdown(60)
       } else {
-        setError(otp.error ?? 'Erro ao enviar código')
+        showAuthError(otp.error ?? 'Erro ao enviar código', 'telefone')
       }
       setIsLoading(false)
       return
@@ -328,7 +339,7 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
         setStep('otp')
         setCountdown(60)
       } else {
-        setError(otp.error ?? 'Erro ao enviar código')
+        showAuthError(otp.error ?? 'Erro ao enviar código', 'telefone')
       }
       setIsLoading(false)
       return
@@ -349,7 +360,7 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
       setStep('otp')
       setCountdown(60)
     } else {
-      setError(otp.error ?? 'Erro ao enviar código')
+      showAuthError(otp.error ?? 'Erro ao enviar código', 'telefone')
     }
     setIsLoading(false)
   }
@@ -415,7 +426,7 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
         'beneficiary'
       )
       if (!result.success) {
-        setError(result.error || 'Código inválido')
+        showAuthError(result.error || 'Código inválido', 'otp')
       }
       // Next steps: useEffect when user loads
     } else if (variant === 'ofertante') {
@@ -425,7 +436,7 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
         'ofertante'
       )
       if (!result.success) {
-        setError(result.error || 'Código inválido')
+        showAuthError(result.error || 'Código inválido', 'otp')
       } else {
         toast.success('Login realizado')
       }
@@ -436,7 +447,7 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
         'admin'
       )
       if (!result.success) {
-        setError(result.error || 'Código inválido')
+        showAuthError(result.error || 'Código inválido', 'otp')
       } else {
         toast.success('Login realizado')
       }
