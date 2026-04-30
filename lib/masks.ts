@@ -3,7 +3,7 @@ import {
   maskitoNumberOptionsGenerator,
   maskitoParseNumber,
   maskitoStringifyNumber,
-  type MaskitoNumberParams,
+  type MaskitoNumberParams
 } from '@maskito/kit'
 
 import { MAX_PROPERTY_PRICE } from '@/lib/property-limits'
@@ -19,13 +19,14 @@ export const brlCurrencyMaskParams: MaskitoNumberParams = {
   thousandSeparator: '.',
   decimalSeparator: ',',
   minimumFractionDigits: 0,
-  maximumFractionDigits: 2,
+  maximumFractionDigits: 2
 }
 
 export const brlCurrencyMaskOptions: MaskitoOptions =
   maskitoNumberOptionsGenerator(brlCurrencyMaskParams)
 
 export function formatBrlCurrency(value: number): string {
+  if (value === 0 || value === undefined || value === null) return 'R$ 0,00'
   return maskitoStringifyNumber(value, brlCurrencyMaskParams)
 }
 
@@ -84,18 +85,7 @@ export const cepMaskOptions: MaskitoOptions = {
 
 /** Birth date: DD/MM/AAAA (day-month-year, Brazilian order). */
 export const dataNascimentoBrMaskOptions: MaskitoOptions = {
-  mask: [
-    /\d/,
-    /\d/,
-    '/',
-    /\d/,
-    /\d/,
-    '/',
-    /\d/,
-    /\d/,
-    /\d/,
-    /\d/
-  ],
+  mask: [/\d/, /\d/, '/', /\d/, /\d/, '/', /\d/, /\d/, /\d/, /\d/],
   plugins: [...reactIntegrationPlugins]
 }
 

@@ -12,6 +12,8 @@ import {
   StepFields,
   SubmitButton
 } from '@/components/multi-step-viewer'
+import { AmenityToggle } from '@/components/property/amenity-toggle'
+import { RoomCounter } from '@/components/property/room-counter'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import {
@@ -28,6 +30,7 @@ import {
 } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
 import { api } from '@/convex/_generated/api'
+import { Id } from '@/convex/_generated/dataModel'
 import { MultiStepFormProvider } from '@/hooks/use-multi-step-viewer'
 import { useAuth } from '@/lib/auth-context'
 import {
@@ -37,30 +40,52 @@ import {
   parseBrlCurrency
 } from '@/lib/masks'
 import {
-  propertyOfertanteFormSchema,
-  type PropertyOfertanteFormValues
-} from '@/lib/schemas/property-ofertante'
-import { cn, mergeRefs } from '@/lib/utils'
+  AMENITY_CONFIG,
+  AMENITY_DEFAULTS,
+  MAX_PROPERTY_PHOTOS,
+  ROOM_COUNT_LIMITS,
+  ROOM_DEFAULTS,
+  type AmenityType,
+  type RoomType
+} from '@/lib/property-limits'
 import {
   PROPERTY_SALE_DOCUMENT_ITEMS,
   PROPERTY_SALE_DOCUMENT_TIPOS,
   type PropertySaleDocumentTipo
 } from '@/lib/property-sale-documents'
-import { MAX_PROPERTY_PHOTOS } from '@/lib/property-limits'
+import {
+  propertyOfertanteFormSchema,
+  type PropertyOfertanteFormValues
+} from '@/lib/schemas/property-ofertante'
+import { cn, mergeRefs } from '@/lib/utils'
 import { fetchAddressByCEP } from '@/lib/validation'
 import { useUploadFile } from '@convex-dev/r2/react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMaskito } from '@maskito/react'
 import { useMutation, useQuery } from 'convex/react'
-import { format, isValid } from 'date-fns'
+import { format, isValid, subYears } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
   ArrowLeft,
+  Bath,
+  BedDouble,
+  Building,
   Calendar as CalendarIcon,
+  Car,
   ChevronLeft,
   ChevronRight,
+  CookingPot,
+  Dumbbell,
   FileText,
+  Flame,
   Loader2,
+  Sofa,
+  Star,
+  Sun,
+  TreePine,
+  WashingMachine,
+  Waves,
+  Wifi,
   X
 } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -72,7 +97,6 @@ import {
   type DefaultValues
 } from 'react-hook-form'
 import { toast } from 'sonner'
-import { Id } from '@/convex/_generated/dataModel'
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024
 
@@ -86,7 +110,8 @@ function toValidDate(value: unknown): Date | undefined {
   return undefined
 }
 
-function dateToUtcStartMs(d: Date): number {
+function dateToUtcStartMs(d: Date | undefined): number | undefined {
+  if (!d) return undefined
   return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())
 }
 
@@ -102,7 +127,9 @@ const emptyFormDefaults: DefaultValues<PropertyOfertanteFormValues> = {
   descricao: '',
   cep: '',
   endereco: '',
-  compartimentos: 1,
+  valor_venda: '',
+  ...ROOM_DEFAULTS,
+  ...AMENITY_DEFAULTS,
   filesIds: []
 } as DefaultValues<PropertyOfertanteFormValues>
 
@@ -215,9 +242,9 @@ function PropertySaleDocumentRow({
 function ImovelCadastroPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const propertyIdParam = searchParams.get('propertyId') as
-    | Id<'properties'>
-    | null
+  const propertyIdParam = searchParams.get(
+    'propertyId'
+  ) as Id<'properties'> | null
   const isEdit = Boolean(propertyIdParam)
 
   const { user, isAuthenticated, isLoading } = useAuth()
@@ -269,11 +296,7 @@ function ImovelCadastroPageInner() {
       fileIds: [args.fileId]
     })
     if (fromSingle !== undefined) {
-      localStore.setQuery(
-        api.r2.getFileUrlAndMetadata,
-        { fileIds: [] },
-        []
-      )
+      localStore.setQuery(api.r2.getFileUrlAndMetadata, { fileIds: [] }, [])
     }
   })
   const syncToFiles = useMutation(api.r2.syncToFiles)
@@ -343,17 +366,36 @@ function ImovelCadastroPageInner() {
       return
     }
     if (!existingProperty) return
+    const ep = existingProperty as Record<string, unknown>
     reset({
-      titulo: existingProperty.titulo,
-      descricao: existingProperty.descricao ?? '',
-      cep: formatCepForInput(existingProperty.cep),
-      endereco: existingProperty.endereco,
-      compartimentos: existingProperty.compartimentos,
-      tamanho: existingProperty.tamanho,
-      data_construcao: new Date(existingProperty.dataConstrucao),
+      titulo: ep.titulo as string,
+      descricao: (ep.descricao as string) ?? '',
+      cep: formatCepForInput(ep.cep as string | undefined),
+      endereco: ep.endereco as string,
+      quartos: (ep.quartos as number) ?? 0,
+      suites: (ep.suites as number) ?? 0,
+      banheiros: (ep.banheiros as number) ?? 0,
+      salasEstar: (ep.salasEstar as number) ?? 0,
+      cozinhas: (ep.cozinhas as number) ?? 0,
+      vagasGaragem: (ep.vagasGaragem as number) ?? 0,
+      areasServico: (ep.areasServico as number) ?? 0,
+      ruaPavimentada: (ep.ruaPavimentada as boolean) ?? false,
+      garagem: (ep.garagem as boolean) ?? false,
+      areaLavanderia: (ep.areaLavanderia as boolean) ?? false,
+      portaria24h: (ep.portaria24h as boolean) ?? false,
+      elevador: (ep.elevador as boolean) ?? false,
+      piscina: (ep.piscina as boolean) ?? false,
+      churrasqueira: (ep.churrasqueira as boolean) ?? false,
+      academia: (ep.academia as boolean) ?? false,
+      jardim: (ep.jardim as boolean) ?? false,
+      varanda: (ep.varanda as boolean) ?? false,
+      tamanho: ep.tamanho as number,
+      data_construcao: existingProperty.dataConstrucao
+        ? new Date(existingProperty.dataConstrucao)
+        : undefined,
       matricula: existingProperty.matricula,
       inscricao_imobiliaria: existingProperty.inscricaoImobiliaria,
-      valor_venda: existingProperty.valorVenda,
+      valor_venda: formatBrlCurrency(existingProperty.valorVenda),
       filesIds: existingProperty.filesIds ?? []
     })
   }, [isEdit, existingProperty, reset])
@@ -366,8 +408,14 @@ function ImovelCadastroPageInner() {
 
     setSubmitting(true)
     const { filesIds, ...rest } = data
+    const parsedValorVenda = parseBrlCurrency(rest.valor_venda)
 
     try {
+      if (parsedValorVenda === undefined || Number.isNaN(parsedValorVenda)) {
+        toast.error('Informe um valor válido para venda')
+        return
+      }
+
       if (isEdit && propertyIdParam) {
         if (
           existingProperty &&
@@ -401,13 +449,29 @@ function ImovelCadastroPageInner() {
           descricao: rest.descricao?.trim() ? rest.descricao : undefined,
           cep: rest.cep ?? '',
           endereco: rest.endereco,
-          compartimentos: rest.compartimentos,
           tamanho: rest.tamanho,
           dataConstrucao: dateToUtcStartMs(rest.data_construcao),
           matricula: rest.matricula,
           inscricaoImobiliaria: rest.inscricao_imobiliaria,
-          valorVenda: rest.valor_venda
-        })
+          valorVenda: parsedValorVenda,
+          quartos: rest.quartos,
+          suites: rest.suites,
+          banheiros: rest.banheiros,
+          salasEstar: rest.salasEstar,
+          cozinhas: rest.cozinhas,
+          vagasGaragem: rest.vagasGaragem,
+          areasServico: rest.areasServico,
+          ruaPavimentada: rest.ruaPavimentada,
+          garagem: rest.garagem,
+          areaLavanderia: rest.areaLavanderia,
+          portaria24h: rest.portaria24h,
+          elevador: rest.elevador,
+          piscina: rest.piscina,
+          churrasqueira: rest.churrasqueira,
+          academia: rest.academia,
+          jardim: rest.jardim,
+          varanda: rest.varanda
+        } as any)
         try {
           await addPropertyImages({
             filesIds,
@@ -447,13 +511,29 @@ function ImovelCadastroPageInner() {
         descricao: rest.descricao?.trim() ? rest.descricao : undefined,
         cep: cepArgCreate,
         endereco: rest.endereco,
-        compartimentos: rest.compartimentos,
         tamanho: rest.tamanho,
         dataConstrucao: dateToUtcStartMs(rest.data_construcao),
         matricula: rest.matricula,
         inscricaoImobiliaria: rest.inscricao_imobiliaria,
-        valorVenda: rest.valor_venda
-      })
+        valorVenda: parsedValorVenda,
+        quartos: rest.quartos,
+        suites: rest.suites,
+        banheiros: rest.banheiros,
+        salasEstar: rest.salasEstar,
+        cozinhas: rest.cozinhas,
+        vagasGaragem: rest.vagasGaragem,
+        areasServico: rest.areasServico,
+        ruaPavimentada: rest.ruaPavimentada,
+        garagem: rest.garagem,
+        areaLavanderia: rest.areaLavanderia,
+        portaria24h: rest.portaria24h,
+        elevador: rest.elevador,
+        piscina: rest.piscina,
+        churrasqueira: rest.churrasqueira,
+        academia: rest.academia,
+        jardim: rest.jardim,
+        varanda: rest.varanda
+      } as any)
 
       if (!result.success || !result.propertyId) {
         toast.error(
@@ -546,6 +626,29 @@ function ImovelCadastroPageInner() {
       toast.error(e instanceof Error ? e.message : 'Erro ao excluir arquivo')
     }
   }
+
+  const ROOM_ICON_MAP = {
+    quartos: <BedDouble className="size-5" />,
+    suites: <Star className="size-5" />,
+    banheiros: <Bath className="size-5" />,
+    salasEstar: <Sofa className="size-5" />,
+    cozinhas: <CookingPot className="size-5" />,
+    vagasGaragem: <Car className="size-5" />,
+    areasServico: <WashingMachine className="size-5" />
+  } as const
+
+  const AMENITY_ICON_MAP = {
+    ruaPavimentada: <Wifi className="size-5" />,
+    garagem: <Car className="size-5" />,
+    areaLavanderia: <WashingMachine className="size-5" />,
+    portaria24h: <Wifi className="size-5" />,
+    elevador: <Building className="size-5" />,
+    piscina: <Waves className="size-5" />,
+    churrasqueira: <Flame className="size-5" />,
+    academia: <Dumbbell className="size-5" />,
+    jardim: <TreePine className="size-5" />,
+    varanda: <Sun className="size-5" />
+  } as const
 
   const stepsFields = [
     {
@@ -677,52 +780,100 @@ function ImovelCadastroPageInner() {
       )
     },
     {
-      fields: ['compartimentos', 'tamanho', 'data_construcao'] as const,
+      fields: ['tamanho', 'data_construcao'] as const,
       component: (
         <>
-          <Controller
-            name="compartimentos"
-            control={control}
-            render={({ field, fieldState }) => (
-              <Field
-                data-invalid={fieldState.invalid}
-                className="gap-1 col-span-full"
-              >
-                <FieldLabel htmlFor="compartimentos">
-                  Quantidade de compartimentos *
-                </FieldLabel>
-                <Input
-                  ref={field.ref}
-                  name={field.name}
-                  onBlur={field.onBlur}
-                  id="compartimentos"
-                  type="number"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  min={1}
-                  step={1}
-                  value={
-                    field.value === undefined || field.value === null
-                      ? ''
-                      : field.value
-                  }
-                  onChange={(e) => {
-                    const v = e.target.value
-                    field.onChange(v === '' ? undefined : Number(v))
-                  }}
-                  aria-invalid={fieldState.invalid}
-                  placeholder="Total de ambientes (quartos, salas, cozinha...)"
+          <div className="col-span-full space-y-1">
+            <h3 className="text-sm font-semibold">Ambientes</h3>
+            <p className="text-xs text-muted-foreground">
+              Informe a quantidade de cada tipo de ambiente do imóvel
+            </p>
+          </div>
+          {(
+            [
+              { key: 'quartos' as RoomType, icon: ROOM_ICON_MAP.quartos },
+              { key: 'suites' as RoomType, icon: ROOM_ICON_MAP.suites },
+              { key: 'banheiros' as RoomType, icon: ROOM_ICON_MAP.banheiros },
+              { key: 'salasEstar' as RoomType, icon: ROOM_ICON_MAP.salasEstar },
+              { key: 'cozinhas' as RoomType, icon: ROOM_ICON_MAP.cozinhas },
+              {
+                key: 'vagasGaragem' as RoomType,
+                icon: ROOM_ICON_MAP.vagasGaragem
+              },
+              {
+                key: 'areasServico' as RoomType,
+                icon: ROOM_ICON_MAP.areasServico
+              }
+            ] as const
+          ).map(({ key, icon }) => (
+            <Controller
+              key={key}
+              name={key}
+              control={control}
+              render={({ field }) => (
+                <RoomCounter
+                  icon={icon}
+                  label={ROOM_COUNT_LIMITS[key].label}
+                  value={field.value ?? 0}
+                  min={ROOM_COUNT_LIMITS[key].min}
+                  max={ROOM_COUNT_LIMITS[key].max}
+                  onChange={field.onChange}
                 />
-                <FieldDescription>
-                  Soma de todos os compartimentos do imóvel (quartos, salas,
-                  cozinhas, etc.).
-                </FieldDescription>
-                {fieldState.invalid && (
-                  <FieldError errors={[fieldState.error]} />
-                )}
-              </Field>
-            )}
-          />
+              )}
+            />
+          ))}
+          <div className="col-span-full space-y-1 pt-2">
+            <h3 className="text-sm font-semibold">Acessórios e Instalações</h3>
+            <p className="text-xs text-muted-foreground">
+              Selecione as características disponíveis no imóvel
+            </p>
+          </div>
+          {(
+            [
+              {
+                key: 'ruaPavimentada' as AmenityType,
+                icon: AMENITY_ICON_MAP.ruaPavimentada
+              },
+              { key: 'garagem' as AmenityType, icon: AMENITY_ICON_MAP.garagem },
+              {
+                key: 'areaLavanderia' as AmenityType,
+                icon: AMENITY_ICON_MAP.areaLavanderia
+              },
+              {
+                key: 'portaria24h' as AmenityType,
+                icon: AMENITY_ICON_MAP.portaria24h
+              },
+              {
+                key: 'elevador' as AmenityType,
+                icon: AMENITY_ICON_MAP.elevador
+              },
+              { key: 'piscina' as AmenityType, icon: AMENITY_ICON_MAP.piscina },
+              {
+                key: 'churrasqueira' as AmenityType,
+                icon: AMENITY_ICON_MAP.churrasqueira
+              },
+              {
+                key: 'academia' as AmenityType,
+                icon: AMENITY_ICON_MAP.academia
+              },
+              { key: 'jardim' as AmenityType, icon: AMENITY_ICON_MAP.jardim },
+              { key: 'varanda' as AmenityType, icon: AMENITY_ICON_MAP.varanda }
+            ] as const
+          ).map(({ key, icon }) => (
+            <Controller
+              key={key}
+              name={key}
+              control={control}
+              render={({ field }) => (
+                <AmenityToggle
+                  icon={icon}
+                  label={AMENITY_CONFIG[key].label}
+                  checked={field.value ?? false}
+                  onCheckedChange={field.onChange}
+                />
+              )}
+            />
+          ))}
           <Controller
             name="tamanho"
             control={control}
@@ -799,7 +950,7 @@ function ImovelCadastroPageInner() {
                             type="button"
                             variant="ghost"
                             size="icon-sm"
-                            className="absolute end-1 top-1/2 -translate-y-1/2 rounded-full"
+                            className="absolute inset-e-1 top-1/2 -translate-y-1/2 rounded-full"
                             onClick={(e) => {
                               e.stopPropagation()
                               form.resetField('data_construcao', {
@@ -817,11 +968,19 @@ function ImovelCadastroPageInner() {
                         mode="single"
                         selected={selectedDate}
                         onSelect={(d) => {
-                          if (d && isValid(d)) {
-                            form.setValue('data_construcao', d, {
-                              shouldDirty: true,
-                              shouldValidate: true
-                            })
+                          if (!d || !isValid(d)) return
+                          const now = new Date()
+                          const boundary = subYears(now, 20)
+                          const clamped =
+                            d > now ? now : d < boundary ? boundary : d
+                          form.setValue('data_construcao', clamped, {
+                            shouldDirty: true,
+                            shouldValidate: true
+                          })
+                          if (d > now || d < boundary) {
+                            toast.info(
+                              'Data ajustada para limite válido (20 anos atrás ou hoje)'
+                            )
                           }
                         }}
                         locale={ptBR}
@@ -882,7 +1041,7 @@ function ImovelCadastroPageInner() {
                 className="gap-1 col-span-full"
               >
                 <FieldLabel htmlFor="inscricao_imobiliaria">
-                  Inscrição imobiliária *
+                  Inscrição imobiliária
                 </FieldLabel>
                 <Input
                   ref={field.ref}
@@ -918,25 +1077,12 @@ function ImovelCadastroPageInner() {
                   type="text"
                   inputMode="decimal"
                   autoComplete="off"
-                  value={
-                    field.value !== undefined &&
-                    field.value !== null &&
-                    !Number.isNaN(field.value)
-                      ? formatBrlCurrency(field.value)
-                      : ''
-                  }
-                  onChange={(e) => {
-                    const n = parseBrlCurrency(e.target.value)
-                    field.onChange(
-                      n === undefined || Number.isNaN(n) ? undefined : n
-                    )
-                  }}
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
                   aria-invalid={fieldState.invalid}
                   placeholder="R$ 0,00"
                 />
-                {fieldState.invalid && (
-                  <FieldError errors={[fieldState.error]} />
-                )}
+                <FieldError errors={[fieldState.error]} />
               </Field>
             )}
           />
@@ -1080,9 +1226,7 @@ function ImovelCadastroPageInner() {
                   podem ser alterados por aqui.
                 </>
               ) : (
-                <>
-                  Preencha em etapas. Campos marcados com * são obrigatórios.
-                </>
+                <>Preencha em etapas. Campos marcados com * são obrigatórios.</>
               )}
             </p>
           </div>

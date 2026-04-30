@@ -298,12 +298,11 @@ export const properties = defineTable({
   /** 8 digits, no mask */
   cep: v.optional(v.string()),
   endereco: v.string(),
-  compartimentos: v.number(),
+  compartimentos: v.optional(v.number()),
   tamanho: v.number(),
-  /** Unix ms at UTC midnight for the chosen construction date */
-  dataConstrucao: v.number(),
+  dataConstrucao: v.optional(v.number()),
   matricula: v.string(),
-  inscricaoImobiliaria: v.string(),
+  inscricaoImobiliaria: v.optional(v.string()),
   valorVenda: v.number(),
 
   status: propertyStatusEnum,

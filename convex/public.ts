@@ -37,7 +37,7 @@ export const getValidatedProperties = query({
 
     if (args.compartimentosMin !== undefined) {
       results = results.filter(
-        (p) => p.compartimentos >= args.compartimentosMin!
+        (p) => (p.compartimentos ?? 0) >= args.compartimentosMin!
       )
     }
 

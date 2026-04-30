@@ -125,7 +125,7 @@ export const getValidated = query({
     }
     if (args.compartimentosMin !== undefined) {
       results = results.filter(
-        (p) => p.compartimentos >= args.compartimentosMin!
+        (p) => (p.compartimentos ?? 0) >= args.compartimentosMin!
       )
     }
 
@@ -224,7 +224,7 @@ export const getListForAdmin = query({
           p.titulo.toLowerCase().includes(q) ||
           p.endereco.toLowerCase().includes(q) ||
           p.matricula.toLowerCase().includes(q) ||
-          p.inscricaoImobiliaria.toLowerCase().includes(q)
+          (p.inscricaoImobiliaria?.toLowerCase().includes(q) ?? false)
       )
     }
 
@@ -374,11 +374,11 @@ export const create = mutation({
     descricao: v.optional(v.string()),
     cep: v.optional(v.string()),
     endereco: v.string(),
-    compartimentos: v.number(),
+    compartimentos: v.optional(v.number()),
     tamanho: v.number(),
-    dataConstrucao: v.number(),
+    dataConstrucao: v.optional(v.number()),
     matricula: v.string(),
-    inscricaoImobiliaria: v.string(),
+    inscricaoImobiliaria: v.optional(v.string()),
     valorVenda: v.number()
   },
   handler: async (
@@ -414,9 +414,11 @@ export const create = mutation({
       }
     }
 
-    const comp = validateCompartimentos(args.compartimentos)
-    if (!comp.valid) {
-      return { success: false, errors: comp.errors }
+    if (args.compartimentos !== undefined) {
+      const comp = validateCompartimentos(args.compartimentos)
+      if (!comp.valid) {
+        return { success: false, errors: comp.errors }
+      }
     }
 
     if (args.tamanho <= 0) {
@@ -485,7 +487,7 @@ export const submitForValidation = mutation({
       )
     }
 
-    const comp = validateCompartimentos(property.compartimentos)
+    const comp = validateCompartimentos(property.compartimentos ?? 0)
     if (!comp.valid) {
       throw new Error(comp.errors.join('; '))
     }
@@ -843,7 +845,7 @@ export const update = mutation({
       updates.compartimentos = args.compartimentos
     }
 
-    const finalComp = args.compartimentos ?? property.compartimentos
+    const finalComp = args.compartimentos ?? property.compartimentos ?? 0
     const compCheck = validateCompartimentos(finalComp)
     if (!compCheck.valid) {
       throw new Error(compCheck.errors.join('; '))
