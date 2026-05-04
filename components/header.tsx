@@ -3,14 +3,13 @@
 import Image from 'next/image'
 import Link from 'next/link'
 
-import { MobileNav } from '@/components/mobile-nav'
 import { navLinks } from '@/components/header-nav-links'
+import { MobileNav } from '@/components/mobile-nav'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { useScroll } from '@/hooks/use-scroll'
 import { cn } from '@/lib/utils'
 
 import type { ReactNode } from 'react'
-import { useAuth } from '@/lib/auth-context'
 
 export function Header({
   showLoginButton = true,
@@ -21,7 +20,6 @@ export function Header({
   actions?: ReactNode
   floatingScrollExpand?: boolean
 }) {
-  const { user } = useAuth()
   const scrolled = useScroll(10)
 
   const desktopCtas =
@@ -46,7 +44,7 @@ export function Header({
         'transition-[max-width,top,background-color,border-color,backdrop-filter,filter] duration-300 ease-out',
         'md:max-w-full md:rounded-md',
         {
-          'border-border bg-background/95 drop-shadow-lg backdrop-blur-md supports-backdrop-filter:bg-background/50 md:top-2 md:max-w-6xl':
+          'bg-background/80 drop-shadow-lg backdrop-blur-lg md:top-2 md:max-w-6xl':
             scrolled
         }
       )}

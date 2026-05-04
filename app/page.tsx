@@ -49,7 +49,7 @@ export default async function LandingPage() {
             className="object-cover brightness-[0.65]"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black/60" />
+          <div className="absolute inset-0 bg-linear-to-b from-black/70 via-black/40 to-black/60" />
         </div>
 
         {/* Hero Content */}
@@ -153,7 +153,7 @@ export default async function LandingPage() {
       </section>
 
       {/* About Section - Asymmetric Layout */}
-      <section className="py-20 md:py-34 bg-gradient-to-br from-muted/50 to-background">
+      <section className="py-20 md:py-34 bg-linear-to-br from-blue-300 via-primary/50 to-accent/80">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
             {/* Image - Takes more space */}
@@ -161,7 +161,7 @@ export default async function LandingPage() {
               direction="left"
               className="lg:col-span-5 relative"
             >
-              <div className="relative aspect-[4/5] lg:aspect-[3/4] rounded-2xl overflow-hidden shadow-brand-xl">
+              <div className="relative aspect-4/5 lg:aspect-3/4 rounded-2xl overflow-hidden shadow-brand-xl">
                 <Image
                   src="/familia-feliz.png"
                   alt="Família feliz com casa própria"
@@ -184,7 +184,7 @@ export default async function LandingPage() {
               <StaggerContainer className="space-y-6" staggerDelay={0.1}>
                 <StaggerItem>
                   <div className="flex gap-5">
-                    <div className="w-14 h-14 bg-accent rounded-xl flex items-center justify-center flex-shrink-0 shadow-brand-md">
+                    <div className="w-14 h-14 bg-accent rounded-xl flex items-center justify-center shrink-0 shadow-brand-md">
                       <Home className="w-7 h-7 text-secondary" />
                     </div>
                     <div>
@@ -205,7 +205,7 @@ export default async function LandingPage() {
 
                 <StaggerItem>
                   <div className="flex gap-5">
-                    <div className="w-14 h-14 bg-primary rounded-xl flex items-center justify-center flex-shrink-0 shadow-brand-md">
+                    <div className="w-14 h-14 bg-primary rounded-xl flex items-center justify-center shrink-0 shadow-brand-md">
                       <UsersRound className="w-7 h-7 text-primary-foreground" />
                     </div>
                     <div>
@@ -271,12 +271,12 @@ export default async function LandingPage() {
             {/* Card 1 - Preparation (taller) */}
             <StaggerItem className="md:col-span-1 lg:row-span-2 flex min-h-0 flex-col">
               <Card
-                variant="bordered"
-                className="h-full min-h-0 border-2 border-secondary hover:border-secondary/70 bg-gradient-to-br from-secondary/5 to-transparent"
+                variant="elevated"
+                className="h-full min-h-0 border-2 border-secondary hover:border-secondary/70 bg-linear-to-br from-secondary/5 to-transparent"
               >
                 <CardContent className="pt-8 pb-8 flex flex-col items-center text-center h-full">
-                  <div className="w-20 h-20 bg-secondary rounded-2xl flex items-center justify-center mb-6 shadow-brand-md">
-                    <FileText className="w-10 h-10 text-secondary-foreground" />
+                  <div className="size-16 bg-secondary rounded-2xl flex items-center justify-center mb-6 shadow-brand-md border-2 border-secondary">
+                    <FileText className="size-8 text-secondary-foreground" />
                   </div>
                   <h3 className="font-bold text-2xl mb-4 text-secondary">
                     Preparação
@@ -285,20 +285,6 @@ export default async function LandingPage() {
                     Criação da base legal e financeira necessária para execução
                     do programa
                   </p>
-                  <ul className="text-sm text-muted-foreground space-y-2 mt-auto">
-                    <li className="flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-secondary" />
-                      Lei de criação
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-secondary" />
-                      Regulamentação
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-secondary" />
-                      Alocação orçamentária
-                    </li>
-                  </ul>
                 </CardContent>
               </Card>
             </StaggerItem>
@@ -307,11 +293,11 @@ export default async function LandingPage() {
             <StaggerItem className="md:col-span-1 lg:row-span-2 flex min-h-0 flex-col">
               <Card
                 variant="elevated"
-                className="h-full min-h-0 bg-gradient-to-br from-primary/10 to-primary/5"
+                className="h-full min-h-0 border-primary border-2 bg-linear-to-br from-primary/20 to-transparent"
               >
                 <CardContent className="flex min-h-0 flex-1 flex-col items-center justify-center text-center">
-                  <div className="w-16 h-16 bg-primary rounded-xl flex items-center justify-center mb-4 shadow-brand-md">
-                    <Building2 className="w-8 h-8 text-primary-foreground" />
+                  <div className="size-16 bg-primary rounded-xl flex items-center justify-center mb-4 shadow-brand-md">
+                    <Building2 className="size-8 text-primary-foreground" />
                   </div>
                   <h3 className="font-bold text-xl mb-3 text-primary">
                     Habilitação
@@ -327,12 +313,12 @@ export default async function LandingPage() {
             {/* Card 3 - Operation (same row band as Preparation) */}
             <StaggerItem className="md:col-span-1 lg:row-span-2 flex min-h-0 flex-col">
               <Card
-                variant="default"
-                className="h-full min-h-0 border-2 border-accent hover:border-accent/70"
+                variant="elevated"
+                className="h-full min-h-0 border-2 border-accent hover:border-accent/70 bg-linear-to-tr from-accent/20 to-transparent"
               >
                 <CardContent className="flex min-h-0 flex-1 flex-col items-center justify-center text-center">
-                  <div className="w-16 h-16 bg-accent rounded-xl flex items-center justify-center mb-4 shadow-brand-md">
-                    <Handshake className="w-8 h-8 text-accent-foreground" />
+                  <div className="size-16 bg-accent rounded-xl flex items-center justify-center mb-4 shadow-brand-md border-2 border-accent">
+                    <Handshake className="size-8 text-accent-foreground" />
                   </div>
                   <h3 className="font-bold text-xl mb-3 text-foreground">
                     Operacionalização
