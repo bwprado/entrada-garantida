@@ -9,8 +9,8 @@ import {
 import { AuthenticatedHeaderActions } from '@/components/authenticated-header-actions'
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
-import { getServerCurrentUser } from '@/lib/server-auth'
 import { Card, CardContent } from '@/components/ui/card'
+import { getServerCurrentUser } from '@/lib/server-auth'
 import {
   ArrowRight,
   Building2,
@@ -18,7 +18,6 @@ import {
   Fingerprint,
   Handshake,
   Home,
-  Sparkles,
   UsersRound
 } from 'lucide-react'
 
@@ -45,7 +44,7 @@ export default async function LandingPage() {
             src="/casas.png"
             alt="Conjunto habitacional da Aquisição Assistida"
             fill
-            sizes="100vw"
+            sizes="(max-width: 1920px) 100vw, 1920px"
             className="object-cover brightness-[0.65]"
             priority
           />
