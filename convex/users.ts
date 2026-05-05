@@ -63,23 +63,22 @@ export const getCurrentUserWithProfile = query({
     if (user.role === 'beneficiary' && user.beneficiaryProfileId) {
       const profile = await ctx.db.get(user.beneficiaryProfileId)
       const properties = []
+      let selectedProperty = null
+      const selectionLocked = Boolean(profile?.selecaoBloqueada)
 
-      if (
-        profile &&
-        profile.propriedadesInteresse &&
-        profile.propriedadesInteresse.length > 0
-      ) {
-        for (const propertyId of profile.propriedadesInteresse ?? []) {
-          const property = await ctx.db.get(propertyId)
-          if (property) {
-            properties.push(property)
-          }
+      if (profile?.propriedadeSelecionadaId) {
+        const property = await ctx.db.get(profile.propriedadeSelecionadaId)
+        if (property) {
+          properties.push(property)
+          selectedProperty = property
         }
       }
       return {
         user,
         profile: await ctx.db.get(user.beneficiaryProfileId),
-        properties
+        properties,
+        selectedProperty,
+        selectionLocked
       }
     }
     if (user.role === 'ofertante') {
@@ -964,14 +963,17 @@ export const selectProperty = mutation({
       throw new Error('Perfil de beneficiário não encontrado')
     }
 
-    const currentSelections = profile.propriedadesInteresse ?? []
+    const currentSelection = profile.propriedadeSelecionadaId
+    const selectionLocked = Boolean(profile.selecaoBloqueada)
 
-    if (currentSelections.length >= 3) {
-      throw new Error('Máximo de 3 propriedades pode ser selecionado')
+    if (selectionLocked) {
+      throw new Error(
+        'Sua seleção está bloqueada até liberação da equipe responsável'
+      )
     }
 
-    if (currentSelections.includes(args.propertyId)) {
-      throw new Error('Propriedade já selecionada')
+    if (currentSelection === args.propertyId) {
+      throw new Error('Propriedade já confirmada')
     }
 
     // Verify property is validated
@@ -980,21 +982,21 @@ export const selectProperty = mutation({
       throw new Error('Propriedade não disponível para seleção')
     }
 
-    const newSelections = [...currentSelections, args.propertyId]
-
     await ctx.db.patch(user.beneficiaryProfileId, {
-      propriedadesInteresse: newSelections,
+      propriedadeSelecionadaId: args.propertyId,
+      selecaoBloqueada: true,
+      selecaoBloqueadaEm: Date.now(),
       atualizadoEm: Date.now()
     })
 
     await ctx.db.insert('selectionsHistory', {
       beneficiarioId: args.userId,
       propertyId: args.propertyId,
-      ordemPreferencia: newSelections.length,
+      ordemPreferencia: 1,
       selecionadoEm: Date.now()
     })
 
-    return { success: true, selections: newSelections }
+    return { success: true, propertyId: args.propertyId, selectionLocked: true }
   }
 })
 
@@ -1023,13 +1025,18 @@ export const removePropertySelection = mutation({
       throw new Error('Perfil de beneficiário não encontrado')
     }
 
-    const currentSelections = profile.propriedadesInteresse ?? []
-    const newSelections = currentSelections.filter(
-      (id) => id !== args.propertyId
-    )
+    if (profile.selecaoBloqueada) {
+      throw new Error(
+        'Seleção bloqueada. Aguarde liberação da equipe responsável.'
+      )
+    }
+
+    if (profile.propriedadeSelecionadaId !== args.propertyId) {
+      throw new Error('Este imóvel não está selecionado para o beneficiário')
+    }
 
     await ctx.db.patch(user.beneficiaryProfileId, {
-      propriedadesInteresse: newSelections,
+      propriedadeSelecionadaId: undefined,
       atualizadoEm: Date.now()
     })
 
@@ -1048,6 +1055,29 @@ export const removePropertySelection = mutation({
         removidoEm: Date.now()
       })
     }
+
+    return { success: true }
+  }
+})
+
+export const adminUnlockPropertySelection = mutation({
+  args: { userId: v.id('users') },
+  handler: async (ctx, args) => {
+    await verifyAdmin(ctx)
+    const user = await ctx.db.get(args.userId)
+    if (!user || user.role !== 'beneficiary' || !user.beneficiaryProfileId) {
+      throw new Error('Beneficiário não encontrado')
+    }
+
+    const profile = await ctx.db.get(user.beneficiaryProfileId)
+    if (!profile) {
+      throw new Error('Perfil de beneficiário não encontrado')
+    }
+
+    await ctx.db.patch(user.beneficiaryProfileId, {
+      selecaoBloqueada: false,
+      atualizadoEm: Date.now()
+    })
 
     return { success: true }
   }
@@ -1325,7 +1355,9 @@ export const bulkUploadBeneficiaries = mutation({
           // Timestamps
           criadoEm: now,
           atualizadoEm: now,
-          propriedadesInteresse: []
+          propriedadeSelecionadaId: undefined,
+          selecaoBloqueada: false,
+          selecaoBloqueadaEm: undefined
         })
 
         // Update user with profile reference
@@ -1666,7 +1698,9 @@ export const createBeneficiary = mutation({
       aceitaComunicacoes: false,
       criadoEm: now,
       atualizadoEm: now,
-      propriedadesInteresse: []
+      propriedadeSelecionadaId: undefined,
+      selecaoBloqueada: false,
+      selecaoBloqueadaEm: undefined
     })
 
     // Update user with profile reference

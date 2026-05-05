@@ -65,6 +65,13 @@ export default function AdminDashboardClient() {
   const [selectedBeneficiary, setSelectedBeneficiary] = useState<any>(null)
   const [showResolveDialog, setShowResolveDialog] = useState(false)
   const [resolvingId, setResolvingId] = useState<string | null>(null)
+  const [unlockingBeneficiaryId, setUnlockingBeneficiaryId] = useState<
+    string | null
+  >(null)
+  const [beneficiaryToUnlock, setBeneficiaryToUnlock] = useState<{
+    id: Id<'users'>
+    nome: string
+  } | null>(null)
   const [showAddUserSheet, setShowAddUserSheet] = useState(false)
   const [detailSheetUserId, setDetailSheetUserId] =
     useState<Id<'users'> | null>(null)
@@ -115,6 +122,9 @@ export default function AdminDashboardClient() {
   const pendingProperties = useQuery(api.properties.getPendingValidation, {})
 
   const resolveErrorMutation = useMutation(api.users.resolveDataError)
+  const unlockSelectionMutation = useMutation(
+    api.users.adminUnlockPropertySelection
+  )
 
   const handleResolveError = async () => {
     if (!selectedBeneficiary) return
@@ -129,6 +139,18 @@ export default function AdminDashboardClient() {
       toast.error(error.message || 'Erro ao resolver')
     } finally {
       setResolvingId(null)
+    }
+  }
+
+  const handleUnlockSelection = async (userId: Id<'users'>) => {
+    setUnlockingBeneficiaryId(userId)
+    try {
+      await unlockSelectionMutation({ userId })
+      toast.success('Seleção do beneficiário desbloqueada')
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao desbloquear seleção')
+    } finally {
+      setUnlockingBeneficiaryId(null)
     }
   }
 
@@ -428,18 +450,39 @@ export default function AdminDashboardClient() {
                                 )}
                               </TableCell>
                               <TableCell className="text-right">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="bg-transparent"
-                                  onClick={() => {
-                                    setDetailSheetUserId(b._id)
-                                    setDetailSheetPreviewNome(b.nome)
-                                  }}
-                                >
-                                  <Eye className="w-4 h-4 mr-2" />
-                                  Ver Detalhes
-                                </Button>
+                                <div className="flex items-center justify-end gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="bg-transparent"
+                                    onClick={() =>
+                                      setBeneficiaryToUnlock({
+                                        id: b._id,
+                                        nome: b.nome
+                                      })
+                                    }
+                                    disabled={unlockingBeneficiaryId === b._id}
+                                  >
+                                    {unlockingBeneficiaryId === b._id ? (
+                                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <XCircle className="w-4 h-4 mr-2" />
+                                    )}
+                                    Desbloquear seleção
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="bg-transparent"
+                                    onClick={() => {
+                                      setDetailSheetUserId(b._id)
+                                      setDetailSheetPreviewNome(b.nome)
+                                    }}
+                                  >
+                                    <Eye className="w-4 h-4 mr-2" />
+                                    Ver Detalhes
+                                  </Button>
+                                </div>
                               </TableCell>
                             </TableRow>
                           ))
@@ -965,6 +1008,48 @@ export default function AdminDashboardClient() {
                   <CheckCircle2 className="w-4 h-4 mr-2" />
                   Confirmar Resolução
                 </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={beneficiaryToUnlock !== null}
+        onOpenChange={(open) => {
+          if (!open) setBeneficiaryToUnlock(null)
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Desbloquear seleção do beneficiário?</DialogTitle>
+            <DialogDescription>
+              Isso permitirá que {beneficiaryToUnlock?.nome} altere o imóvel
+              selecionado no catálogo.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setBeneficiaryToUnlock(null)}
+              disabled={unlockingBeneficiaryId === beneficiaryToUnlock?.id}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!beneficiaryToUnlock) return
+                await handleUnlockSelection(beneficiaryToUnlock.id)
+                setBeneficiaryToUnlock(null)
+              }}
+              disabled={unlockingBeneficiaryId === beneficiaryToUnlock?.id}
+            >
+              {unlockingBeneficiaryId === beneficiaryToUnlock?.id ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Desbloqueando...
+                </>
+              ) : (
+                'Confirmar desbloqueio'
               )}
             </Button>
           </DialogFooter>

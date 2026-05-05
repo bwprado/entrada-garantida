@@ -5,13 +5,6 @@ import PropertyFilters from './property-filters'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle
-} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -31,8 +24,8 @@ export default function ImoveisClient() {
   const { user, isAuthenticated } = useAuth()
   const properties = useQuery(api.properties.getValidated, {})
 
-  const userSelectedProperties = useQuery(
-    api.properties.getUserSelectedProperties,
+  const selectionState = useQuery(
+    api.properties.getUserPropertySelectionState,
     user ? { userId: user._id } : 'skip'
   )
 
@@ -41,13 +34,12 @@ export default function ImoveisClient() {
 
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState('recentes')
-  const [showLimitDialog, setShowLimitDialog] = useState(false)
   const [loadingPropertyId, setLoadingPropertyId] = useState<string | null>(
     null
   )
 
-  // Get user's current selections
-  const selectionCount = userSelectedProperties?.length || 0
+  const selectedPropertyId = selectionState?.selectedProperty?._id ?? null
+  const selectionLocked = Boolean(selectionState?.selectionLocked)
 
   // Filter properties based on search
   const filteredProperties = properties?.filter((property) => {
@@ -78,24 +70,15 @@ export default function ImoveisClient() {
       return
     }
 
-    if (selectionCount >= 3) {
-      setShowLimitDialog(true)
-      return
-    }
-
     setLoadingPropertyId(propertyId)
     try {
       await selectPropertyMutation({
         userId: user._id,
         propertyId: propertyId as any
       })
-      toast.success(`Imóvel selecionado (${selectionCount + 1}/3)`)
+      toast.success('Imóvel confirmado com sucesso')
     } catch (error: any) {
-      if (error.message?.includes('Máximo de 3')) {
-        setShowLimitDialog(true)
-      } else {
-        toast.error(error.message || 'Erro ao selecionar imóvel')
-      }
+      toast.error(error.message || 'Erro ao selecionar imóvel')
     } finally {
       setLoadingPropertyId(null)
     }
@@ -119,7 +102,7 @@ export default function ImoveisClient() {
   }
 
   const isPropertySelected = (propertyId: string) => {
-    return userSelectedProperties?.some((p) => p._id === propertyId)
+    return selectedPropertyId === propertyId
   }
 
   return (
@@ -142,26 +125,12 @@ export default function ImoveisClient() {
                 <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full">
                   <Heart className="w-5 h-5 fill-current" />
                   <span className="font-medium">
-                    {selectionCount === 0
-                      ? 'Você ainda não selecionou nenhum imóvel'
-                      : selectionCount === 3
-                        ? 'Você selecionou 3 imóveis (limite atingido)'
-                        : `Você selecionou ${selectionCount} imóvel(s) de 3 possíveis`}
+                    {!selectedPropertyId
+                      ? 'Você ainda não confirmou um imóvel'
+                      : selectionLocked
+                        ? 'Você possui um imóvel confirmado e bloqueado'
+                        : 'Você possui um imóvel confirmado'}
                   </span>
-                </div>
-                <div className="flex justify-center gap-1 mt-2">
-                  {[1, 2, 3].map((num) => (
-                    <div
-                      key={num}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                        num <= selectionCount
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted text-muted-foreground'
-                      }`}
-                    >
-                      {num}
-                    </div>
-                  ))}
                 </div>
               </div>
             )}
@@ -236,7 +205,7 @@ export default function ImoveisClient() {
                           ? 'Disponível'
                           : property.status
                       }
-                      compartimentos={property.compartimentos}
+                      compartimentos={property.compartimentos ?? 0}
                       areaM2={property.tamanho}
                       priceBRL={property.valorVenda}
                       type="Imóvel"
@@ -252,7 +221,9 @@ export default function ImoveisClient() {
                             variant="destructive"
                             className="rounded-full shadow-lg"
                             onClick={() => handleRemoveProperty(property._id)}
-                            disabled={loadingPropertyId === property._id}
+                            disabled={
+                              selectionLocked || loadingPropertyId === property._id
+                            }
                           >
                             {loadingPropertyId === property._id ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
@@ -265,13 +236,14 @@ export default function ImoveisClient() {
                             size="icon"
                             variant="secondary"
                             className={`rounded-full shadow-lg ${
-                              selectionCount >= 3
+                              selectionLocked && !isPropertySelected(property._id)
                                 ? 'bg-gray-300 hover:bg-gray-300 cursor-not-allowed'
                                 : 'bg-background/80 hover:bg-background'
                             }`}
                             onClick={() => handleSelectProperty(property._id)}
                             disabled={
-                              selectionCount >= 3 ||
+                              (selectionLocked &&
+                                !isPropertySelected(property._id)) ||
                               loadingPropertyId === property._id
                             }
                           >
@@ -288,11 +260,7 @@ export default function ImoveisClient() {
                     {/* Selected Badge */}
                     {isPropertySelected(property._id) && (
                       <Badge className="absolute top-3 left-3 bg-primary text-primary-foreground">
-                        Selecionado{' '}
-                        {userSelectedProperties?.findIndex(
-                          (p) => p._id === property._id
-                        ) ?? 0 + 1}
-                        /3
+                        Imóvel confirmado
                       </Badge>
                     )}
                   </div>
@@ -300,38 +268,21 @@ export default function ImoveisClient() {
               </div>
             )}
 
-            {/* Empty state for when user has reached limit */}
+            {/* Empty state for locked selection */}
             {isAuthenticated &&
-              selectionCount >= 3 &&
+              selectionLocked &&
               sortedProperties.length > 0 && (
                 <div className="mt-6 p-4 bg-muted/50 rounded-lg text-center">
                   <AlertCircle className="w-6 h-6 mx-auto mb-2 text-muted-foreground" />
                   <p className="text-muted-foreground text-sm">
-                    Você atingiu o limite de 3 imóveis selecionados. Remova um
-                    imóvel para selecionar outro.
+                    Sua seleção está bloqueada. A troca só poderá ser feita após
+                    liberação da equipe responsável.
                   </p>
                 </div>
               )}
           </div>
         </div>
       </div>
-
-      {/* Limit Dialog */}
-      <Dialog open={showLimitDialog} onOpenChange={setShowLimitDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Limite de Seleção Atingido</DialogTitle>
-            <DialogDescription>
-              Você já selecionou 3 imóveis, que é o máximo permitido. Para
-              selecionar um novo imóvel, você precisa remover um dos já
-              selecionados.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-4 flex justify-end">
-            <Button onClick={() => setShowLimitDialog(false)}>Entendido</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Footer */}
     </div>

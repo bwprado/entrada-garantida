@@ -31,6 +31,26 @@ function validateCompartimentos(n: number): {
   return { valid: errors.length === 0, errors }
 }
 
+function deriveCompartimentosFromRooms(input: {
+  quartos?: number
+  suites?: number
+  banheiros?: number
+  salasEstar?: number
+  cozinhas?: number
+  vagasGaragem?: number
+  areasServico?: number
+}): number {
+  return (
+    (input.quartos ?? 0) +
+    (input.suites ?? 0) +
+    (input.banheiros ?? 0) +
+    (input.salasEstar ?? 0) +
+    (input.cozinhas ?? 0) +
+    (input.vagasGaragem ?? 0) +
+    (input.areasServico ?? 0)
+  )
+}
+
 // ============ QUERIES ============
 
 export const getById = query({
@@ -88,10 +108,31 @@ export const getUserSelectedProperties = query({
     }
     const profile = await ctx.db.get(user.beneficiaryProfileId)
     if (!profile) return []
-    const properties = await Promise.all(
-      profile.propriedadesInteresse?.map((id) => ctx.db.get(id)) || []
-    )
-    return properties.filter((p): p is Doc<'properties'> => p !== null)
+    if (!profile.propriedadeSelecionadaId) return []
+    const property = await ctx.db.get(profile.propriedadeSelecionadaId)
+    return property ? [property] : []
+  }
+})
+
+export const getUserPropertySelectionState = query({
+  args: { userId: v.id('users') },
+  handler: async (ctx, args) => {
+    await verifySelfOrAdmin(ctx, args.userId)
+    const user = await ctx.db.get(args.userId)
+    if (!user || user.role !== 'beneficiary' || !user.beneficiaryProfileId) {
+      return { selectedProperty: null, selectionLocked: false }
+    }
+
+    const profile = await ctx.db.get(user.beneficiaryProfileId)
+    if (!profile?.propriedadeSelecionadaId) {
+      return { selectedProperty: null, selectionLocked: false }
+    }
+
+    const selectedProperty = await ctx.db.get(profile.propriedadeSelecionadaId)
+    return {
+      selectedProperty,
+      selectionLocked: Boolean(profile.selecaoBloqueada)
+    }
   }
 })
 
@@ -375,6 +416,23 @@ export const create = mutation({
     cep: v.optional(v.string()),
     endereco: v.string(),
     compartimentos: v.optional(v.number()),
+    quartos: v.optional(v.number()),
+    suites: v.optional(v.number()),
+    banheiros: v.optional(v.number()),
+    salasEstar: v.optional(v.number()),
+    cozinhas: v.optional(v.number()),
+    vagasGaragem: v.optional(v.number()),
+    areasServico: v.optional(v.number()),
+    ruaPavimentada: v.optional(v.boolean()),
+    garagem: v.optional(v.boolean()),
+    areaLavanderia: v.optional(v.boolean()),
+    portaria24h: v.optional(v.boolean()),
+    elevador: v.optional(v.boolean()),
+    piscina: v.optional(v.boolean()),
+    churrasqueira: v.optional(v.boolean()),
+    academia: v.optional(v.boolean()),
+    jardim: v.optional(v.boolean()),
+    varanda: v.optional(v.boolean()),
     tamanho: v.number(),
     dataConstrucao: v.optional(v.number()),
     matricula: v.string(),
@@ -414,11 +472,11 @@ export const create = mutation({
       }
     }
 
-    if (args.compartimentos !== undefined) {
-      const comp = validateCompartimentos(args.compartimentos)
-      if (!comp.valid) {
-        return { success: false, errors: comp.errors }
-      }
+    const derivedCompartimentos = deriveCompartimentosFromRooms(args)
+    const compartimentosToStore = args.compartimentos ?? derivedCompartimentos
+    const comp = validateCompartimentos(compartimentosToStore)
+    if (!comp.valid) {
+      return { success: false, errors: comp.errors }
     }
 
     if (args.tamanho <= 0) {
@@ -443,7 +501,24 @@ export const create = mutation({
       descricao: args.descricao,
       cep: cepToStore,
       endereco: args.endereco,
-      compartimentos: args.compartimentos,
+      compartimentos: compartimentosToStore,
+      quartos: args.quartos ?? 0,
+      suites: args.suites ?? 0,
+      banheiros: args.banheiros ?? 0,
+      salasEstar: args.salasEstar ?? 0,
+      cozinhas: args.cozinhas ?? 0,
+      vagasGaragem: args.vagasGaragem ?? 0,
+      areasServico: args.areasServico ?? 0,
+      ruaPavimentada: args.ruaPavimentada ?? false,
+      garagem: args.garagem ?? false,
+      areaLavanderia: args.areaLavanderia ?? false,
+      portaria24h: args.portaria24h ?? false,
+      elevador: args.elevador ?? false,
+      piscina: args.piscina ?? false,
+      churrasqueira: args.churrasqueira ?? false,
+      academia: args.academia ?? false,
+      jardim: args.jardim ?? false,
+      varanda: args.varanda ?? false,
       tamanho: args.tamanho,
       dataConstrucao: args.dataConstrucao,
       matricula: args.matricula,
@@ -596,11 +671,11 @@ async function clearPropertyFromBeneficiaryWishlists(
 ): Promise<void> {
   const profiles = await ctx.db.query('beneficiaryProfiles').collect()
   for (const profile of profiles) {
-    const list = profile.propriedadesInteresse ?? []
-    if (!list.some((id) => id === propertyId)) continue
-    const next = list.filter((id) => id !== propertyId)
+    if (profile.propriedadeSelecionadaId !== propertyId) continue
     await ctx.db.patch(profile._id, {
-      propriedadesInteresse: next.length > 0 ? next : undefined,
+      propriedadeSelecionadaId: undefined,
+      selecaoBloqueada: false,
+      selecaoBloqueadaEm: undefined,
       atualizadoEm: now
     })
   }
@@ -791,6 +866,23 @@ export const update = mutation({
     cep: v.optional(v.string()),
     endereco: v.optional(v.string()),
     compartimentos: v.optional(v.number()),
+    quartos: v.optional(v.number()),
+    suites: v.optional(v.number()),
+    banheiros: v.optional(v.number()),
+    salasEstar: v.optional(v.number()),
+    cozinhas: v.optional(v.number()),
+    vagasGaragem: v.optional(v.number()),
+    areasServico: v.optional(v.number()),
+    ruaPavimentada: v.optional(v.boolean()),
+    garagem: v.optional(v.boolean()),
+    areaLavanderia: v.optional(v.boolean()),
+    portaria24h: v.optional(v.boolean()),
+    elevador: v.optional(v.boolean()),
+    piscina: v.optional(v.boolean()),
+    churrasqueira: v.optional(v.boolean()),
+    academia: v.optional(v.boolean()),
+    jardim: v.optional(v.boolean()),
+    varanda: v.optional(v.boolean()),
     tamanho: v.optional(v.number()),
     dataConstrucao: v.optional(v.number()),
     matricula: v.optional(v.string()),
@@ -830,6 +922,26 @@ export const update = mutation({
       updates.cep = clean.length === 8 ? clean : undefined
     }
     if (args.endereco !== undefined) updates.endereco = args.endereco
+    if (args.quartos !== undefined) updates.quartos = args.quartos
+    if (args.suites !== undefined) updates.suites = args.suites
+    if (args.banheiros !== undefined) updates.banheiros = args.banheiros
+    if (args.salasEstar !== undefined) updates.salasEstar = args.salasEstar
+    if (args.cozinhas !== undefined) updates.cozinhas = args.cozinhas
+    if (args.vagasGaragem !== undefined) updates.vagasGaragem = args.vagasGaragem
+    if (args.areasServico !== undefined) updates.areasServico = args.areasServico
+    if (args.ruaPavimentada !== undefined)
+      updates.ruaPavimentada = args.ruaPavimentada
+    if (args.garagem !== undefined) updates.garagem = args.garagem
+    if (args.areaLavanderia !== undefined)
+      updates.areaLavanderia = args.areaLavanderia
+    if (args.portaria24h !== undefined) updates.portaria24h = args.portaria24h
+    if (args.elevador !== undefined) updates.elevador = args.elevador
+    if (args.piscina !== undefined) updates.piscina = args.piscina
+    if (args.churrasqueira !== undefined)
+      updates.churrasqueira = args.churrasqueira
+    if (args.academia !== undefined) updates.academia = args.academia
+    if (args.jardim !== undefined) updates.jardim = args.jardim
+    if (args.varanda !== undefined) updates.varanda = args.varanda
     if (args.tamanho !== undefined) updates.tamanho = args.tamanho
     if (args.dataConstrucao !== undefined)
       updates.dataConstrucao = args.dataConstrucao
@@ -837,19 +949,22 @@ export const update = mutation({
     if (args.inscricaoImobiliaria !== undefined)
       updates.inscricaoImobiliaria = args.inscricaoImobiliaria
 
-    if (args.compartimentos !== undefined) {
-      const comp = validateCompartimentos(args.compartimentos)
-      if (!comp.valid) {
-        throw new Error(comp.errors.join('; '))
-      }
-      updates.compartimentos = args.compartimentos
-    }
-
-    const finalComp = args.compartimentos ?? property.compartimentos ?? 0
+    const finalComp =
+      args.compartimentos ??
+      deriveCompartimentosFromRooms({
+        quartos: args.quartos ?? property.quartos,
+        suites: args.suites ?? property.suites,
+        banheiros: args.banheiros ?? property.banheiros,
+        salasEstar: args.salasEstar ?? property.salasEstar,
+        cozinhas: args.cozinhas ?? property.cozinhas,
+        vagasGaragem: args.vagasGaragem ?? property.vagasGaragem,
+        areasServico: args.areasServico ?? property.areasServico
+      })
     const compCheck = validateCompartimentos(finalComp)
     if (!compCheck.valid) {
       throw new Error(compCheck.errors.join('; '))
     }
+    updates.compartimentos = finalComp
 
     await ctx.db.patch(args.propertyId, updates)
 

@@ -66,6 +66,8 @@ export default function BeneficiarioDashboardPage() {
   };
 
   const selectionCount = properties?.length || 0;
+  const selectionLocked = query?.selectionLocked ?? Boolean(profile?.selecaoBloqueada);
+  const selectedProperty = query?.selectedProperty ?? properties?.[0];
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -120,22 +122,20 @@ export default function BeneficiarioDashboardPage() {
                     <div>
                       <CardTitle className="flex items-center gap-2">
                         <Heart className="w-5 h-5 text-primary" />
-                        Imóveis Selecionados
+                        Imóvel Confirmado
                       </CardTitle>
                       <CardDescription>
-                        Você pode selecionar até 3 imóveis de seu interesse
+                        A confirmação é única e fica bloqueada até liberação da equipe
                       </CardDescription>
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-bold text-primary">
-                        {selectionCount}/3
-                      </p>
+                      <p className="text-2xl font-bold text-primary">{selectionCount}/1</p>
                       <p className="text-sm text-muted-foreground">
                         {selectionCount === 0 
-                          ? "Nenhum selecionado" 
-                          : selectionCount === 3 
-                            ? "Limite atingido"
-                            : `${3 - selectionCount} restante(s)`
+                          ? "Nenhum confirmado" 
+                          : selectionLocked
+                            ? "Bloqueado"
+                            : "Desbloqueado"
                         }
                       </p>
                     </div>
@@ -146,8 +146,8 @@ export default function BeneficiarioDashboardPage() {
                     <div className="flex flex-col items-center justify-center py-8 text-center">
                       <Building2 className="w-12 h-12 text-muted-foreground mb-4" />
                       <p className="text-muted-foreground mb-4 max-w-md">
-                        Você ainda não selecionou nenhum imóvel. 
-                        Navegue pelo catálogo e escolha até 3 opções.
+                        Você ainda não confirmou um imóvel.
+                        Acesse o catálogo e confirme sua escolha no botão Adquirir.
                       </p>
                       <Button asChild>
                         <Link href="/imoveis">Ver Imóveis Disponíveis</Link>
@@ -155,21 +155,20 @@ export default function BeneficiarioDashboardPage() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {properties?.map((property, index) => (
+                      {selectedProperty && (
                         <div
-                          key={property._id}
+                          key={selectedProperty._id}
                           className="relative flex gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                         >
-                          {/* Preference Number */}
                           <div className="absolute -top-2 -left-2 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold text-sm">
-                            {index + 1}
+                            1
                           </div>
 
                           {/* Property Image */}
-                          <div className="w-24 h-24 bg-muted rounded-lg overflow-hidden flex-shrink-0">
+                          <div className="w-24 h-24 bg-muted rounded-lg overflow-hidden shrink-0">
                             <Image
                               src="/placeholder-property.jpg"
-                              alt={property.titulo}
+                              alt={selectedProperty.titulo}
                               width={96}
                               height={96}
                               className="w-full h-full object-cover"
@@ -180,47 +179,54 @@ export default function BeneficiarioDashboardPage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-2">
                               <h4 className="font-semibold line-clamp-1">
-                                {property.titulo}
+                                {selectedProperty.titulo}
                               </h4>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-destructive hover:text-destructive"
-                                onClick={() => handleRemoveProperty(property._id)}
-                                disabled={removingId === property._id}
-                              >
-                                {removingId === property._id ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <X className="w-4 h-4" />
-                                )}
-                              </Button>
+                              {!selectionLocked && (
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8 text-destructive hover:text-destructive"
+                                  onClick={() => handleRemoveProperty(selectedProperty._id)}
+                                  disabled={removingId === selectedProperty._id}
+                                >
+                                  {removingId === selectedProperty._id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <X className="w-4 h-4" />
+                                  )}
+                                </Button>
+                              )}
                             </div>
                             <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
                               <MapPin className="w-3 h-3 inline mr-1 shrink-0" />
-                              {property.endereco}
+                              {selectedProperty.endereco}
                             </p>
                             <div className="flex items-center gap-3 text-sm text-muted-foreground">
                               <span className="flex items-center gap-1">
                                 <Bed className="w-3 h-3" />
-                                {property.compartimentos} compart.
+                                {selectedProperty.compartimentos} compart.
                               </span>
-                              <span>{property.tamanho} m²</span>
+                              <span>{selectedProperty.tamanho} m²</span>
                             </div>
                             <p className="text-lg font-bold text-primary mt-2">
-                              {formatCurrency(property.valorVenda)}
+                              {formatCurrency(selectedProperty.valorVenda)}
                             </p>
                           </div>
                         </div>
-                      ))}
+                      )}
 
-                      {selectionCount < 3 && (
+                      {selectionCount === 0 && (
                         <Button asChild variant="outline" className="w-full mt-4">
                           <Link href="/imoveis">
                             <Heart className="w-4 h-4 mr-2" />
-                            Adicionar mais imóveis
+                            Escolher imóvel
                           </Link>
                         </Button>
+                      )}
+                      {selectionLocked && (
+                        <p className="text-sm text-muted-foreground">
+                          Sua seleção está bloqueada. A troca só pode ser feita após liberação administrativa.
+                        </p>
                       )}
                     </div>
                   )}
@@ -303,8 +309,8 @@ export default function BeneficiarioDashboardPage() {
                         </p>
                         <p className="text-sm mt-2">
                           {selectionCount > 0 
-                            ? `Você selecionou ${selectionCount} imóvel(s).`
-                            : "Selecione até 3 imóveis de seu interesse."
+                            ? "Você confirmou um imóvel."
+                            : "Confirme um imóvel no catálogo."
                           }
                         </p>
                       </div>
@@ -458,7 +464,7 @@ export default function BeneficiarioDashboardPage() {
                   {selectionCount === 0 && (
                     <div className="mt-4 p-3 bg-primary/10 rounded-lg">
                       <p className="text-sm text-primary">
-                        <strong>Dica:</strong> Selecione até 3 imóveis para aumentar suas chances!
+                        <strong>Dica:</strong> Confirme um imóvel para avançar no processo.
                       </p>
                     </div>
                   )}

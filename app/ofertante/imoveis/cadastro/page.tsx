@@ -471,7 +471,7 @@ function ImovelCadastroPageInner() {
           academia: rest.academia,
           jardim: rest.jardim,
           varanda: rest.varanda
-        } as any)
+        })
         try {
           await addPropertyImages({
             filesIds,
@@ -533,7 +533,7 @@ function ImovelCadastroPageInner() {
         academia: rest.academia,
         jardim: rest.jardim,
         varanda: rest.varanda
-      } as any)
+      })
 
       if (!result.success || !result.propertyId) {
         toast.error(

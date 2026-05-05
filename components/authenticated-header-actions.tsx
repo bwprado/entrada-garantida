@@ -51,7 +51,9 @@ export function AuthenticatedHeaderActions() {
   const selectedPropertiesHref = getSelectedPropertiesHomeHref(user?.role)
   const quickLinks = getHeaderQuickActionLinks(user?.role)
   const isOfertante = user?.role === 'ofertante'
-  const homeMenuLabel = isOfertante ? 'Painel' : 'Imóveis selecionados'
+  const homeMenuLabel = isOfertante
+    ? 'Aplicação atual'
+    : 'Imóveis selecionados'
   const HomeMenuIcon = isOfertante ? LayoutDashboard : House
 
   return (

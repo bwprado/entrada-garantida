@@ -149,7 +149,9 @@ async function createTestRoleProfile(
       telefoneRecado: '',
       falarCom: '',
       aceitaComunicacoes: false,
-      propriedadesInteresse: [],
+      propriedadeSelecionadaId: undefined,
+      selecaoBloqueada: false,
+      selecaoBloqueadaEm: undefined,
       criadoEm: now,
       atualizadoEm: now
     })

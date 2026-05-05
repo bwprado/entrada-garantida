@@ -237,8 +237,10 @@ export const beneficiaryProfiles = defineTable({
   falarCom: v.optional(v.string()),
   aceitaComunicacoes: v.boolean(),
 
-  // Property selections (max 3)
-  propriedadesInteresse: v.optional(v.array(v.id('properties'))),
+  // Single property selection flow
+  propriedadeSelecionadaId: v.optional(v.id('properties')),
+  selecaoBloqueada: v.optional(v.boolean()),
+  selecaoBloqueadaEm: v.optional(v.number()),
 
   // Timestamps
   criadoEm: v.number(),
@@ -301,6 +303,23 @@ export const properties = defineTable({
   cep: v.optional(v.string()),
   endereco: v.string(),
   compartimentos: v.optional(v.number()),
+  quartos: v.optional(v.number()),
+  suites: v.optional(v.number()),
+  banheiros: v.optional(v.number()),
+  salasEstar: v.optional(v.number()),
+  cozinhas: v.optional(v.number()),
+  vagasGaragem: v.optional(v.number()),
+  areasServico: v.optional(v.number()),
+  ruaPavimentada: v.optional(v.boolean()),
+  garagem: v.optional(v.boolean()),
+  areaLavanderia: v.optional(v.boolean()),
+  portaria24h: v.optional(v.boolean()),
+  elevador: v.optional(v.boolean()),
+  piscina: v.optional(v.boolean()),
+  churrasqueira: v.optional(v.boolean()),
+  academia: v.optional(v.boolean()),
+  jardim: v.optional(v.boolean()),
+  varanda: v.optional(v.boolean()),
   tamanho: v.number(),
   dataConstrucao: v.optional(v.number()),
   matricula: v.string(),

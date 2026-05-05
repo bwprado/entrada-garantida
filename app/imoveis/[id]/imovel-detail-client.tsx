@@ -8,6 +8,16 @@ import { useParams } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog'
+import {
   Carousel,
   CarouselContent,
   CarouselItem,
@@ -19,14 +29,17 @@ import { Separator } from '@/components/ui/separator'
 import PropertyMap from '@/components/property-map'
 import { api } from '@/convex/_generated/api'
 import type { Id } from '@/convex/_generated/dataModel'
-import { useQuery } from 'convex/react'
+import { useAuth } from '@/lib/auth-context'
+import { useMutation, useQuery } from 'convex/react'
 import {
   ArrowLeft,
   Bed,
   CalendarDays,
+  Loader2,
   Maximize,
   Share2
 } from 'lucide-react'
+import { toast } from 'sonner'
 
 function propertyStatusLabel(status: string): string {
   switch (status) {
@@ -113,6 +126,8 @@ function ThumbnailStrip({
           key={img._id}
           type="button"
           onClick={() => carouselApi?.scrollTo(i)}
+          title={`Ver foto ${i + 1}`}
+          aria-label={`Ver foto ${i + 1}`}
           className={`relative shrink-0 size-16 rounded-lg overflow-hidden ring-2 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
             i === active
               ? 'ring-primary ring-offset-2 scale-105'
@@ -164,6 +179,11 @@ export default function ImovelDetailClient() {
         ? (raw[0] as Id<'properties'>)
         : null
 
+  const { user } = useAuth()
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [isConfirming, setIsConfirming] = useState(false)
+  const selectPropertyMutation = useMutation(api.users.selectProperty)
+
   const property = useQuery(
     api.properties.getForPublicDetail,
     id ? { id } : 'skip'
@@ -174,6 +194,10 @@ export default function ImovelDetailClient() {
     property?.filesIds && property.filesIds.length > 0
       ? { fileIds: property.filesIds }
       : 'skip'
+  )
+  const selectionState = useQuery(
+    api.properties.getUserPropertySelectionState,
+    user ? { userId: user._id } : 'skip'
   )
 
   if (id === null) {
@@ -213,7 +237,28 @@ export default function ImovelDetailClient() {
 
   const images = files ?? []
   const price = formatPrice(property.valorVenda)
-  const constructionYear = new Date(property.dataConstrucao).getFullYear()
+  const constructionYear = property.dataConstrucao
+    ? new Date(property.dataConstrucao).getFullYear()
+    : null
+  const isBeneficiary = user?.role === 'beneficiary'
+  const selectedPropertyId = selectionState?.selectedProperty?._id ?? null
+  const isThisPropertySelected = selectedPropertyId === property._id
+  const canConfirmProperty =
+    isBeneficiary && !selectionState?.selectionLocked && !isThisPropertySelected
+
+  const handleConfirmAcquire = async () => {
+    if (!user || !canConfirmProperty) return
+    setIsConfirming(true)
+    try {
+      await selectPropertyMutation({ userId: user._id, propertyId: property._id })
+      toast.success('Imóvel confirmado com sucesso')
+      setConfirmOpen(false)
+    } catch (error: any) {
+      toast.error(error.message || 'Não foi possível confirmar este imóvel')
+    } finally {
+      setIsConfirming(false)
+    }
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 pb-16">
@@ -324,7 +369,9 @@ export default function ImovelDetailClient() {
           </span>
           <span className="inline-flex items-center gap-2">
             <CalendarDays className="size-5" strokeWidth={1.5} />
-            <span className="font-medium text-foreground">{constructionYear}</span>
+            <span className="font-medium text-foreground">
+              {constructionYear ?? 'N/A'}
+            </span>
           </span>
         </div>
         <Separator className="mt-6" />
@@ -391,17 +438,60 @@ export default function ImovelDetailClient() {
                     <CalendarDays className="size-4" strokeWidth={1.5} />
                     Construcao
                   </span>
-                  <span className="font-medium text-foreground">{constructionYear}</span>
+                  <span className="font-medium text-foreground">
+                    {constructionYear ?? 'N/A'}
+                  </span>
                 </div>
               </div>
 
-              <Button className="w-full mt-6 h-12 text-base font-semibold rounded-xl shadow-brand-colored transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] active:scale-[0.98] active:translate-y-[1px]">
-                Adquirir
-              </Button>
+              {isThisPropertySelected ? (
+                <Button asChild className="w-full mt-6 h-12 text-base font-semibold rounded-xl">
+                  <Link href="/beneficiario/dashboard">Ver status da solicitação</Link>
+                </Button>
+              ) : (
+                <Button
+                  className="w-full mt-6 h-12 text-base font-semibold rounded-xl shadow-brand-colored transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] active:scale-[0.98] active:translate-y-[1px]"
+                  disabled={!canConfirmProperty}
+                  onClick={() => setConfirmOpen(true)}
+                >
+                  Adquirir
+                </Button>
+              )}
+              {selectionState?.selectionLocked && !isThisPropertySelected && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Você já possui um imóvel confirmado e a seleção está bloqueada.
+                </p>
+              )}
             </div>
           </FadeSection>
         </div>
       </div>
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar aquisição deste imóvel?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você está confirmando este imóvel como sua escolha oficial no
+              programa. Após confirmar, não será possível trocar, remover ou
+              selecionar outro imóvel até que esta etapa seja finalizada pela
+              equipe responsável. Deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isConfirming}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmAcquire} disabled={isConfirming}>
+              {isConfirming ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Confirmando...
+                </>
+              ) : (
+                'Confirmar aquisição'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
