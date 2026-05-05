@@ -9,7 +9,8 @@ export const adminPaths = {
   dashboard: '/admin/dashboard',
   perfil: '/admin/perfil',
   imoveis: '/admin/imoveis',
-  beneficiariosUpload: '/admin/beneficiarios/upload'
+  beneficiariosUpload: '/admin/beneficiarios/upload',
+  testUsers: '/admin/test-users'
 } as const
 
 export function getProfileHref(

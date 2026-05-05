@@ -1,0 +1,269 @@
+'use client'
+
+import { useMemo, useState } from 'react'
+import { api } from '@/convex/_generated/api'
+import { useAction, useMutation, useQuery } from 'convex/react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Loader2, RefreshCw, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
+import type { Id } from '@/convex/_generated/dataModel'
+
+type TestRole = 'beneficiary' | 'ofertante'
+
+export default function TestUsersClient() {
+  const config = useQuery(api.testUsers.getTestAuthConfig, {})
+  const users = useQuery(api.testUsers.listTestUsers, config?.enabled ? {} : 'skip')
+  const createTestUser = useAction(api.testUsers.createTestUser)
+  const resetPassword = useAction(api.testUsers.resetTestUserPassword)
+  const deleteTestUser = useMutation(api.testUsers.deleteTestUser)
+
+  const [role, setRole] = useState<TestRole>('beneficiary')
+  const [nome, setNome] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [workingId, setWorkingId] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
+  const [resetMap, setResetMap] = useState<Record<string, string>>({})
+
+  const sortedUsers = useMemo(() => {
+    if (!users) return []
+    return [...users].sort((a, b) => b.criadoEm - a.criadoEm)
+  }, [users])
+
+  if (config === undefined) {
+    return (
+      <div className="p-6">
+        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (!config.enabled) {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Usuários de teste</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Ative `ENABLE_TEST_PASSWORD_AUTH=true` para usar este painel.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const onCreate = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setCreating(true)
+    try {
+      await createTestUser({
+        role,
+        nome: nome.trim() || undefined,
+        email,
+        password
+      })
+      setNome('')
+      setEmail('')
+      setPassword('')
+      toast.success('Usuário de teste criado')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao criar usuário')
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  const onDelete = async (userId: Id<'users'>) => {
+    setWorkingId(userId)
+    try {
+      await deleteTestUser({ userId })
+      toast.success('Usuário removido')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao remover usuário')
+    } finally {
+      setWorkingId(null)
+    }
+  }
+
+  const onResetPassword = async (userId: Id<'users'>) => {
+    const passwordValue = resetMap[userId] ?? ''
+    if (passwordValue.length < 8) {
+      toast.error('Informe uma nova senha com no mínimo 8 caracteres')
+      return
+    }
+    setWorkingId(userId)
+    try {
+      await resetPassword({ userId, password: passwordValue })
+      setResetMap((prev) => ({ ...prev, [userId]: '' }))
+      toast.success('Senha redefinida')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao redefinir senha')
+    } finally {
+      setWorkingId(null)
+    }
+  }
+
+  return (
+    <div className="flex w-full flex-1 flex-col bg-muted/20 p-4 md:p-6">
+      <div className="mx-auto w-full max-w-6xl space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Usuários de teste</h1>
+          <p className="text-sm text-muted-foreground">
+            Crie contas com e-mail e senha para fluxo de beneficiário ou ofertante.
+          </p>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Novo usuário de teste</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form className="grid gap-4 md:grid-cols-2" onSubmit={onCreate}>
+              <div className="space-y-2">
+                <Label htmlFor="test-role">Fluxo</Label>
+                <select
+                  id="test-role"
+                  name="test-role"
+                  aria-label="Fluxo do usuário de teste"
+                  value={role}
+                  onChange={(event) => setRole(event.target.value as TestRole)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="beneficiary">Beneficiário</option>
+                  <option value="ofertante">Ofertante</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="test-name">Nome (opcional)</Label>
+                <Input
+                  id="test-name"
+                  value={nome}
+                  onChange={(event) => setNome(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="test-email-create">E-mail</Label>
+                <Input
+                  id="test-email-create"
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="test-password-create">Senha</Label>
+                <Input
+                  id="test-password-create"
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Button type="submit" disabled={creating}>
+                  {creating ? (
+                    <>
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                      Criando...
+                    </>
+                  ) : (
+                    'Criar usuário'
+                  )}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Contas existentes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>E-mail</TableHead>
+                  <TableHead>Fluxo</TableHead>
+                  <TableHead>Nova senha</TableHead>
+                  <TableHead className="w-[220px] text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sortedUsers.map((user) => {
+                  const isBusy = workingId === user._id
+                  return (
+                    <TableRow key={user._id}>
+                      <TableCell>{user.nome}</TableCell>
+                      <TableCell>{user.email ?? '—'}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">
+                          {user.role === 'beneficiary' ? 'Beneficiário' : 'Ofertante'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="password"
+                          value={resetMap[user._id] ?? ''}
+                          onChange={(event) =>
+                            setResetMap((prev) => ({
+                              ...prev,
+                              [user._id]: event.target.value
+                            }))
+                          }
+                          placeholder="Nova senha"
+                        />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={isBusy}
+                            onClick={() => void onResetPassword(user._id)}
+                          >
+                            {isBusy ? (
+                              <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                              <RefreshCw className="size-4" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            disabled={isBusy}
+                            onClick={() => void onDelete(user._id)}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+                {sortedUsers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                      Nenhum usuário de teste cadastrado.
+                    </TableCell>
+                  </TableRow>
+                ) : null}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}

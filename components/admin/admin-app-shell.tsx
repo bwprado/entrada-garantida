@@ -24,6 +24,7 @@ import {
   LayoutDashboard,
   LogOut,
   Shield,
+  UserRoundCog,
   Upload
 } from 'lucide-react'
 import Image from 'next/image'
@@ -54,6 +55,11 @@ const nav: Array<{
     href: adminPaths.beneficiariosUpload,
     label: 'Upload beneficiários',
     icon: Upload
+  },
+  {
+    href: adminPaths.testUsers,
+    label: 'Usuários de teste',
+    icon: UserRoundCog
   },
   {
     href: adminPaths.dashboard,

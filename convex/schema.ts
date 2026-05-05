@@ -156,6 +156,7 @@ export const users = defineTable({
   // Normalized name for search (lowercase, no accents, trimmed)
   searchName: v.optional(v.string()),
   email: v.optional(v.string()),
+  isTestUser: v.optional(v.boolean()),
 
   // Status and timestamps
   status: userStatusEnum,
@@ -185,6 +186,7 @@ export const users = defineTable({
   .index('by_ofertante_profile', ['ofertanteProfileId'])
   .index('by_admin_profile', ['adminProfileId'])
   .index('by_searchName', ['searchName'])
+  .index('by_test_user', ['isTestUser'])
   .searchIndex('search_name', {
     searchField: 'searchName',
     filterFields: ['role']
