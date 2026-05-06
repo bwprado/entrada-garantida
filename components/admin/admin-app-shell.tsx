@@ -19,13 +19,16 @@ import {
 } from '@/components/ui/sidebar'
 import { useAuth } from '@/lib/auth-context'
 import { adminPaths } from '@/lib/app-links'
+import type { LucideIcon } from 'lucide-react'
 import {
   Building2,
+  Home,
   LayoutDashboard,
   LogOut,
   Shield,
+  Upload,
   UserRoundCog,
-  Upload
+  Users
 } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -35,7 +38,7 @@ import type { ReactNode } from 'react'
 const nav: Array<{
   href: string
   label: string
-  icon: typeof LayoutDashboard
+  icon: LucideIcon
   disabled?: boolean
   /** If set, item is active when pathname starts with this (e.g. section routes). */
   matchPrefix?: string
@@ -44,6 +47,17 @@ const nav: Array<{
     href: adminPaths.dashboard,
     label: 'Painel',
     icon: LayoutDashboard
+  },
+  {
+    href: adminPaths.beneficiarios,
+    label: 'Beneficiários',
+    icon: Users
+  },
+  {
+    href: adminPaths.ofertantes,
+    label: 'Ofertantes',
+    icon: Home,
+    matchPrefix: adminPaths.ofertantes
   },
   {
     href: adminPaths.imoveis,

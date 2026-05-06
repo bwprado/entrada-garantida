@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
-import { useQuery, useMutation, usePaginatedQuery } from 'convex/react'
+import { useQuery, useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
+import { adminPaths } from '@/lib/app-links'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -14,117 +15,58 @@ import {
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Input } from '@/components/ui/input'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui/table'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
-  DialogTitle,
-  DialogFooter
+  DialogTitle
 } from '@/components/ui/dialog'
 import {
-  Home,
   Users,
   Building2,
   FileText,
   TrendingUp,
-  Search,
-  Filter,
   Download,
   Eye,
   CheckCircle2,
-  XCircle,
-  Clock,
   AlertCircle,
   Phone,
   MapPin,
   CreditCard,
-  Loader2,
-  ChevronRight,
-  ArrowUp,
-  ArrowDown,
-  Plus
+  Loader2
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { AddUserSheet } from './add-user-sheet'
-import { UserDetailSheet } from './user-detail-sheet'
-import type { Id } from '@/convex/_generated/dataModel'
+import type { Doc } from '@/convex/_generated/dataModel'
 import { normalizePhone } from '@/lib/normalize-phone'
 
+/** Users doc plus optional address (joined/enriched in some rows). */
+type BeneficiaryErrorRow = Doc<'users'> & {
+  endereco?: string
+  numero?: string
+  bairro?: string
+  cidade?: string
+  estado?: string
+}
+
 export default function AdminDashboardClient() {
-  const [activeTab, setActiveTab] = useState('beneficiarios')
-  const [selectedBeneficiary, setSelectedBeneficiary] = useState<any>(null)
+  const [activeTab, setActiveTab] = useState('erros')
+  const [selectedBeneficiary, setSelectedBeneficiary] =
+    useState<BeneficiaryErrorRow | null>(null)
   const [showResolveDialog, setShowResolveDialog] = useState(false)
   const [resolvingId, setResolvingId] = useState<string | null>(null)
-  const [unlockingBeneficiaryId, setUnlockingBeneficiaryId] = useState<
-    string | null
-  >(null)
-  const [beneficiaryToUnlock, setBeneficiaryToUnlock] = useState<{
-    id: Id<'users'>
-    nome: string
-  } | null>(null)
-  const [showAddUserSheet, setShowAddUserSheet] = useState(false)
-  const [detailSheetUserId, setDetailSheetUserId] =
-    useState<Id<'users'> | null>(null)
-  const [detailSheetPreviewNome, setDetailSheetPreviewNome] = useState('')
-
-  // Beneficiary table state
-  const [searchInput, setSearchInput] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
-
-  // Debounce search input
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchInput)
-    }, 300)
-    return () => clearTimeout(timer)
-  }, [searchInput])
-
-  // Paginated beneficiaries query
-  const {
-    results: beneficiaries,
-    status,
-    loadMore
-  } = usePaginatedQuery(
-    api.users.getBeneficiariesPaginated,
-    {
-      searchQuery: debouncedSearch || undefined,
-      sortDirection
-    },
-    { initialNumItems: 30 }
-  )
-
-  const isLoading = status === 'LoadingFirstPage'
-  const isLoadingMore = status === 'LoadingMore'
-  const canLoadMore = status === 'CanLoadMore'
 
   const beneficiariesWithErrors = useQuery(
     api.users.getBeneficiariesWithErrors,
     {}
   )
-  const beneficiariesCount = useQuery(api.users.getBeneficiariesCount, {
-    searchQuery: debouncedSearch || undefined
-  })
+  const beneficiariesCount = useQuery(api.users.getBeneficiariesCount, {})
   const construtores = useQuery(api.users.getConstrutores, {})
-  const ofertantes = useQuery(api.users.getOfertantes, {})
-  const ofertantesPendentes = useQuery(api.users.getOfertantesPendentes, {})
   const properties = useQuery(api.properties.getAllForAdmin, {})
   const pendingProperties = useQuery(api.properties.getPendingValidation, {})
 
   const resolveErrorMutation = useMutation(api.users.resolveDataError)
-  const unlockSelectionMutation = useMutation(
-    api.users.adminUnlockPropertySelection
-  )
 
   const handleResolveError = async () => {
     if (!selectedBeneficiary) return
@@ -135,44 +77,28 @@ export default function AdminDashboardClient() {
       toast.success('Erro marcado como resolvido')
       setShowResolveDialog(false)
       setSelectedBeneficiary(null)
-    } catch (error: any) {
-      toast.error(error.message || 'Erro ao resolver')
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'Erro ao resolver'
+      toast.error(message)
     } finally {
       setResolvingId(null)
     }
   }
 
-  const handleUnlockSelection = async (userId: Id<'users'>) => {
-    setUnlockingBeneficiaryId(userId)
-    try {
-      await unlockSelectionMutation({ userId })
-      toast.success('Seleção do beneficiário desbloqueada')
-    } catch (error: any) {
-      toast.error(error.message || 'Erro ao desbloquear seleção')
-    } finally {
-      setUnlockingBeneficiaryId(null)
-    }
-  }
-
-  // Get total beneficiaries count for stats (using a separate query or estimate)
-  // For now, we'll use the paginated results length as an estimate
-  // You might want to add a separate count query for accurate stats
   const stats = {
-    totalBeneficiarios: beneficiariesCount || 0, // This is now paginated count
-    totalImoveis: properties?.length || 0,
-    solicitacoesPendentes: pendingProperties?.length || 0,
-    construtoresAtivos: construtores?.length || 0,
-    ofertantesAtivos:
-      ofertantes?.filter((o) => o.status === 'active').length || 0,
-    ofertantesPendentes: ofertantesPendentes?.length || 0,
-    beneficiariosComErros: beneficiariesWithErrors?.length || 0
+    totalBeneficiarios: beneficiariesCount ?? 0,
+    totalImoveis: properties?.length ?? 0,
+    solicitacoesPendentes: pendingProperties?.length ?? 0,
+    construtoresAtivos: construtores?.length ?? 0,
+    beneficiariosComErros: beneficiariesWithErrors?.length ?? 0
   }
 
   const formatCPF = (cpf: string) => {
     return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
   }
 
-  const formatAddress = (b: any) => {
+  const formatAddress = (b: BeneficiaryErrorRow) => {
     const parts = [b.endereco, b.numero, b.bairro, b.cidade, b.estado].filter(
       Boolean
     )
@@ -181,38 +107,43 @@ export default function AdminDashboardClient() {
 
   return (
     <div className="flex w-full flex-1 flex-col">
-      {/* Main Content */}
       <div className="flex-1 bg-muted/30 px-4 py-8">
         <div className="container mx-auto max-w-7xl">
-          {/* Welcome Section */}
           <div className="mb-8">
-            <h2 className="text-3xl font-bold mb-2">Painel Administrativo</h2>
+            <h2 className="mb-2 text-3xl font-bold">Painel Administrativo</h2>
             <p className="text-muted-foreground">
               Gestão completa da Aquisição Assistida no Maranhão
             </p>
           </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">
+                    <p className="mb-1 text-sm text-muted-foreground">
                       Total de Beneficiários
                     </p>
                     <p className="text-3xl font-bold">
                       {stats.totalBeneficiarios}
                     </p>
                     {stats.beneficiariosComErros > 0 && (
-                      <p className="text-xs text-destructive mt-1 flex items-center">
-                        <AlertCircle className="w-3 h-3 mr-1" />
+                      <p className="mt-1 flex items-center text-xs text-destructive">
+                        <AlertCircle className="mr-1 size-3" />
                         {stats.beneficiariosComErros} com erros
                       </p>
                     )}
+                    <p className="mt-2">
+                      <Link
+                        href={adminPaths.beneficiarios}
+                        className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                      >
+                        Ver lista completa
+                      </Link>
+                    </p>
                   </div>
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <Users className="w-6 h-6 text-primary" />
+                  <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10">
+                    <Users className="size-6 text-primary" />
                   </div>
                 </div>
               </CardContent>
@@ -222,18 +153,18 @@ export default function AdminDashboardClient() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">
+                    <p className="mb-1 text-sm text-muted-foreground">
                       Imóveis Cadastrados
                     </p>
                     <p className="text-3xl font-bold">{stats.totalImoveis}</p>
-                    <p className="text-xs text-secondary mt-1">
-                      <TrendingUp className="w-3 h-3 inline mr-1" />+
-                      {pendingProperties?.length || 0} pendentes
+                    <p className="mt-1 text-xs text-secondary">
+                      <TrendingUp className="mr-1 inline size-3" />+
+                      {pendingProperties?.length ?? 0} pendentes
                     </p>
                     {(pendingProperties?.length ?? 0) > 0 && (
                       <p className="mt-2">
                         <Link
-                          href="/admin/imoveis"
+                          href={adminPaths.imoveis}
                           className="text-sm font-medium text-primary underline-offset-4 hover:underline"
                         >
                           Revisar fila de análise
@@ -241,8 +172,8 @@ export default function AdminDashboardClient() {
                       </p>
                     )}
                   </div>
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <Building2 className="w-6 h-6 text-primary" />
+                  <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10">
+                    <Building2 className="size-6 text-primary" />
                   </div>
                 </div>
               </CardContent>
@@ -252,18 +183,18 @@ export default function AdminDashboardClient() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">
+                    <p className="mb-1 text-sm text-muted-foreground">
                       Solicitações Pendentes
                     </p>
                     <p className="text-3xl font-bold">
                       {stats.solicitacoesPendentes}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       Requer atenção
                     </p>
                   </div>
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <FileText className="w-6 h-6 text-primary" />
+                  <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10">
+                    <FileText className="size-6 text-primary" />
                   </div>
                 </div>
               </CardContent>
@@ -273,45 +204,35 @@ export default function AdminDashboardClient() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">
+                    <p className="mb-1 text-sm text-muted-foreground">
                       Construtores Ativos
                     </p>
                     <p className="text-3xl font-bold">
                       {stats.construtoresAtivos}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       Empresas cadastradas
                     </p>
                   </div>
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <Building2 className="w-6 h-6 text-primary" />
+                  <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10">
+                    <Building2 className="size-6 text-primary" />
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Tabs */}
           <Tabs
             value={activeTab}
             onValueChange={setActiveTab}
             className="space-y-6"
           >
-            <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
-              <TabsTrigger value="beneficiarios">Beneficiários</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4 lg:inline-grid lg:w-auto">
               <TabsTrigger value="erros" className="relative">
                 Erros de Dados
                 {stats.beneficiariosComErros > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground rounded-full text-xs flex items-center justify-center">
+                  <span className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">
                     {stats.beneficiariosComErros}
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="ofertantes" className="relative">
-                Ofertantes
-                {stats.ofertantesPendentes > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-500 text-white rounded-full text-xs flex items-center justify-center">
-                    {stats.ofertantesPendentes}
                   </span>
                 )}
               </TabsTrigger>
@@ -320,217 +241,13 @@ export default function AdminDashboardClient() {
               <TabsTrigger value="solicitacoes">Solicitações</TabsTrigger>
             </TabsList>
 
-            {/* Beneficiários Tab */}
-            <TabsContent value="beneficiarios" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                      <CardTitle>Gestão de Beneficiários</CardTitle>
-                      <CardDescription>
-                        Visualize e gerencie os cadastros de beneficiários
-                      </CardDescription>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="bg-transparent"
-                      >
-                        <Filter className="w-4 h-4 mr-2" />
-                        Filtrar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowAddUserSheet(true)}
-                      >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Adicionar
-                      </Button>
-                      <Button
-                        asChild
-                        variant="outline"
-                        size="sm"
-                        className="bg-transparent"
-                      >
-                        <Link href="/admin/beneficiarios/upload">
-                          <Download className="w-4 h-4 mr-2" />
-                          Importar
-                        </Link>
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="mb-4 flex flex-col sm:flex-row gap-4">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Buscar por nome..."
-                        className="pl-10"
-                        value={searchInput}
-                        onChange={(e) => setSearchInput(e.target.value)}
-                      />
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() =>
-                        setSortDirection(
-                          sortDirection === 'asc' ? 'desc' : 'asc'
-                        )
-                      }
-                      title={`Ordenar ${sortDirection === 'asc' ? 'decrescente' : 'crescente'}`}
-                    >
-                      {sortDirection === 'asc' ? (
-                        <ArrowUp className="w-4 h-4" />
-                      ) : (
-                        <ArrowDown className="w-4 h-4" />
-                      )}
-                    </Button>
-                  </div>
-
-                  <div className="border rounded-md">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[250px]">Nome</TableHead>
-                          <TableHead>CPF</TableHead>
-                          <TableHead>Telefone</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Cadastro</TableHead>
-                          <TableHead className="text-right">Ações</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {isLoading ? (
-                          <TableRow>
-                            <TableCell colSpan={6} className="text-center py-8">
-                              <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Carregando beneficiários...
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ) : beneficiaries?.length === 0 ? (
-                          <TableRow>
-                            <TableCell
-                              colSpan={6}
-                              className="text-center py-8 text-muted-foreground"
-                            >
-                              Nenhum beneficiário encontrado.
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          beneficiaries?.map((b) => (
-                            <TableRow key={b._id}>
-                              <TableCell className="font-medium">
-                                {b.nome}
-                              </TableCell>
-                              <TableCell>{formatCPF(b.cpf)}</TableCell>
-                              <TableCell>
-                                {normalizePhone(b.phone).display()}
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant={
-                                    b.dadosComErro ? 'destructive' : 'secondary'
-                                  }
-                                  className={
-                                    b.dadosComErro ? '' : 'bg-secondary/50'
-                                  }
-                                >
-                                  {b.dadosComErro ? 'Erro Reportado' : b.status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                {new Date(b.criadoEm).toLocaleDateString(
-                                  'pt-BR'
-                                )}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex items-center justify-end gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="bg-transparent"
-                                    onClick={() =>
-                                      setBeneficiaryToUnlock({
-                                        id: b._id,
-                                        nome: b.nome
-                                      })
-                                    }
-                                    disabled={unlockingBeneficiaryId === b._id}
-                                  >
-                                    {unlockingBeneficiaryId === b._id ? (
-                                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    ) : (
-                                      <XCircle className="w-4 h-4 mr-2" />
-                                    )}
-                                    Desbloquear seleção
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="bg-transparent"
-                                    onClick={() => {
-                                      setDetailSheetUserId(b._id)
-                                      setDetailSheetPreviewNome(b.nome)
-                                    }}
-                                  >
-                                    <Eye className="w-4 h-4 mr-2" />
-                                    Ver Detalhes
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  {/* Pagination Controls */}
-                  <div className="flex items-center justify-between mt-4">
-                    <p className="text-sm text-muted-foreground">
-                      {isLoading
-                        ? 'Carregando...'
-                        : `Mostrando ${beneficiaries?.length || 0} beneficiários`}
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => loadMore(30)}
-                        disabled={!canLoadMore || isLoadingMore || isLoading}
-                      >
-                        {isLoadingMore ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Carregando...
-                          </>
-                        ) : (
-                          <>
-                            <ChevronRight className="w-4 h-4 mr-2" />
-                            Carregar Mais
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Erros de Dados Tab */}
             <TabsContent value="erros" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
                     <div>
                       <CardTitle className="flex items-center gap-2">
-                        <AlertCircle className="w-5 h-5 text-destructive" />
+                        <AlertCircle className="size-5 text-destructive" />
                         Beneficiários com Erros nos Dados
                       </CardTitle>
                       <CardDescription>
@@ -544,7 +261,7 @@ export default function AdminDashboardClient() {
                         size="sm"
                         className="bg-transparent"
                       >
-                        <Download className="w-4 h-4 mr-2" />
+                        <Download className="mr-2 size-4" />
                         Exportar Lista
                       </Button>
                     </div>
@@ -552,8 +269,8 @@ export default function AdminDashboardClient() {
                 </CardHeader>
                 <CardContent>
                   {beneficiariesWithErrors?.length === 0 ? (
-                    <div className="text-center py-12">
-                      <CheckCircle2 className="w-12 h-12 text-secondary mx-auto mb-4" />
+                    <div className="py-12 text-center">
+                      <CheckCircle2 className="mx-auto mb-4 size-12 text-secondary" />
                       <p className="text-muted-foreground">
                         Nenhum beneficiário com erro reportado no momento.
                       </p>
@@ -563,12 +280,12 @@ export default function AdminDashboardClient() {
                       {beneficiariesWithErrors?.map((b) => (
                         <div
                           key={b._id}
-                          className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                          className="rounded-lg border p-4 transition-colors hover:bg-muted/50"
                         >
-                          <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
                             <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-3">
-                                <h4 className="font-semibold text-lg">
+                              <div className="mb-3 flex items-center gap-3">
+                                <h4 className="text-lg font-semibold">
                                   {b.nome}
                                 </h4>
                                 <Badge variant="destructive">
@@ -582,10 +299,10 @@ export default function AdminDashboardClient() {
                                 </span>
                               </div>
 
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                              <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div className="space-y-2">
                                   <div className="flex items-start gap-2">
-                                    <CreditCard className="w-4 h-4 text-muted-foreground mt-0.5" />
+                                    <CreditCard className="mt-0.5 size-4 text-muted-foreground" />
                                     <div>
                                       <p className="text-sm text-muted-foreground">
                                         CPF
@@ -596,7 +313,7 @@ export default function AdminDashboardClient() {
                                     </div>
                                   </div>
                                   <div className="flex items-start gap-2">
-                                    <Phone className="w-4 h-4 text-muted-foreground mt-0.5" />
+                                    <Phone className="mt-0.5 size-4 text-muted-foreground" />
                                     <div>
                                       <p className="text-sm text-muted-foreground">
                                         Telefone
@@ -609,7 +326,7 @@ export default function AdminDashboardClient() {
                                 </div>
                                 <div className="space-y-2">
                                   <div className="flex items-start gap-2">
-                                    <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
+                                    <MapPin className="mt-0.5 size-4 text-muted-foreground" />
                                     <div>
                                       <p className="text-sm text-muted-foreground">
                                         Endereço
@@ -622,8 +339,8 @@ export default function AdminDashboardClient() {
                                 </div>
                               </div>
 
-                              <div className="bg-muted/50 p-3 rounded-lg">
-                                <p className="text-sm font-medium mb-1">
+                              <div className="rounded-lg bg-muted/50 p-3">
+                                <p className="mb-1 text-sm font-medium">
                                   Descrição do problema:
                                 </p>
                                 <p className="text-sm text-muted-foreground">
@@ -641,7 +358,7 @@ export default function AdminDashboardClient() {
                                   setShowResolveDialog(true)
                                 }}
                               >
-                                <CheckCircle2 className="w-4 h-4 mr-2" />
+                                <CheckCircle2 className="mr-2 size-4" />
                                 Marcar como Resolvido
                               </Button>
                               <Button
@@ -649,7 +366,7 @@ export default function AdminDashboardClient() {
                                 variant="outline"
                                 className="bg-transparent"
                               >
-                                <Phone className="w-4 h-4 mr-2" />
+                                <Phone className="mr-2 size-4" />
                                 Contatar
                               </Button>
                             </div>
@@ -662,190 +379,10 @@ export default function AdminDashboardClient() {
               </Card>
             </TabsContent>
 
-            {/* Ofertantes Tab */}
-            <TabsContent value="ofertantes" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <Home className="w-5 h-5 text-primary" />
-                        Gestão de Ofertantes
-                      </CardTitle>
-                      <CardDescription>
-                        Visualize e gerencie os proprietários cadastrados
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <Tabs defaultValue="pendentes" className="space-y-6">
-                    <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-grid">
-                      <TabsTrigger value="pendentes">
-                        <Clock className="w-4 h-4 mr-2" />
-                        Pendentes de Onboarding
-                        {stats.ofertantesPendentes > 0 && (
-                          <span className="ml-2 w-5 h-5 bg-yellow-500 text-white rounded-full text-xs flex items-center justify-center">
-                            {stats.ofertantesPendentes}
-                          </span>
-                        )}
-                      </TabsTrigger>
-                      <TabsTrigger value="ativos">
-                        <CheckCircle2 className="w-4 h-4 mr-2" />
-                        Ativos
-                      </TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="pendentes">
-                      {ofertantesPendentes?.length === 0 ? (
-                        <div className="text-center py-12">
-                          <CheckCircle2 className="w-12 h-12 text-secondary mx-auto mb-4" />
-                          <p className="text-muted-foreground">
-                            Nenhum ofertante pendente de onboarding.
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {ofertantesPendentes?.map((o) => (
-                            <div
-                              key={o._id}
-                              className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                            >
-                              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-3 mb-2">
-                                    <h4 className="font-semibold">{o.nome}</h4>
-                                    <Badge
-                                      variant="outline"
-                                      className="bg-yellow-50"
-                                    >
-                                      <Clock className="w-3 h-3 mr-1" />
-                                      Pendente Onboarding
-                                    </Badge>
-                                  </div>
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-muted-foreground">
-                                    <p>
-                                      Telefone:{' '}
-                                      {normalizePhone(o.phone).display()}
-                                    </p>
-                                    <p>
-                                      Cadastro:{' '}
-                                      {new Date(o.criadoEm).toLocaleDateString(
-                                        'pt-BR'
-                                      )}
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="flex gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="bg-transparent"
-                                    onClick={() => {
-                                      setDetailSheetUserId(o._id)
-                                      setDetailSheetPreviewNome(o.nome)
-                                    }}
-                                  >
-                                    <Eye className="w-4 h-4 mr-2" />
-                                    Ver Detalhes
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </TabsContent>
-
-                    <TabsContent value="ativos">
-                      {ofertantes?.filter((o) => o.status === 'active')
-                        .length === 0 ? (
-                        <div className="text-center py-12">
-                          <Home className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                          <p className="text-muted-foreground">
-                            Nenhum ofertante ativo.
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {ofertantes
-                            ?.filter((o) => o.status === 'active')
-                            .map((o) => (
-                              <div
-                                key={o._id}
-                                className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                              >
-                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-3 mb-2">
-                                      <h4 className="font-semibold">
-                                        {o.nome}
-                                      </h4>
-                                      <Badge
-                                        variant="secondary"
-                                        className="bg-secondary/50"
-                                      >
-                                        <CheckCircle2 className="w-3 h-3 mr-1" />
-                                        Ativo
-                                      </Badge>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-muted-foreground">
-                                      <p>
-                                        CPF:{' '}
-                                        {o.cpf
-                                          ? formatCPF(o.cpf)
-                                          : 'Não informado'}
-                                      </p>
-                                      <p>
-                                        Telefone:{' '}
-                                        {normalizePhone(o.phone).display()}
-                                      </p>
-                                      <p>
-                                        Cadastro:{' '}
-                                        {new Date(
-                                          o.criadoEm
-                                        ).toLocaleDateString('pt-BR')}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <div className="flex gap-2">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="bg-transparent"
-                                      onClick={() => {
-                                        setDetailSheetUserId(o._id)
-                                        setDetailSheetPreviewNome(o.nome)
-                                      }}
-                                    >
-                                      <Eye className="w-4 h-4 mr-2" />
-                                      Ver Detalhes
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="bg-transparent"
-                                    >
-                                      <Phone className="w-4 h-4 mr-2" />
-                                      Contatar
-                                    </Button>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      )}
-                    </TabsContent>
-                  </Tabs>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Construtores Tab */}
             <TabsContent value="construtores" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
                     <div>
                       <CardTitle>Gestão de Construtores</CardTitle>
                       <CardDescription>
@@ -859,19 +396,16 @@ export default function AdminDashboardClient() {
                     {construtores?.slice(0, 3).map((c) => (
                       <div
                         key={c._id}
-                        className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                        className="flex flex-col justify-between gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50 md:flex-row md:items-center"
                       >
                         <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
+                          <div className="mb-2 flex items-center gap-3">
                             <h4 className="font-semibold">{c.nome}</h4>
-                            <Badge
-                              variant="secondary"
-                              className="bg-secondary/50"
-                            >
+                            <Badge variant="secondary" className="bg-secondary/50">
                               Ativo
                             </Badge>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-muted-foreground">
+                          <div className="grid grid-cols-1 gap-2 text-sm text-muted-foreground md:grid-cols-3">
                             <p>CNPJ: {c.cpf}</p>
                             <p>Telefone: {normalizePhone(c.phone).display()}</p>
                             <p>
@@ -885,7 +419,7 @@ export default function AdminDashboardClient() {
                           size="sm"
                           className="bg-transparent"
                         >
-                          <Eye className="w-4 h-4 mr-2" />
+                          <Eye className="mr-2 size-4" />
                           Ver Detalhes
                         </Button>
                       </div>
@@ -895,11 +429,10 @@ export default function AdminDashboardClient() {
               </Card>
             </TabsContent>
 
-            {/* Imóveis Tab — listagem unificada em /admin/imoveis */}
             <TabsContent value="imoveis" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                     <div>
                       <CardTitle>Gestão de Imóveis</CardTitle>
                       <CardDescription>
@@ -908,9 +441,7 @@ export default function AdminDashboardClient() {
                       </CardDescription>
                     </div>
                     <Button asChild>
-                      <Link href="/admin/imoveis">
-                        Abrir imóveis
-                      </Link>
+                      <Link href={adminPaths.imoveis}>Abrir imóveis</Link>
                     </Button>
                   </div>
                 </CardHeader>
@@ -918,10 +449,10 @@ export default function AdminDashboardClient() {
                   <p className="text-sm text-muted-foreground">
                     Use busca e filtro de status em{' '}
                     <Link
-                      href="/admin/imoveis"
+                      href={adminPaths.imoveis}
                       className="font-medium text-primary underline-offset-4 hover:underline"
                     >
-                      /admin/imoveis
+                      {adminPaths.imoveis}
                     </Link>
                     . No painel, o card &quot;Imóveis cadastrados&quot; também
                     oferece atalho quando há pendentes de análise.
@@ -930,7 +461,6 @@ export default function AdminDashboardClient() {
               </Card>
             </TabsContent>
 
-            {/* Solicitações Tab */}
             <TabsContent value="solicitacoes" className="space-y-6">
               <Card>
                 <CardHeader>
@@ -941,14 +471,14 @@ export default function AdminDashboardClient() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    <div className="p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="flex items-start justify-between gap-4 mb-3">
+                    <div className="rounded-lg border p-4 transition-colors hover:bg-muted/50">
+                      <div className="mb-3 flex items-start justify-between gap-4">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
+                          <div className="mb-2 flex items-center gap-2">
                             <h4 className="font-semibold">João Silva Santos</h4>
                             <Badge>Em Análise</Badge>
                           </div>
-                          <p className="text-sm text-muted-foreground mb-1">
+                          <p className="mb-1 text-sm text-muted-foreground">
                             Solicitou: Residencial Jardim das Flores
                           </p>
                         </div>
@@ -957,7 +487,7 @@ export default function AdminDashboardClient() {
                           variant="outline"
                           className="bg-transparent"
                         >
-                          <Eye className="w-4 h-4 mr-2" />
+                          <Eye className="mr-2 size-4" />
                           Analisar
                         </Button>
                       </div>
@@ -970,7 +500,6 @@ export default function AdminDashboardClient() {
         </div>
       </div>
 
-      {/* Resolve Dialog */}
       <Dialog open={showResolveDialog} onOpenChange={setShowResolveDialog}>
         <DialogContent>
           <DialogHeader>
@@ -980,8 +509,8 @@ export default function AdminDashboardClient() {
               <strong>{selectedBeneficiary?.nome}</strong> foram corrigidos.
             </DialogDescription>
           </DialogHeader>
-          <div className="bg-muted/50 p-3 rounded-lg my-4">
-            <p className="text-sm font-medium mb-1">Problema reportado:</p>
+          <div className="my-4 rounded-lg bg-muted/50 p-3">
+            <p className="mb-1 text-sm font-medium">Problema reportado:</p>
             <p className="text-sm text-muted-foreground">
               {selectedBeneficiary?.mensagemErroDados}
             </p>
@@ -995,17 +524,17 @@ export default function AdminDashboardClient() {
               Cancelar
             </Button>
             <Button
-              onClick={handleResolveError}
+              onClick={() => void handleResolveError()}
               disabled={resolvingId === selectedBeneficiary?._id}
             >
               {resolvingId === selectedBeneficiary?._id ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader2 className="mr-2 size-4 animate-spin" />
                   Processando...
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  <CheckCircle2 className="mr-2 size-4" />
                   Confirmar Resolução
                 </>
               )}
@@ -1013,74 +542,6 @@ export default function AdminDashboardClient() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Dialog
-        open={beneficiaryToUnlock !== null}
-        onOpenChange={(open) => {
-          if (!open) setBeneficiaryToUnlock(null)
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Desbloquear seleção do beneficiário?</DialogTitle>
-            <DialogDescription>
-              Isso permitirá que {beneficiaryToUnlock?.nome} altere o imóvel
-              selecionado no catálogo.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setBeneficiaryToUnlock(null)}
-              disabled={unlockingBeneficiaryId === beneficiaryToUnlock?.id}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={async () => {
-                if (!beneficiaryToUnlock) return
-                await handleUnlockSelection(beneficiaryToUnlock.id)
-                setBeneficiaryToUnlock(null)
-              }}
-              disabled={unlockingBeneficiaryId === beneficiaryToUnlock?.id}
-            >
-              {unlockingBeneficiaryId === beneficiaryToUnlock?.id ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Desbloqueando...
-                </>
-              ) : (
-                'Confirmar desbloqueio'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <UserDetailSheet
-        open={detailSheetUserId !== null}
-        onOpenChange={(next) => {
-          if (!next) {
-            setDetailSheetUserId(null)
-            setDetailSheetPreviewNome('')
-          }
-        }}
-        userId={detailSheetUserId}
-        previewNome={detailSheetPreviewNome}
-        onDeleted={() => {
-          setDetailSheetUserId(null)
-          setDetailSheetPreviewNome('')
-        }}
-      />
-
-      {/* Add User Sheet */}
-      <AddUserSheet
-        open={showAddUserSheet}
-        onOpenChange={setShowAddUserSheet}
-        onSuccess={() => {
-          // The paginated query will automatically refresh
-          toast.success('Lista de beneficiários atualizada')
-        }}
-      />
     </div>
   )
 }

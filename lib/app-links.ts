@@ -9,7 +9,9 @@ export const adminPaths = {
   dashboard: '/admin/dashboard',
   perfil: '/admin/perfil',
   imoveis: '/admin/imoveis',
+  beneficiarios: '/admin/beneficiarios',
   beneficiariosUpload: '/admin/beneficiarios/upload',
+  ofertantes: '/admin/ofertantes',
   testUsers: '/admin/test-users'
 } as const
 
