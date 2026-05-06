@@ -10,6 +10,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import {
@@ -38,6 +39,16 @@ import {
   DialogTitle
 } from '@/components/ui/dialog'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog'
+import {
   ArrowDown,
   ArrowUp,
   ChevronRight,
@@ -46,8 +57,10 @@ import {
   Filter,
   Loader2,
   MoreHorizontal,
+  Pencil,
   Plus,
   Search,
+  Trash2,
   XCircle
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -73,6 +86,17 @@ export function BeneficiariosAdminClient() {
   const [detailSheetUserId, setDetailSheetUserId] =
     useState<Id<'users'> | null>(null)
   const [detailSheetPreviewNome, setDetailSheetPreviewNome] = useState('')
+  const [detailSheetInitialMode, setDetailSheetInitialMode] = useState<
+    'view' | 'edit'
+  >('view')
+
+  const [beneficiaryToDelete, setBeneficiaryToDelete] = useState<{
+    id: Id<'users'>
+    nome: string
+    phone?: string
+  } | null>(null)
+  const [deletingBeneficiaryId, setDeletingBeneficiaryId] =
+    useState<Id<'users'> | null>(null)
 
   const [searchInput, setSearchInput] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -105,6 +129,30 @@ export function BeneficiariosAdminClient() {
   const unlockSelectionMutation = useMutation(
     api.users.adminUnlockPropertySelection
   )
+  const deleteBeneficiaryMutation = useMutation(
+    api.users.adminDeleteBeneficiary
+  )
+
+  const handleDeleteBeneficiary = async () => {
+    if (!beneficiaryToDelete) return
+    setDeletingBeneficiaryId(beneficiaryToDelete.id)
+    try {
+      await deleteBeneficiaryMutation({ userId: beneficiaryToDelete.id })
+      toast.success('Beneficiário excluído')
+      setBeneficiaryToDelete(null)
+      if (detailSheetUserId === beneficiaryToDelete.id) {
+        setDetailSheetUserId(null)
+        setDetailSheetPreviewNome('')
+        setDetailSheetInitialMode('view')
+      }
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'Erro ao excluir beneficiário'
+      toast.error(message)
+    } finally {
+      setDeletingBeneficiaryId(null)
+    }
+  }
 
   const handleUnlockSelection = async (userId: Id<'users'>) => {
     setUnlockingBeneficiaryId(userId)
@@ -248,6 +296,33 @@ export function BeneficiariosAdminClient() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56">
                               <DropdownMenuItem
+                                onSelect={() => {
+                                  setDetailSheetUserId(b._id)
+                                  setDetailSheetPreviewNome(b.nome)
+                                  setDetailSheetInitialMode('view')
+                                }}
+                              >
+                                <Eye className="size-4" />
+                                Ver detalhes
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                disabled={!b.beneficiaryProfileId}
+                                title={
+                                  !b.beneficiaryProfileId
+                                    ? 'Sem perfil cadastrado'
+                                    : undefined
+                                }
+                                onSelect={() => {
+                                  setDetailSheetUserId(b._id)
+                                  setDetailSheetPreviewNome(b.nome)
+                                  setDetailSheetInitialMode('edit')
+                                }}
+                              >
+                                <Pencil className="size-4" />
+                                Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
                                 disabled={unlockingBeneficiaryId === b._id}
                                 onSelect={() =>
                                   setBeneficiaryToUnlock({
@@ -263,14 +338,19 @@ export function BeneficiariosAdminClient() {
                                 )}
                                 Desbloquear seleção
                               </DropdownMenuItem>
+                              <DropdownMenuSeparator />
                               <DropdownMenuItem
-                                onSelect={() => {
-                                  setDetailSheetUserId(b._id)
-                                  setDetailSheetPreviewNome(b.nome)
-                                }}
+                                data-variant="destructive"
+                                onSelect={() =>
+                                  setBeneficiaryToDelete({
+                                    id: b._id,
+                                    nome: b.nome,
+                                    phone: b.phone
+                                  })
+                                }
                               >
-                                <Eye className="size-4" />
-                                Ver detalhes
+                                <Trash2 className="size-4" />
+                                Excluir usuário
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -356,19 +436,72 @@ export function BeneficiariosAdminClient() {
         </DialogContent>
       </Dialog>
 
+      <AlertDialog
+        open={beneficiaryToDelete !== null}
+        onOpenChange={(next) => {
+          if (!next) setBeneficiaryToDelete(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir beneficiário?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Serão removidos o cadastro, o
+              perfil, documentos e sessões de{' '}
+              <strong>{beneficiaryToDelete?.nome}</strong>
+              {beneficiaryToDelete?.phone && (
+                <>
+                  {' '}
+                  ({normalizePhone(beneficiaryToDelete.phone).display()})
+                </>
+              )}
+              .
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={deletingBeneficiaryId !== null}
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={deletingBeneficiaryId !== null}
+              onClick={(e) => {
+                e.preventDefault()
+                void handleDeleteBeneficiary()
+              }}
+            >
+              {deletingBeneficiaryId !== null ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  Excluindo…
+                </>
+              ) : (
+                'Excluir definitivamente'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <UserDetailSheet
         open={detailSheetUserId !== null}
         onOpenChange={(next) => {
           if (!next) {
             setDetailSheetUserId(null)
             setDetailSheetPreviewNome('')
+            setDetailSheetInitialMode('view')
           }
         }}
         userId={detailSheetUserId}
         previewNome={detailSheetPreviewNome}
+        initialMode={detailSheetInitialMode}
+        sheetActions="none"
         onDeleted={() => {
           setDetailSheetUserId(null)
           setDetailSheetPreviewNome('')
+          setDetailSheetInitialMode('view')
         }}
       />
 
