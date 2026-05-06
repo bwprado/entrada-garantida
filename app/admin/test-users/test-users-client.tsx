@@ -13,8 +13,6 @@ import { Loader2, RefreshCw, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Id } from '@/convex/_generated/dataModel'
 
-type TestRole = 'beneficiary' | 'ofertante'
-
 export default function TestUsersClient() {
   const config = useQuery(api.testUsers.getTestAuthConfig, {})
   const users = useQuery(api.testUsers.listTestUsers, config?.enabled ? {} : 'skip')
@@ -22,7 +20,6 @@ export default function TestUsersClient() {
   const resetPassword = useAction(api.testUsers.resetTestUserPassword)
   const deleteTestUser = useMutation(api.testUsers.deleteTestUser)
 
-  const [role, setRole] = useState<TestRole>('beneficiary')
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -65,7 +62,6 @@ export default function TestUsersClient() {
     setCreating(true)
     try {
       await createTestUser({
-        role,
         nome: nome.trim() || undefined,
         email,
         password
@@ -117,7 +113,20 @@ export default function TestUsersClient() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Usuários de teste</h1>
           <p className="text-sm text-muted-foreground">
-            Crie contas com e-mail e senha para fluxo de beneficiário ou ofertante.
+            Uma conta cobre ambos os fluxos. Em{' '}
+            <span className="font-medium text-foreground">/t/login</span> o tester
+            escolhe se navega como beneficiário ou ofertante.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Contas criadas com os provedores antigos{' '}
+            <code className="rounded bg-muted px-1 py-0.5 text-xs">
+              password_test_beneficiary
+            </code>{' '}
+            /{' '}
+            <code className="rounded bg-muted px-1 py-0.5 text-xs">
+              password_test_ofertante
+            </code>{' '}
+            deixam de autenticar: recrie-as aqui após o deploy.
           </p>
         </div>
 
@@ -127,20 +136,6 @@ export default function TestUsersClient() {
           </CardHeader>
           <CardContent>
             <form className="grid gap-4 md:grid-cols-2" onSubmit={onCreate}>
-              <div className="space-y-2">
-                <Label htmlFor="test-role">Fluxo</Label>
-                <select
-                  id="test-role"
-                  name="test-role"
-                  aria-label="Fluxo do usuário de teste"
-                  value={role}
-                  onChange={(event) => setRole(event.target.value as TestRole)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                >
-                  <option value="beneficiary">Beneficiário</option>
-                  <option value="ofertante">Ofertante</option>
-                </select>
-              </div>
               <div className="space-y-2">
                 <Label htmlFor="test-name">Nome (opcional)</Label>
                 <Input
@@ -195,7 +190,7 @@ export default function TestUsersClient() {
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>E-mail</TableHead>
-                  <TableHead>Fluxo</TableHead>
+                  <TableHead>Perfil ativo</TableHead>
                   <TableHead>Nova senha</TableHead>
                   <TableHead className="w-[220px] text-right">Ações</TableHead>
                 </TableRow>
@@ -209,7 +204,11 @@ export default function TestUsersClient() {
                       <TableCell>{user.email ?? '—'}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">
-                          {user.role === 'beneficiary' ? 'Beneficiário' : 'Ofertante'}
+                          {user.role === 'beneficiary'
+                            ? 'Beneficiário'
+                            : user.role === 'ofertante'
+                              ? 'Ofertante'
+                              : user.role}
                         </Badge>
                       </TableCell>
                       <TableCell>

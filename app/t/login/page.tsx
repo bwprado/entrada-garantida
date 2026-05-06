@@ -3,24 +3,23 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthActions } from '@convex-dev/auth/react'
+import { useMutation } from 'convex/react'
 import { Building2, Loader2, UsersRound } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { api } from '@/convex/_generated/api'
 import { getSelectedPropertiesHomeHref } from '@/lib/app-links'
+import { TEST_PASSWORD_PROVIDER_ID } from '@/lib/test-auth'
 
-type TestRole = 'beneficiary' | 'ofertante'
-
-const providerByRole: Record<TestRole, string> = {
-  beneficiary: 'password_test_beneficiary',
-  ofertante: 'password_test_ofertante'
-}
+type TestPersona = 'beneficiary' | 'ofertante'
 
 export default function HiddenTestLoginPage() {
   const router = useRouter()
   const { signIn } = useAuthActions()
-  const [selectedRole, setSelectedRole] = useState<TestRole | null>(null)
+  const applyTestPersona = useMutation(api.testUsers.applyTestPersona)
+  const [selectedPersona, setSelectedPersona] = useState<TestPersona | null>(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -28,19 +27,20 @@ export default function HiddenTestLoginPage() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (!selectedRole) {
-      setError('Escolha o tipo de acesso para continuar.')
+    if (!selectedPersona) {
+      setError('Escolha como quer navegar para continuar.')
       return
     }
     setLoading(true)
     setError(null)
     try {
-      await signIn(providerByRole[selectedRole], {
+      await signIn(TEST_PASSWORD_PROVIDER_ID, {
         flow: 'signIn',
         email: email.trim().toLowerCase(),
         password
       })
-      router.replace(getSelectedPropertiesHomeHref(selectedRole))
+      await applyTestPersona({ persona: selectedPersona })
+      router.replace(getSelectedPropertiesHomeHref(selectedPersona))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao autenticar.')
     } finally {
@@ -56,18 +56,19 @@ export default function HiddenTestLoginPage() {
             Acesso de testes
           </h1>
           <p className="text-sm text-muted-foreground">
-            Escolha o fluxo e entre com e-mail e senha.
+            Escolha como navegar (beneficiário ou ofertante) e entre com e-mail e
+            senha da mesma conta de teste.
           </p>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Card
             className={`cursor-pointer border transition-colors ${
-              selectedRole === 'beneficiary'
+              selectedPersona === 'beneficiary'
                 ? 'border-primary bg-primary/5'
                 : 'hover:border-primary/40'
             }`}
-            onClick={() => setSelectedRole('beneficiary')}
+            onClick={() => setSelectedPersona('beneficiary')}
           >
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-base">
@@ -76,17 +77,17 @@ export default function HiddenTestLoginPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground">
-              Login para contas de teste de beneficiário.
+              Abre o painel e fluxos de beneficiário após o login.
             </CardContent>
           </Card>
 
           <Card
             className={`cursor-pointer border transition-colors ${
-              selectedRole === 'ofertante'
+              selectedPersona === 'ofertante'
                 ? 'border-primary bg-primary/5'
                 : 'hover:border-primary/40'
             }`}
-            onClick={() => setSelectedRole('ofertante')}
+            onClick={() => setSelectedPersona('ofertante')}
           >
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-base">
@@ -95,7 +96,7 @@ export default function HiddenTestLoginPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground">
-              Login para contas de teste de ofertante.
+              Abre o painel e fluxos de ofertante após o login.
             </CardContent>
           </Card>
         </div>

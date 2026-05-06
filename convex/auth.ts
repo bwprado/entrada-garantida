@@ -2,21 +2,20 @@ import {
   AuthProviderConfig,
   convexAuth,
   type GenericActionCtxWithAuthConfig,
-  type PhoneConfig
 } from '@convex-dev/auth/server'
 import { Password } from '@convex-dev/auth/providers/Password'
 import { ConvexError } from 'convex/values'
+import { TEST_PASSWORD_PROVIDER_ID } from '../lib/test-auth'
 import { normalizePhone } from '../lib/normalize-phone'
 import { normalizeName } from './users'
 import { internal } from './_generated/api'
+import { ensureTestUserProfiles } from './testUserProfiles'
 
 import type { AnyDataModel } from 'convex/server'
 import type { GenericId } from 'convex/values'
-import type { MutationCtx, QueryCtx } from './_generated/server'
+import type { QueryCtx } from './_generated/server'
 
 const PHONE_OTP_MAX_AGE_SEC = 60 * 5
-const TEST_PASSWORD_BENEFICIARY_PROVIDER = 'password_test_beneficiary'
-const TEST_PASSWORD_OFERTANTE_PROVIDER = 'password_test_ofertante'
 const ENABLE_TEST_PASSWORD_AUTH =
   process.env.ENABLE_TEST_PASSWORD_AUTH === 'true'
 
@@ -104,82 +103,6 @@ function createPhoneProvider(id: PhoneProviderId): AuthProviderConfig {
   }
 }
 
-function getTestRoleFromProviderId(
-  providerId: string
-): 'beneficiary' | 'ofertante' | null {
-  if (providerId === TEST_PASSWORD_BENEFICIARY_PROVIDER) return 'beneficiary'
-  if (providerId === TEST_PASSWORD_OFERTANTE_PROVIDER) return 'ofertante'
-  return null
-}
-
-async function createTestRoleProfile(
-  ctx: MutationCtx,
-  userId: GenericId<'users'>,
-  role: 'beneficiary' | 'ofertante',
-  now: number
-): Promise<void> {
-  if (role === 'beneficiary') {
-    const profileId = await ctx.db.insert('beneficiaryProfiles', {
-      userId,
-      rg: '',
-      nomeMae: '',
-      nomePai: '',
-      sexo: 'nao_informado',
-      identidadeGenero: 'nao_informado',
-      raca: 'nao_informado',
-      deficiencias: ['nao_possui'],
-      profissao: '',
-      tipoRenda: 'nao_informado',
-      rendaFamiliarFaixa: 'ate_2',
-      pessoasFamilia: 1,
-      mesesAluguelSocial: 0,
-      possuiIdosoFamilia: false,
-      chefiaFeminina: false,
-      cep: '',
-      endereco: '',
-      numero: '',
-      complemento: '',
-      bairro: '',
-      cidade: '',
-      estado: '',
-      empreendimento: '',
-      dddTelefoneFixo: '',
-      telefoneFixo: '',
-      dddTelefoneRecado: '',
-      telefoneRecado: '',
-      falarCom: '',
-      aceitaComunicacoes: false,
-      propriedadeSelecionadaId: undefined,
-      selecaoBloqueada: false,
-      selecaoBloqueadaEm: undefined,
-      criadoEm: now,
-      atualizadoEm: now
-    })
-    await ctx.db.patch(userId, { beneficiaryProfileId: profileId })
-    return
-  }
-
-  const profileId = await ctx.db.insert('ofertanteProfiles', {
-    userId,
-    rg: '',
-    dataNascimento: '',
-    estadoCivil: 'solteiro',
-    profissao: '',
-    cep: '',
-    endereco: '',
-    numero: '',
-    complemento: '',
-    bairro: '',
-    cidade: '',
-    estado: '',
-    onboardingCompleto: false,
-    documentosPendentes: ['rg', 'comp_residencia'],
-    criadoEm: now,
-    atualizadoEm: now
-  })
-  await ctx.db.patch(userId, { ofertanteProfileId: profileId })
-}
-
 const providers: AuthProviderConfig[] = [
   createPhoneProvider('phone_admin'),
   createPhoneProvider('phone_ofertante'),
@@ -189,14 +112,7 @@ const providers: AuthProviderConfig[] = [
 if (ENABLE_TEST_PASSWORD_AUTH) {
   providers.push(
     Password({
-      id: TEST_PASSWORD_BENEFICIARY_PROVIDER,
-      profile(params) {
-        const email = String(params.email ?? '').trim().toLowerCase()
-        return { email }
-      }
-    }),
-    Password({
-      id: TEST_PASSWORD_OFERTANTE_PROVIDER,
+      id: TEST_PASSWORD_PROVIDER_ID,
       profile(params) {
         const email = String(params.email ?? '').trim().toLowerCase()
         return { email }
@@ -249,8 +165,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
       }
 
       if (type === 'credentials') {
-        const role = getTestRoleFromProviderId(provider.id)
-        if (!role) {
+        if (provider.id !== TEST_PASSWORD_PROVIDER_ID) {
           throw new Error(`Provider de credenciais não suportado: ${provider.id}`)
         }
         if (!ENABLE_TEST_PASSWORD_AUTH) {
@@ -266,37 +181,37 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         const nomeBase =
           typeof profile.nome === 'string' && profile.nome.trim().length > 0
             ? profile.nome.trim()
-            : `Teste ${role === 'beneficiary' ? 'Beneficiário' : 'Ofertante'}`
+            : 'Usuário de teste'
         const cpfBase =
           typeof profile.cpf === 'string' && profile.cpf.trim().length > 0
             ? profile.cpf.trim()
-            : `test-${role}-${email}`
+            : `test-${email}`
 
         if (existingUserId !== null) {
           await ctx.db.patch(existingUserId, {
             email,
             nome: nomeBase,
             searchName: normalizeName(nomeBase),
-            role,
             isTestUser: true,
             atualizadoEm: now
           })
+          await ensureTestUserProfiles(ctx, existingUserId, now)
           return existingUserId
         }
 
         const userId = await ctx.db.insert('users', {
-          role,
+          role: 'beneficiary',
           cpf: cpfBase,
           nome: nomeBase,
           searchName: normalizeName(nomeBase),
           email,
-          status: role === 'beneficiary' ? 'active' : 'onboarding',
+          status: 'active',
           isTestUser: true,
           criadoEm: now,
           atualizadoEm: now
         })
 
-        await createTestRoleProfile(ctx, userId, role, now)
+        await ensureTestUserProfiles(ctx, userId, now)
         return userId
       }
 

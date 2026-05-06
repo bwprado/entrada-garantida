@@ -17,6 +17,7 @@ import type * as properties from "../properties.js";
 import type * as propertySaleDocuments from "../propertySaleDocuments.js";
 import type * as public_ from "../public.js";
 import type * as r2 from "../r2.js";
+import type * as testUserProfiles from "../testUserProfiles.js";
 import type * as testUsers from "../testUsers.js";
 import type * as twilio from "../twilio.js";
 import type * as users from "../users.js";
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   propertySaleDocuments: typeof propertySaleDocuments;
   public: typeof public_;
   r2: typeof r2;
+  testUserProfiles: typeof testUserProfiles;
   testUsers: typeof testUsers;
   twilio: typeof twilio;
   users: typeof users;

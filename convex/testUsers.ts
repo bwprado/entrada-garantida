@@ -4,14 +4,15 @@ import {
   modifyAccountCredentials
 } from '@convex-dev/auth/server'
 import { ConvexError, v } from 'convex/values'
+import { TEST_PASSWORD_PROVIDER_ID } from '../lib/test-auth'
 import { api } from './_generated/api'
+import { verifyLogin } from './authz'
 import { action, mutation, query } from './_generated/server'
 import { normalizeName } from './users'
+import { ensureTestUserProfiles } from './testUserProfiles'
 
 const ENABLE_TEST_PASSWORD_AUTH =
   process.env.ENABLE_TEST_PASSWORD_AUTH === 'true'
-const TEST_PASSWORD_BENEFICIARY_PROVIDER = 'password_test_beneficiary'
-const TEST_PASSWORD_OFERTANTE_PROVIDER = 'password_test_ofertante'
 
 function assertFeatureEnabled() {
   if (!ENABLE_TEST_PASSWORD_AUTH) {
@@ -19,16 +20,9 @@ function assertFeatureEnabled() {
   }
 }
 
-function providerForRole(role: 'beneficiary' | 'ofertante') {
-  return role === 'beneficiary'
-    ? TEST_PASSWORD_BENEFICIARY_PROVIDER
-    : TEST_PASSWORD_OFERTANTE_PROVIDER
-}
-
-function buildTestCpf(role: 'beneficiary' | 'ofertante'): string {
-  const roleDigit = role === 'beneficiary' ? '1' : '2'
+function buildTestCpf(): string {
   const suffix = `${Date.now()}`.slice(-10)
-  return `${roleDigit}${suffix}`.slice(0, 11)
+  return `9${suffix}`.slice(0, 11)
 }
 
 export const getTestAuthConfig = query({
@@ -58,9 +52,49 @@ export const listTestUsers = query({
   }
 })
 
+/** Switches active navigation role for password test users (both profiles must exist). */
+export const applyTestPersona = mutation({
+  args: {
+    persona: v.union(v.literal('beneficiary'), v.literal('ofertante'))
+  },
+  handler: async (ctx, args) => {
+    const user = await verifyLogin(ctx)
+    if (!user.isTestUser) {
+      throw new ConvexError('Apenas usuários de teste podem alternar perfil')
+    }
+
+    const now = Date.now()
+    await ensureTestUserProfiles(ctx, user._id, now)
+
+    const row = await ctx.db.get(user._id)
+    if (!row) {
+      throw new ConvexError('Usuário não encontrado')
+    }
+
+    if (args.persona === 'beneficiary') {
+      await ctx.db.patch(user._id, {
+        role: 'beneficiary',
+        status: 'active',
+        atualizadoEm: now
+      })
+      return { ok: true as const }
+    }
+
+    const ofProfile = row.ofertanteProfileId
+      ? await ctx.db.get(row.ofertanteProfileId)
+      : null
+    const onboardingDone = Boolean(ofProfile?.onboardingCompleto)
+    await ctx.db.patch(user._id, {
+      role: 'ofertante',
+      status: onboardingDone ? 'active' : 'onboarding',
+      atualizadoEm: now
+    })
+    return { ok: true as const }
+  }
+})
+
 export const createTestUser = action({
   args: {
-    role: v.union(v.literal('beneficiary'), v.literal('ofertante')),
     email: v.string(),
     password: v.string(),
     nome: v.optional(v.string())
@@ -82,24 +116,19 @@ export const createTestUser = action({
       throw new ConvexError('Senha deve ter no mínimo 8 caracteres')
     }
 
-    const nome =
-      args.nome?.trim() ||
-      (args.role === 'beneficiary'
-        ? 'Beneficiário de teste'
-        : 'Ofertante de teste')
+    const nome = args.nome?.trim() || 'Usuário de teste'
     const now = Date.now()
-    const provider = providerForRole(args.role)
 
     const created = await createAccount(ctx, {
-      provider,
+      provider: TEST_PASSWORD_PROVIDER_ID,
       account: { id: email, secret: args.password },
       profile: {
-        role: args.role,
-        cpf: buildTestCpf(args.role),
+        role: 'beneficiary',
+        cpf: buildTestCpf(),
         nome,
         searchName: normalizeName(nome),
         email,
-        status: args.role === 'beneficiary' ? 'active' : 'onboarding',
+        status: 'active',
         isTestUser: true,
         criadoEm: now,
         atualizadoEm: now
@@ -136,12 +165,9 @@ export const resetTestUserPassword = action({
     if (!user.email) {
       throw new ConvexError('Usuário sem e-mail cadastrado')
     }
-    if (user.role !== 'beneficiary' && user.role !== 'ofertante') {
-      throw new ConvexError('Apenas beneficiário e ofertante são suportados')
-    }
 
     await modifyAccountCredentials(ctx, {
-      provider: providerForRole(user.role),
+      provider: TEST_PASSWORD_PROVIDER_ID,
       account: {
         id: user.email,
         secret: args.password
