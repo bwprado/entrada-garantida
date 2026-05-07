@@ -139,10 +139,16 @@ export default async function LandingPage() {
             <StaggerItem className="text-center">
               <div className="text-4xl md:text-5xl font-bold text-accent mb-2 tracking-tight">
                 R$ 200 mil
+                <sup className="text-xl md:text-2xl font-semibold align-super ml-0.5">
+                  *
+                </sup>
               </div>
               <div className="text-white/90 text-lg">
                 Valor Máximo do Imóvel
               </div>
+              <p className="text-white/65 text-xs sm:text-sm mt-3 max-w-sm mx-auto leading-snug">
+                *sujeito à avaliação pela Caixa Econômica Federal
+              </p>
             </StaggerItem>
           </StaggerContainer>
         </div>
@@ -333,10 +339,16 @@ export default async function LandingPage() {
                 <div className="bg-muted/50 rounded-xl p-5 border border-border">
                   <div className="text-3xl font-bold text-primary mb-1 tracking-tight">
                     R$ 200.000,00
+                    <sup className="text-lg font-semibold align-super ml-0.5">
+                      *
+                    </sup>
                   </div>
                   <div className="text-sm text-muted-foreground">
                     Preço máximo do imóvel
                   </div>
+                  <p className="text-muted-foreground/80 text-xs mt-2 leading-snug">
+                    *sujeito à avaliação pela Caixa Econômica Federal
+                  </p>
                 </div>
                 <div className="bg-muted/50 rounded-xl p-5 border border-border">
                   <div className="text-3xl font-bold text-secondary mb-1 tracking-tight">
