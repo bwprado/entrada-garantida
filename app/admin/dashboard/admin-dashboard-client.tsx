@@ -141,455 +141,388 @@ export default function AdminDashboardClient() {
   }
 
   return (
-    <div className="flex w-full flex-1 flex-col">
-      <div className="flex-1 bg-muted/30 px-4 py-8">
-        <div className="container mx-auto max-w-7xl">
-          <div className="mb-8">
-            <h2 className="mb-2 text-3xl font-bold">Painel Administrativo</h2>
-            <p className="text-muted-foreground">
-              Gestão completa da Aquisição Assistida no Maranhão
-            </p>
-          </div>
-
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle>Controle de acesso por perfil</CardTitle>
-              <CardDescription>
-                Defina quais perfis podem iniciar login na plataforma.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between rounded-lg border p-4">
+    <div className="space-y-6">
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium">Login de beneficiário</p>
-                  <p className="text-sm text-muted-foreground">
-                    Ative apenas quando iniciar a etapa de atendimento dos
-                    beneficiários.
+                  <p className="mb-1 text-sm text-muted-foreground">
+                    Total de Beneficiários
                   </p>
-                </div>
-                <Switch
-                  checked={beneficiaryLoginEnabled}
-                  onCheckedChange={setBeneficiaryLoginEnabled}
-                  disabled={!hasLoginSettingsLoaded || isSavingLoginSettings}
-                />
-              </div>
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div>
-                  <p className="font-medium">Login de ofertante</p>
-                  <p className="text-sm text-muted-foreground">
-                    Mantém o acesso dos vendedores de imóveis.
+                  <p className="text-3xl font-bold">
+                    {stats.totalBeneficiarios}
                   </p>
-                </div>
-                <Switch
-                  checked={ofertanteLoginEnabled}
-                  onCheckedChange={setOfertanteLoginEnabled}
-                  disabled={!hasLoginSettingsLoaded || isSavingLoginSettings}
-                />
-              </div>
-              <div className="flex justify-end">
-                <Button
-                  onClick={() => void handleSaveLoginSettings()}
-                  disabled={
-                    !hasLoginSettingsLoaded ||
-                    !hasLoginSettingsChanged ||
-                    isSavingLoginSettings
-                  }
-                >
-                  {isSavingLoginSettings ? (
-                    <>
-                      <Loader2 className="mr-2 size-4 animate-spin" />
-                      Salvando...
-                    </>
-                  ) : (
-                    'Salvar disponibilidade'
+                  {stats.beneficiariosComErros > 0 && (
+                    <p className="mt-1 flex items-center text-xs text-destructive">
+                      <AlertCircle className="mr-1 size-3" />
+                      {stats.beneficiariosComErros} com erros
+                    </p>
                   )}
-                </Button>
+                  <p className="mt-2">
+                    <Link
+                      href={adminPaths.beneficiarios}
+                      className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                    >
+                      Ver lista completa
+                    </Link>
+                  </p>
+                </div>
+                <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10">
+                  <Users className="size-6 text-primary" />
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="mb-1 text-sm text-muted-foreground">
-                      Total de Beneficiários
-                    </p>
-                    <p className="text-3xl font-bold">
-                      {stats.totalBeneficiarios}
-                    </p>
-                    {stats.beneficiariosComErros > 0 && (
-                      <p className="mt-1 flex items-center text-xs text-destructive">
-                        <AlertCircle className="mr-1 size-3" />
-                        {stats.beneficiariosComErros} com erros
-                      </p>
-                    )}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="mb-1 text-sm text-muted-foreground">
+                    Imóveis Cadastrados
+                  </p>
+                  <p className="text-3xl font-bold">{stats.totalImoveis}</p>
+                  <p className="mt-1 text-xs text-secondary">
+                    <TrendingUp className="mr-1 inline size-3" />+
+                    {pendingProperties?.length ?? 0} pendentes
+                  </p>
+                  {(pendingProperties?.length ?? 0) > 0 && (
                     <p className="mt-2">
                       <Link
-                        href={adminPaths.beneficiarios}
+                        href={adminPaths.imoveis}
                         className="text-sm font-medium text-primary underline-offset-4 hover:underline"
                       >
-                        Ver lista completa
+                        Revisar fila de análise
                       </Link>
                     </p>
-                  </div>
-                  <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10">
-                    <Users className="size-6 text-primary" />
-                  </div>
+                  )}
                 </div>
-              </CardContent>
-            </Card>
+                <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10">
+                  <Building2 className="size-6 text-primary" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="mb-1 text-sm text-muted-foreground">
+                    Solicitações Pendentes
+                  </p>
+                  <p className="text-3xl font-bold">
+                    {stats.solicitacoesPendentes}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Requer atenção
+                  </p>
+                </div>
+                <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10">
+                  <FileText className="size-6 text-primary" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="mb-1 text-sm text-muted-foreground">
+                    Construtores Ativos
+                  </p>
+                  <p className="text-3xl font-bold">
+                    {stats.construtoresAtivos}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Empresas cadastradas
+                  </p>
+                </div>
+                <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10">
+                  <Building2 className="size-6 text-primary" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-4 lg:inline-grid lg:w-auto">
+            <TabsTrigger value="erros" className="relative">
+              Erros de Dados
+              {stats.beneficiariosComErros > 0 && (
+                <span className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">
+                  {stats.beneficiariosComErros}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="construtores">Construtores</TabsTrigger>
+            <TabsTrigger value="imoveis">Imóveis</TabsTrigger>
+            <TabsTrigger value="solicitacoes">Solicitações</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="erros" className="space-y-6">
             <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
+              <CardHeader>
+                <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
                   <div>
-                    <p className="mb-1 text-sm text-muted-foreground">
-                      Imóveis Cadastrados
-                    </p>
-                    <p className="text-3xl font-bold">{stats.totalImoveis}</p>
-                    <p className="mt-1 text-xs text-secondary">
-                      <TrendingUp className="mr-1 inline size-3" />+
-                      {pendingProperties?.length ?? 0} pendentes
-                    </p>
-                    {(pendingProperties?.length ?? 0) > 0 && (
-                      <p className="mt-2">
-                        <Link
-                          href={adminPaths.imoveis}
-                          className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-                        >
-                          Revisar fila de análise
-                        </Link>
-                      </p>
-                    )}
+                    <CardTitle className="flex items-center gap-2">
+                      <AlertCircle className="size-5 text-destructive" />
+                      Beneficiários com Erros nos Dados
+                    </CardTitle>
+                    <CardDescription>
+                      Lista de beneficiários que reportaram erros em seus dados
+                      cadastrais
+                    </CardDescription>
                   </div>
-                  <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10">
-                    <Building2 className="size-6 text-primary" />
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="bg-transparent"
+                    >
+                      <Download className="mr-2 size-4" />
+                      Exportar Lista
+                    </Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </CardHeader>
+              <CardContent>
+                {beneficiariesWithErrors?.length === 0 ? (
+                  <div className="py-12 text-center">
+                    <CheckCircle2 className="mx-auto mb-4 size-12 text-secondary" />
+                    <p className="text-muted-foreground">
+                      Nenhum beneficiário com erro reportado no momento.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {beneficiariesWithErrors?.map((b) => (
+                      <div
+                        key={b._id}
+                        className="rounded-lg border p-4 transition-colors hover:bg-muted/50"
+                      >
+                        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+                          <div className="flex-1">
+                            <div className="mb-3 flex items-center gap-3">
+                              <h4 className="text-lg font-semibold">
+                                {b.nome}
+                              </h4>
+                              <Badge variant="destructive">
+                                Erro Reportado
+                              </Badge>
+                              <span className="text-sm text-muted-foreground">
+                                {b.erroReportadoEm &&
+                                  new Date(
+                                    b.erroReportadoEm
+                                  ).toLocaleDateString('pt-BR')}
+                              </span>
+                            </div>
 
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="mb-1 text-sm text-muted-foreground">
-                      Solicitações Pendentes
-                    </p>
-                    <p className="text-3xl font-bold">
-                      {stats.solicitacoesPendentes}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Requer atenção
-                    </p>
-                  </div>
-                  <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10">
-                    <FileText className="size-6 text-primary" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                            <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                              <div className="space-y-2">
+                                <div className="flex items-start gap-2">
+                                  <CreditCard className="mt-0.5 size-4 text-muted-foreground" />
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">
+                                      CPF
+                                    </p>
+                                    <p className="font-medium">
+                                      {formatCPF(b.cpf)}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <Phone className="mt-0.5 size-4 text-muted-foreground" />
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">
+                                      Telefone
+                                    </p>
+                                    <p className="font-medium">
+                                      {normalizePhone(b.phone).display()}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                <div className="flex items-start gap-2">
+                                  <MapPin className="mt-0.5 size-4 text-muted-foreground" />
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">
+                                      Endereço
+                                    </p>
+                                    <p className="font-medium">
+                                      {formatAddress(b)}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
 
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="mb-1 text-sm text-muted-foreground">
-                      Construtores Ativos
-                    </p>
-                    <p className="text-3xl font-bold">
-                      {stats.construtoresAtivos}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Empresas cadastradas
-                    </p>
-                  </div>
-                  <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10">
-                    <Building2 className="size-6 text-primary" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                            <div className="rounded-lg bg-muted/50 p-3">
+                              <p className="mb-1 text-sm font-medium">
+                                Descrição do problema:
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {b.mensagemErroDados}
+                              </p>
+                            </div>
+                          </div>
 
-          <Tabs
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className="space-y-6"
-          >
-            <TabsList className="grid w-full grid-cols-4 lg:inline-grid lg:w-auto">
-              <TabsTrigger value="erros" className="relative">
-                Erros de Dados
-                {stats.beneficiariosComErros > 0 && (
-                  <span className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">
-                    {stats.beneficiariosComErros}
-                  </span>
+                          <div className="flex flex-col gap-2 md:min-w-[150px]">
+                            <Button
+                              size="sm"
+                              variant="default"
+                              onClick={() => {
+                                setSelectedBeneficiary(b)
+                                setShowResolveDialog(true)
+                              }}
+                            >
+                              <CheckCircle2 className="mr-2 size-4" />
+                              Marcar como Resolvido
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="bg-transparent"
+                            >
+                              <Phone className="mr-2 size-4" />
+                              Contatar
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
-              </TabsTrigger>
-              <TabsTrigger value="construtores">Construtores</TabsTrigger>
-              <TabsTrigger value="imoveis">Imóveis</TabsTrigger>
-              <TabsTrigger value="solicitacoes">Solicitações</TabsTrigger>
-            </TabsList>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-            <TabsContent value="erros" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <AlertCircle className="size-5 text-destructive" />
-                        Beneficiários com Erros nos Dados
-                      </CardTitle>
-                      <CardDescription>
-                        Lista de beneficiários que reportaram erros em seus
-                        dados cadastrais
-                      </CardDescription>
-                    </div>
-                    <div className="flex gap-2">
+          <TabsContent value="construtores" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+                  <div>
+                    <CardTitle>Gestão de Construtores</CardTitle>
+                    <CardDescription>
+                      Visualize e gerencie as empresas cadastradas
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {construtores?.slice(0, 3).map((c) => (
+                    <div
+                      key={c._id}
+                      className="flex flex-col justify-between gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50 md:flex-row md:items-center"
+                    >
+                      <div className="flex-1">
+                        <div className="mb-2 flex items-center gap-3">
+                          <h4 className="font-semibold">{c.nome}</h4>
+                          <Badge
+                            variant="secondary"
+                            className="bg-secondary/50"
+                          >
+                            Ativo
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-1 gap-2 text-sm text-muted-foreground md:grid-cols-3">
+                          <p>CNPJ: {c.cpf}</p>
+                          <p>Telefone: {normalizePhone(c.phone).display()}</p>
+                          <p>
+                            Cadastro:{' '}
+                            {new Date(c.criadoEm).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                      </div>
                       <Button
                         variant="outline"
                         size="sm"
                         className="bg-transparent"
                       >
-                        <Download className="mr-2 size-4" />
-                        Exportar Lista
+                        <Eye className="mr-2 size-4" />
+                        Ver Detalhes
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="imoveis" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                  <div>
+                    <CardTitle>Gestão de Imóveis</CardTitle>
+                    <CardDescription>
+                      Consulte, filtre por status e abra a revisão de cada
+                      imóvel numa única tela.
+                    </CardDescription>
+                  </div>
+                  <Button asChild>
+                    <Link href={adminPaths.imoveis}>Abrir imóveis</Link>
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Use busca e filtro de status em{' '}
+                  <Link
+                    href={adminPaths.imoveis}
+                    className="font-medium text-primary underline-offset-4 hover:underline"
+                  >
+                    {adminPaths.imoveis}
+                  </Link>
+                  . No painel, o card &quot;Imóveis cadastrados&quot; também
+                  oferece atalho quando há pendentes de análise.
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="solicitacoes" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Solicitações de Imóveis</CardTitle>
+                <CardDescription>
+                  Gerencie as solicitações de beneficiários
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="rounded-lg border p-4 transition-colors hover:bg-muted/50">
+                    <div className="mb-3 flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="mb-2 flex items-center gap-2">
+                          <h4 className="font-semibold">João Silva Santos</h4>
+                          <Badge>Em Análise</Badge>
+                        </div>
+                        <p className="mb-1 text-sm text-muted-foreground">
+                          Solicitou: Residencial Jardim das Flores
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="bg-transparent"
+                      >
+                        <Eye className="mr-2 size-4" />
+                        Analisar
                       </Button>
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  {beneficiariesWithErrors?.length === 0 ? (
-                    <div className="py-12 text-center">
-                      <CheckCircle2 className="mx-auto mb-4 size-12 text-secondary" />
-                      <p className="text-muted-foreground">
-                        Nenhum beneficiário com erro reportado no momento.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {beneficiariesWithErrors?.map((b) => (
-                        <div
-                          key={b._id}
-                          className="rounded-lg border p-4 transition-colors hover:bg-muted/50"
-                        >
-                          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
-                            <div className="flex-1">
-                              <div className="mb-3 flex items-center gap-3">
-                                <h4 className="text-lg font-semibold">
-                                  {b.nome}
-                                </h4>
-                                <Badge variant="destructive">
-                                  Erro Reportado
-                                </Badge>
-                                <span className="text-sm text-muted-foreground">
-                                  {b.erroReportadoEm &&
-                                    new Date(
-                                      b.erroReportadoEm
-                                    ).toLocaleDateString('pt-BR')}
-                                </span>
-                              </div>
-
-                              <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                                <div className="space-y-2">
-                                  <div className="flex items-start gap-2">
-                                    <CreditCard className="mt-0.5 size-4 text-muted-foreground" />
-                                    <div>
-                                      <p className="text-sm text-muted-foreground">
-                                        CPF
-                                      </p>
-                                      <p className="font-medium">
-                                        {formatCPF(b.cpf)}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-start gap-2">
-                                    <Phone className="mt-0.5 size-4 text-muted-foreground" />
-                                    <div>
-                                      <p className="text-sm text-muted-foreground">
-                                        Telefone
-                                      </p>
-                                      <p className="font-medium">
-                                        {normalizePhone(b.phone).display()}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="space-y-2">
-                                  <div className="flex items-start gap-2">
-                                    <MapPin className="mt-0.5 size-4 text-muted-foreground" />
-                                    <div>
-                                      <p className="text-sm text-muted-foreground">
-                                        Endereço
-                                      </p>
-                                      <p className="font-medium">
-                                        {formatAddress(b)}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="rounded-lg bg-muted/50 p-3">
-                                <p className="mb-1 text-sm font-medium">
-                                  Descrição do problema:
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                  {b.mensagemErroDados}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="flex flex-col gap-2 md:min-w-[150px]">
-                              <Button
-                                size="sm"
-                                variant="default"
-                                onClick={() => {
-                                  setSelectedBeneficiary(b)
-                                  setShowResolveDialog(true)
-                                }}
-                              >
-                                <CheckCircle2 className="mr-2 size-4" />
-                                Marcar como Resolvido
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="bg-transparent"
-                              >
-                                <Phone className="mr-2 size-4" />
-                                Contatar
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="construtores" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-                    <div>
-                      <CardTitle>Gestão de Construtores</CardTitle>
-                      <CardDescription>
-                        Visualize e gerencie as empresas cadastradas
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {construtores?.slice(0, 3).map((c) => (
-                      <div
-                        key={c._id}
-                        className="flex flex-col justify-between gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50 md:flex-row md:items-center"
-                      >
-                        <div className="flex-1">
-                          <div className="mb-2 flex items-center gap-3">
-                            <h4 className="font-semibold">{c.nome}</h4>
-                            <Badge variant="secondary" className="bg-secondary/50">
-                              Ativo
-                            </Badge>
-                          </div>
-                          <div className="grid grid-cols-1 gap-2 text-sm text-muted-foreground md:grid-cols-3">
-                            <p>CNPJ: {c.cpf}</p>
-                            <p>Telefone: {normalizePhone(c.phone).display()}</p>
-                            <p>
-                              Cadastro:{' '}
-                              {new Date(c.criadoEm).toLocaleDateString('pt-BR')}
-                            </p>
-                          </div>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="bg-transparent"
-                        >
-                          <Eye className="mr-2 size-4" />
-                          Ver Detalhes
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="imoveis" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                    <div>
-                      <CardTitle>Gestão de Imóveis</CardTitle>
-                      <CardDescription>
-                        Consulte, filtre por status e abra a revisão de cada
-                        imóvel numa única tela.
-                      </CardDescription>
-                    </div>
-                    <Button asChild>
-                      <Link href={adminPaths.imoveis}>Abrir imóveis</Link>
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Use busca e filtro de status em{' '}
-                    <Link
-                      href={adminPaths.imoveis}
-                      className="font-medium text-primary underline-offset-4 hover:underline"
-                    >
-                      {adminPaths.imoveis}
-                    </Link>
-                    . No painel, o card &quot;Imóveis cadastrados&quot; também
-                    oferece atalho quando há pendentes de análise.
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="solicitacoes" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Solicitações de Imóveis</CardTitle>
-                  <CardDescription>
-                    Gerencie as solicitações de beneficiários
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="rounded-lg border p-4 transition-colors hover:bg-muted/50">
-                      <div className="mb-3 flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="mb-2 flex items-center gap-2">
-                            <h4 className="font-semibold">João Silva Santos</h4>
-                            <Badge>Em Análise</Badge>
-                          </div>
-                          <p className="mb-1 text-sm text-muted-foreground">
-                            Solicitou: Residencial Jardim das Flores
-                          </p>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="bg-transparent"
-                        >
-                          <Eye className="mr-2 size-4" />
-                          Analisar
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
       <Dialog open={showResolveDialog} onOpenChange={setShowResolveDialog}>

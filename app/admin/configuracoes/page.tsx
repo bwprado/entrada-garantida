@@ -52,64 +52,58 @@ export default function AdminConfiguracoesPage() {
   }
 
   return (
-    <div className="flex w-full flex-1 flex-col">
-      <div className="flex-1 bg-muted/30 p-4">
-        <div className="w-full">
-          <Card>
-            <CardHeader>
-              <CardTitle>Controle de acesso por perfil</CardTitle>
-              <CardDescription>
-                Defina quais perfis podem iniciar login na plataforma.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div>
-                  <p className="font-medium">Login de beneficiário</p>
-                  <p className="text-sm text-muted-foreground">
-                    Ative quando iniciar o acesso dos beneficiários.
-                  </p>
-                </div>
-                <Switch
-                  checked={beneficiaryLoginEnabled}
-                  onCheckedChange={setBeneficiaryLoginEnabled}
-                  disabled={!hasLoaded || isSaving}
-                />
-              </div>
-
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div>
-                  <p className="font-medium">Login de ofertante</p>
-                  <p className="text-sm text-muted-foreground">
-                    Mantém o acesso dos vendedores de imóveis.
-                  </p>
-                </div>
-                <Switch
-                  checked={ofertanteLoginEnabled}
-                  onCheckedChange={setOfertanteLoginEnabled}
-                  disabled={!hasLoaded || isSaving}
-                />
-              </div>
-
-              <div className="flex justify-end">
-                <Button
-                  onClick={() => void handleSave()}
-                  disabled={!hasLoaded || !hasChanges || isSaving}
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 size-4 animate-spin" />
-                      Salvando...
-                    </>
-                  ) : (
-                    'Salvar disponibilidade'
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+    <Card>
+      <CardHeader>
+        <CardTitle>Controle de acesso por perfil</CardTitle>
+        <CardDescription>
+          Defina quais perfis podem iniciar login na plataforma.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between rounded-lg border p-4">
+          <div>
+            <p className="font-medium">Login de beneficiário</p>
+            <p className="text-sm text-muted-foreground">
+              Ative quando iniciar o acesso dos beneficiários.
+            </p>
+          </div>
+          <Switch
+            checked={beneficiaryLoginEnabled}
+            onCheckedChange={setBeneficiaryLoginEnabled}
+            disabled={!hasLoaded || isSaving}
+          />
         </div>
-      </div>
-    </div>
+
+        <div className="flex items-center justify-between rounded-lg border p-4">
+          <div>
+            <p className="font-medium">Login de ofertante</p>
+            <p className="text-sm text-muted-foreground">
+              Mantém o acesso dos vendedores de imóveis.
+            </p>
+          </div>
+          <Switch
+            checked={ofertanteLoginEnabled}
+            onCheckedChange={setOfertanteLoginEnabled}
+            disabled={!hasLoaded || isSaving}
+          />
+        </div>
+
+        <div className="flex justify-end">
+          <Button
+            onClick={() => void handleSave()}
+            disabled={!hasLoaded || !hasChanges || isSaving}
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              'Salvar disponibilidade'
+            )}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
