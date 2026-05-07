@@ -1,3 +1,5 @@
+'use client'
+
 import Link from 'next/link'
 
 import {
@@ -14,9 +16,16 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { api } from '@/convex/_generated/api'
+import { useQuery } from 'convex/react'
 import { ArrowLeft, Building2, Fingerprint, UsersRound } from 'lucide-react'
 
 export default function LoginHubPage() {
+  const availability = useQuery(api.users.getLoginAvailability, {})
+  const beneficiaryEnabled = availability?.beneficiaryLoginEnabled ?? false
+  const ofertanteEnabled = availability?.ofertanteLoginEnabled ?? true
+
   return (
     <div className="min-h-[calc(100dvh-5rem)] flex flex-col bg-linear-to-br from-primary/5 via-background to-secondary/5">
       <div className="flex-1 flex justify-center p-4 sm:p-6 lg:p-8">
@@ -59,17 +68,27 @@ export default function LoginHubPage() {
                   <CardDescription className="text-sm leading-relaxed">
                     CPF e celular cadastrados na Aquisição Assistida
                   </CardDescription>
+                  {!beneficiaryEnabled ? (
+                    <Badge variant="secondary" className="w-fit">
+                      Indisponível no momento
+                    </Badge>
+                  ) : null}
                 </CardHeader>
                 <CardContent className="h-full">
                   <div></div>
                 </CardContent>
                 <CardFooter>
                   <Button
-                    asChild
+                    asChild={beneficiaryEnabled}
                     variant="ghost"
                     className="w-full bg-primary text-white shadow-brand-sm hover:bg-primary/15 hover:text-primary"
+                    disabled={!beneficiaryEnabled}
                   >
-                    <Link href="/login/beneficiario">Entrar</Link>
+                    {beneficiaryEnabled ? (
+                      <Link href="/login/beneficiario">Entrar</Link>
+                    ) : (
+                      <span>Indisponível</span>
+                    )}
                   </Button>
                 </CardFooter>
               </Card>
@@ -90,17 +109,27 @@ export default function LoginHubPage() {
                   <CardDescription className="text-sm leading-relaxed">
                     Proprietários que ofertam imóveis na Aquisição Assistida
                   </CardDescription>
+                  {!ofertanteEnabled ? (
+                    <Badge variant="secondary" className="w-fit">
+                      Indisponível no momento
+                    </Badge>
+                  ) : null}
                 </CardHeader>
                 <CardContent className="h-full">
                   <div></div>
                 </CardContent>
                 <CardFooter>
                   <Button
-                    asChild
+                    asChild={ofertanteEnabled}
                     variant="ghost"
                     className="w-full bg-secondary text-white shadow-brand-sm hover:bg-secondary hover:text-secondary"
+                    disabled={!ofertanteEnabled}
                   >
-                    <Link href="/login/ofertante">Entrar</Link>
+                    {ofertanteEnabled ? (
+                      <Link href="/login/ofertante">Entrar</Link>
+                    ) : (
+                      <span>Indisponível</span>
+                    )}
                   </Button>
                 </CardFooter>
               </Card>

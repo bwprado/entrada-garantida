@@ -42,6 +42,37 @@ const ROLE_CONFIG = {
 
 type PhoneProviderId = keyof typeof ROLE_CONFIG
 
+const APP_SETTINGS_SINGLETON_KEY = 'global'
+
+async function assertLoginEnabledForProvider(
+  ctx: QueryCtx,
+  providerId: PhoneProviderId
+): Promise<void> {
+  if (providerId !== 'phone_beneficiary' && providerId !== 'phone_ofertante') {
+    return
+  }
+  const settings = await ctx.db
+    .query('appSettings')
+    .withIndex('by_singleton_key', (q) =>
+      q.eq('singletonKey', APP_SETTINGS_SINGLETON_KEY)
+    )
+    .first()
+
+  const beneficiaryEnabled = settings?.beneficiaryLoginEnabled ?? false
+  const ofertanteEnabled = settings?.ofertanteLoginEnabled ?? true
+
+  if (providerId === 'phone_beneficiary' && !beneficiaryEnabled) {
+    throw new ConvexError(
+      'Acesso de beneficiário indisponível no momento. Tente novamente mais tarde.'
+    )
+  }
+  if (providerId === 'phone_ofertante' && !ofertanteEnabled) {
+    throw new ConvexError(
+      'Acesso de ofertante indisponível no momento. Tente novamente mais tarde.'
+    )
+  }
+}
+
 async function findUserByPhone(
   ctx: QueryCtx,
   phone: string
@@ -128,6 +159,10 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
       const { type, provider, profile, existingUserId } = args
 
       if (type === 'phone' && typeof profile.phone === 'string') {
+        await assertLoginEnabledForProvider(
+          ctx,
+          provider.id as PhoneProviderId
+        )
         const user = await findUserByPhone(ctx, profile.phone)
         validateUserRole(user, ROLE_CONFIG[provider.id as PhoneProviderId])
 

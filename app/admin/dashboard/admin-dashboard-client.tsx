@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
@@ -14,6 +14,7 @@ import {
   CardTitle
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Dialog,
@@ -56,6 +57,9 @@ export default function AdminDashboardClient() {
     useState<BeneficiaryErrorRow | null>(null)
   const [showResolveDialog, setShowResolveDialog] = useState(false)
   const [resolvingId, setResolvingId] = useState<string | null>(null)
+  const [beneficiaryLoginEnabled, setBeneficiaryLoginEnabled] = useState(false)
+  const [ofertanteLoginEnabled, setOfertanteLoginEnabled] = useState(true)
+  const [isSavingLoginSettings, setIsSavingLoginSettings] = useState(false)
 
   const beneficiariesWithErrors = useQuery(
     api.users.getBeneficiariesWithErrors,
@@ -65,8 +69,22 @@ export default function AdminDashboardClient() {
   const construtores = useQuery(api.users.getConstrutores, {})
   const properties = useQuery(api.properties.getAllForAdmin, {})
   const pendingProperties = useQuery(api.properties.getPendingValidation, {})
+  const loginAvailability = useQuery(api.users.getLoginAvailabilityForAdmin, {})
 
   const resolveErrorMutation = useMutation(api.users.resolveDataError)
+  const setLoginAvailability = useMutation(api.users.setLoginAvailability)
+
+  const hasLoginSettingsLoaded = loginAvailability !== undefined
+  const hasLoginSettingsChanged =
+    hasLoginSettingsLoaded &&
+    (beneficiaryLoginEnabled !== loginAvailability.beneficiaryLoginEnabled ||
+      ofertanteLoginEnabled !== loginAvailability.ofertanteLoginEnabled)
+
+  useEffect(() => {
+    if (!loginAvailability || isSavingLoginSettings) return
+    setBeneficiaryLoginEnabled(loginAvailability.beneficiaryLoginEnabled)
+    setOfertanteLoginEnabled(loginAvailability.ofertanteLoginEnabled)
+  }, [loginAvailability, isSavingLoginSettings])
 
   const handleResolveError = async () => {
     if (!selectedBeneficiary) return
@@ -83,6 +101,23 @@ export default function AdminDashboardClient() {
       toast.error(message)
     } finally {
       setResolvingId(null)
+    }
+  }
+
+  const handleSaveLoginSettings = async () => {
+    setIsSavingLoginSettings(true)
+    try {
+      await setLoginAvailability({
+        beneficiaryLoginEnabled,
+        ofertanteLoginEnabled
+      })
+      toast.success('Disponibilidade de acesso atualizada')
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'Erro ao atualizar acessos'
+      toast.error(message)
+    } finally {
+      setIsSavingLoginSettings(false)
     }
   }
 
@@ -115,6 +150,63 @@ export default function AdminDashboardClient() {
               Gestão completa da Aquisição Assistida no Maranhão
             </p>
           </div>
+
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Controle de acesso por perfil</CardTitle>
+              <CardDescription>
+                Defina quais perfis podem iniciar login na plataforma.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div>
+                  <p className="font-medium">Login de beneficiário</p>
+                  <p className="text-sm text-muted-foreground">
+                    Ative apenas quando iniciar a etapa de atendimento dos
+                    beneficiários.
+                  </p>
+                </div>
+                <Switch
+                  checked={beneficiaryLoginEnabled}
+                  onCheckedChange={setBeneficiaryLoginEnabled}
+                  disabled={!hasLoginSettingsLoaded || isSavingLoginSettings}
+                />
+              </div>
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div>
+                  <p className="font-medium">Login de ofertante</p>
+                  <p className="text-sm text-muted-foreground">
+                    Mantém o acesso dos vendedores de imóveis.
+                  </p>
+                </div>
+                <Switch
+                  checked={ofertanteLoginEnabled}
+                  onCheckedChange={setOfertanteLoginEnabled}
+                  disabled={!hasLoginSettingsLoaded || isSavingLoginSettings}
+                />
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  onClick={() => void handleSaveLoginSettings()}
+                  disabled={
+                    !hasLoginSettingsLoaded ||
+                    !hasLoginSettingsChanged ||
+                    isSavingLoginSettings
+                  }
+                >
+                  {isSavingLoginSettings ? (
+                    <>
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    'Salvar disponibilidade'
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
           <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             <Card>

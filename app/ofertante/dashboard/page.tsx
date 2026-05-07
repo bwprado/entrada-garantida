@@ -450,10 +450,7 @@ export default function OfertanteDashboardPage() {
             </p>
             <div className="text-sm space-y-1">
               <p>
-                <strong>Telefone:</strong> (98) 3198-5300
-              </p>
-              <p>
-                <strong>Email:</strong> secid@ma.gov.br
+                <strong>Email:</strong> aquisicao@secid.ma.gov.br
               </p>
               <p>
                 <strong>Horário:</strong> Segunda a Sexta, 8h às 18h

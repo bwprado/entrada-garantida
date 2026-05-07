@@ -7,12 +7,12 @@ import {
   StaggerItem
 } from '@/components/animations'
 import { AuthenticatedHeaderActions } from '@/components/authenticated-header-actions'
+import { HeroAccessCtas } from '@/components/home/hero-access-ctas'
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { getServerCurrentUser } from '@/lib/server-auth'
 import {
-  ArrowRight,
   Building2,
   FileText,
   Fingerprint,
@@ -89,21 +89,18 @@ export default async function LandingPage() {
             </AnimatedSection>
 
             <AnimatedSection delay={0.4} direction="up">
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" asChild className="text-base shadow-brand-xl">
-                  <Link href="/login/beneficiario">
-                    Sou beneficiário
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </Link>
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  asChild
-                  className="text-base bg-white/95 hover:bg-white border-white text-secondary shadow-xl"
-                >
-                  <Link href="/imoveis">Ver Imóveis Disponíveis</Link>
-                </Button>
+              <div className="space-y-3">
+                <HeroAccessCtas />
+                <div className="flex justify-center">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    asChild
+                    className="text-base bg-white/10 hover:bg-white/20 border-white text-white shadow-xl"
+                  >
+                    <Link href="/imoveis">Ver Imóveis Disponíveis</Link>
+                  </Button>
+                </div>
               </div>
             </AnimatedSection>
           </div>
@@ -224,7 +221,7 @@ export default async function LandingPage() {
 
                 <StaggerItem>
                   <div className="flex gap-5">
-                    <div className="w-14 h-14 bg-secondary rounded-xl flex items-center justify-center flex-shrink-0 shadow-brand-md">
+                    <div className="w-14 h-14 bg-secondary rounded-xl flex items-center justify-center shrink-0 shadow-brand-md">
                       <Fingerprint className="w-7 h-7 text-secondary-foreground" />
                     </div>
                     <div>
@@ -458,6 +455,8 @@ export default async function LandingPage() {
                 <br />
                 Entre em contato com a SECID - Secretaria de Estado de Cidades e
                 Desenvolvimento Urbano.
+                <br />
+                aquisicao@secid.ma.gov.br
               </p>
             </div>
           </div>

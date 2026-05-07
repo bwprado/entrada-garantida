@@ -16,7 +16,9 @@ import { parseBrlCurrency } from '../masks'
 const cepDigits = (s: string) => s.replace(/\D/g, '')
 
 export const propertyOfertanteFormSchema = z.object({
-  titulo: z.string().min(1, 'Informe o título'),
+  titulo: z.enum(['Casa', 'Apartamento'], {
+    errorMap: () => ({ message: 'Selecione o tipo do imóvel' })
+  }),
   descricao: z.string().optional(),
   cep: z
     .string()

@@ -7,6 +7,7 @@ export type AppUserRole = Doc<'users'>['role']
 /** Admin section pathnames — keep in sync with `app/admin` routes. */
 export const adminPaths = {
   dashboard: '/admin/dashboard',
+  configuracoes: '/admin/configuracoes',
   perfil: '/admin/perfil',
   imoveis: '/admin/imoveis',
   beneficiarios: '/admin/beneficiarios',

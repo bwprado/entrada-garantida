@@ -25,6 +25,7 @@ import {
   Home,
   LayoutDashboard,
   LogOut,
+  Settings2,
   Shield,
   Upload,
   UserRoundCog,
@@ -74,6 +75,11 @@ const nav: Array<{
     href: adminPaths.testUsers,
     label: 'Usuários de teste',
     icon: UserRoundCog
+  },
+  {
+    href: adminPaths.configuracoes,
+    label: 'Configurações',
+    icon: Settings2
   },
   {
     href: adminPaths.dashboard,

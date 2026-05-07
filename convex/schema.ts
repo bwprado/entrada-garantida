@@ -408,6 +408,13 @@ export const files = defineTable({
   .index('by_property', ['propertyId'])
   .index('by_document', ['documentId'])
 
+export const appSettings = defineTable({
+  singletonKey: v.string(),
+  beneficiaryLoginEnabled: v.boolean(),
+  ofertanteLoginEnabled: v.boolean(),
+  atualizadoEm: v.number()
+}).index('by_singleton_key', ['singletonKey'])
+
 export default defineSchema({
   ...authTablesWithoutUsers,
   users,
@@ -417,5 +424,6 @@ export default defineSchema({
   adminProfiles,
   properties,
   documents,
-  selectionsHistory
+  selectionsHistory,
+  appSettings
 })

@@ -35,6 +35,24 @@ function isValidCPFLength(cpf: string): boolean {
   return cleaned.length === 11
 }
 
+const APP_SETTINGS_SINGLETON_KEY = 'global'
+
+async function getOrCreateAppSettings(ctx: MutationCtx) {
+  const existing = await ctx.db
+    .query('appSettings')
+    .withIndex('by_singleton_key', (q) => q.eq('singletonKey', APP_SETTINGS_SINGLETON_KEY))
+    .first()
+  if (existing) return existing
+  const now = Date.now()
+  const id = await ctx.db.insert('appSettings', {
+    singletonKey: APP_SETTINGS_SINGLETON_KEY,
+    beneficiaryLoginEnabled: false,
+    ofertanteLoginEnabled: true,
+    atualizadoEm: now
+  })
+  return (await ctx.db.get(id))!
+}
+
 /** Compare stored phone (any supported shape) with user input. */
 function sameBrazilMobile(stored: string, input: string): boolean {
   const a = normalizePhone(stored)
@@ -431,6 +449,58 @@ export const getCurrentUserProfile = query({
     const userId = await getAuthUserId(ctx)
     if (userId === null) return null
     return await ctx.db.get(userId)
+  }
+})
+
+export const getLoginAvailability = query({
+  args: {},
+  handler: async (ctx) => {
+    const settings = await ctx.db
+      .query('appSettings')
+      .withIndex('by_singleton_key', (q) =>
+        q.eq('singletonKey', APP_SETTINGS_SINGLETON_KEY)
+      )
+      .first()
+
+    return {
+      beneficiaryLoginEnabled: settings?.beneficiaryLoginEnabled ?? false,
+      ofertanteLoginEnabled: settings?.ofertanteLoginEnabled ?? true
+    }
+  }
+})
+
+export const getLoginAvailabilityForAdmin = query({
+  args: {},
+  handler: async (ctx) => {
+    await verifyAdmin(ctx)
+    const settings = await ctx.db
+      .query('appSettings')
+      .withIndex('by_singleton_key', (q) =>
+        q.eq('singletonKey', APP_SETTINGS_SINGLETON_KEY)
+      )
+      .first()
+
+    return {
+      beneficiaryLoginEnabled: settings?.beneficiaryLoginEnabled ?? false,
+      ofertanteLoginEnabled: settings?.ofertanteLoginEnabled ?? true
+    }
+  }
+})
+
+export const setLoginAvailability = mutation({
+  args: {
+    beneficiaryLoginEnabled: v.boolean(),
+    ofertanteLoginEnabled: v.boolean()
+  },
+  handler: async (ctx, args) => {
+    await verifyAdmin(ctx)
+    const settings = await getOrCreateAppSettings(ctx)
+    await ctx.db.patch(settings._id, {
+      beneficiaryLoginEnabled: args.beneficiaryLoginEnabled,
+      ofertanteLoginEnabled: args.ofertanteLoginEnabled,
+      atualizadoEm: Date.now()
+    })
+    return { success: true as const }
   }
 })
 

@@ -44,7 +44,7 @@ import {
   User
 } from 'lucide-react'
 import { api } from '@/convex/_generated/api'
-import { useConvex } from 'convex/react'
+import { useConvex, useQuery } from 'convex/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -158,6 +158,7 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
   const [error, setError] = useState('')
   const [countdown, setCountdown] = useState(0)
   const [userData, setUserData] = useState<Record<string, unknown> | null>(null)
+  const loginAvailability = useQuery(api.users.getLoginAvailability, {})
 
   const form = useForm<LoginFormValues>({
     defaultValues: {
@@ -259,6 +260,10 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
   }
 
   const handleRequestOTP = async () => {
+    if (isVariantDisabled) {
+      setError('Este tipo de acesso está indisponível no momento.')
+      return
+    }
     setIsLoading(true)
     setError('')
     form.clearErrors()
@@ -366,6 +371,10 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
   }
 
   const handleRegisterOfertante = async () => {
+    if (loginAvailability?.ofertanteLoginEnabled === false) {
+      setError('Este tipo de acesso está indisponível no momento.')
+      return
+    }
     setIsLoading(true)
     setError('')
     form.clearErrors()
@@ -522,8 +531,14 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
     return parts.join(', ')
   }
 
+  const isVariantDisabled =
+    (variant === 'beneficiary' &&
+      loginAvailability?.beneficiaryLoginEnabled === false) ||
+    (variant === 'ofertante' &&
+      loginAvailability?.ofertanteLoginEnabled === false)
+
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+    <div className="min-h-screen flex flex-col bg-linear-to-br from-primary/5 via-background to-secondary/5">
       <div className="flex-1 flex justify-center p-4">
         <div className="w-full max-w-sm my-auto space-y-4">
           <Image
@@ -552,6 +567,30 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
           </div>
 
           <Form {...form}>
+            {isVariantDisabled ? (
+              <Card>
+                <CardHeader className="text-center">
+                  <CardTitle className="text-2xl">
+                    {variant === 'beneficiary'
+                      ? 'Acesso de beneficiário'
+                      : 'Acesso de ofertante'}
+                  </CardTitle>
+                  <CardDescription>
+                    Este acesso está temporariamente indisponível.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-center text-muted-foreground">
+                    Tente novamente mais tarde ou volte para escolher outro tipo
+                    de acesso.
+                  </p>
+                  <Button asChild className="w-full">
+                    <Link href="/login">Voltar para tipos de acesso</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
             {step === 'phone' && (
               <Card>
                 <CardHeader className="text-center">
@@ -1132,10 +1171,7 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
                         Quadra 33 - Calhau, São Luís - MA
                       </p>
                       <p>
-                        <strong>Telefone:</strong> (98) 3198-5300
-                      </p>
-                      <p>
-                        <strong>Email:</strong> secid@ma.gov.br
+                        <strong>Email:</strong> aquisicao@secid.ma.gov.br
                       </p>
                       <p>
                         <strong>Horário:</strong> Segunda a Sexta, 8h às 18h
@@ -1245,6 +1281,8 @@ export function LoginFlow({ variant, hubHref }: LoginFlowProps) {
                   </div>
                 </CardContent>
               </Card>
+            )}
+              </>
             )}
           </Form>
         </div>

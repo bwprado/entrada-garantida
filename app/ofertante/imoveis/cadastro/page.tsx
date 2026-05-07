@@ -28,6 +28,7 @@ import {
   PopoverContent,
   PopoverTrigger
 } from '@/components/ui/popover'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Textarea } from '@/components/ui/textarea'
 import { api } from '@/convex/_generated/api'
 import { Id } from '@/convex/_generated/dataModel'
@@ -69,7 +70,9 @@ import {
   ArrowLeft,
   Bath,
   BedDouble,
+  Building2,
   Building,
+  House,
   Calendar as CalendarIcon,
   Car,
   ChevronLeft,
@@ -123,7 +126,7 @@ function formatCepForInput(cep: string | undefined): string {
 }
 
 const emptyFormDefaults: DefaultValues<PropertyOfertanteFormValues> = {
-  titulo: '',
+  titulo: undefined,
   descricao: '',
   cep: '',
   endereco: '',
@@ -367,8 +370,10 @@ function ImovelCadastroPageInner() {
     }
     if (!existingProperty) return
     const ep = existingProperty as Record<string, unknown>
+    const titulo =
+      ep.titulo === 'Apartamento' ? 'Apartamento' : ('Casa' as const)
     reset({
-      titulo: ep.titulo as string,
+      titulo,
       descricao: (ep.descricao as string) ?? '',
       cep: formatCepForInput(ep.cep as string | undefined),
       endereco: ep.endereco as string,
@@ -663,18 +668,52 @@ function ImovelCadastroPageInner() {
                 data-invalid={fieldState.invalid}
                 className="gap-1 col-span-full"
               >
-                <FieldLabel htmlFor="titulo">Título do imóvel *</FieldLabel>
-                <Input
-                  ref={field.ref}
-                  name={field.name}
-                  onBlur={field.onBlur}
-                  id="titulo"
-                  type="text"
+                <FieldLabel htmlFor="tipo_imovel">Tipo do imóvel *</FieldLabel>
+                <RadioGroup
                   value={field.value ?? ''}
-                  onChange={field.onChange}
+                  onValueChange={field.onChange}
+                  className="grid grid-cols-1 gap-3 sm:grid-cols-2"
                   aria-invalid={fieldState.invalid}
-                  placeholder="Ex.: Apartamento 2 quartos — Centro"
-                />
+                >
+                  <label
+                    htmlFor="tipo-casa"
+                    className="flex cursor-pointer items-start gap-3 rounded-lg border p-4"
+                  >
+                    <RadioGroupItem
+                      id="tipo-casa"
+                      value="Casa"
+                      className="mt-1"
+                    />
+                    <div>
+                      <p className="font-medium flex items-center gap-2">
+                        <House className="size-4" />
+                        Casa
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Imóvel residencial térreo ou sobrado.
+                      </p>
+                    </div>
+                  </label>
+                  <label
+                    htmlFor="tipo-apartamento"
+                    className="flex cursor-pointer items-start gap-3 rounded-lg border p-4"
+                  >
+                    <RadioGroupItem
+                      id="tipo-apartamento"
+                      value="Apartamento"
+                      className="mt-1"
+                    />
+                    <div>
+                      <p className="font-medium flex items-center gap-2">
+                        <Building2 className="size-4" />
+                        Apartamento
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Unidade em edifício residencial.
+                      </p>
+                    </div>
+                  </label>
+                </RadioGroup>
                 {fieldState.invalid && (
                   <FieldError errors={[fieldState.error]} />
                 )}
