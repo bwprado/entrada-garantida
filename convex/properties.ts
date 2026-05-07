@@ -3,7 +3,12 @@ import { getAuthUserId } from '@convex-dev/auth/server'
 import { v } from 'convex/values'
 import { components } from './_generated/api'
 import { Doc, Id } from './_generated/dataModel'
-import { mutation, type MutationCtx, query } from './_generated/server'
+import {
+  internalMutation,
+  mutation,
+  type MutationCtx,
+  query
+} from './_generated/server'
 import {
   ensurePropertyOwnerOrAdmin,
   verifyAdmin,
@@ -11,6 +16,7 @@ import {
   verifyPropertyOwnerOrAdmin,
   verifySelfOrAdmin
 } from './authz'
+import { isSelectionActivePending } from './selectionHistory'
 import {
   PROPERTY_SALE_DOCUMENT_TIPOS,
   missingSaleDocumentMessage
@@ -102,14 +108,17 @@ export const getUserSelectedProperties = query({
   handler: async (ctx, args) => {
     await verifySelfOrAdmin(ctx, args.userId)
     const user = await ctx.db.get(args.userId)
-    if (!user) return []
-    if (user.role !== 'beneficiary' || !user.beneficiaryProfileId) {
+    if (!user || user.role !== 'beneficiary') {
       return []
     }
-    const profile = await ctx.db.get(user.beneficiaryProfileId)
-    if (!profile) return []
-    if (!profile.propriedadeSelecionadaId) return []
-    const property = await ctx.db.get(profile.propriedadeSelecionadaId)
+
+    const lines = await ctx.db
+      .query('selectionsHistory')
+      .withIndex('by_beneficiario', (q) => q.eq('beneficiarioId', args.userId))
+      .collect()
+    const activeLine = lines.find((line) => isSelectionActivePending(line))
+    if (!activeLine) return []
+    const property = await ctx.db.get(activeLine.propertyId)
     return property ? [property] : []
   }
 })
@@ -119,19 +128,21 @@ export const getUserPropertySelectionState = query({
   handler: async (ctx, args) => {
     await verifySelfOrAdmin(ctx, args.userId)
     const user = await ctx.db.get(args.userId)
-    if (!user || user.role !== 'beneficiary' || !user.beneficiaryProfileId) {
+    if (!user || user.role !== 'beneficiary') {
       return { selectedProperty: null, selectionLocked: false }
     }
 
-    const profile = await ctx.db.get(user.beneficiaryProfileId)
-    if (!profile?.propriedadeSelecionadaId) {
-      return { selectedProperty: null, selectionLocked: false }
-    }
-
-    const selectedProperty = await ctx.db.get(profile.propriedadeSelecionadaId)
+    const lines = await ctx.db
+      .query('selectionsHistory')
+      .withIndex('by_beneficiario', (q) => q.eq('beneficiarioId', args.userId))
+      .collect()
+    const activeLine = lines.find((line) => isSelectionActivePending(line))
+    const selectedProperty = activeLine
+      ? await ctx.db.get(activeLine.propertyId)
+      : null
     return {
       selectedProperty,
-      selectionLocked: Boolean(profile.selecaoBloqueada)
+      selectionLocked: selectedProperty !== null
     }
   }
 })
@@ -387,11 +398,11 @@ export const getSelectionsForProperty = query({
     }
     await verifyPropertyOwnerOrAdmin(ctx, property)
 
-    const selections = await ctx.db
+    const selectionRows = await ctx.db
       .query('selectionsHistory')
       .withIndex('by_property', (q) => q.eq('propertyId', args.propertyId))
-      .filter((q) => q.eq(q.field('removidoEm'), undefined))
       .collect()
+    const selections = selectionRows.filter((line) => isSelectionActivePending(line))
 
     const beneficiaryIds = selections.map((s) => s.beneficiarioId)
     const beneficiaries = await Promise.all(
@@ -667,25 +678,25 @@ export const updateChecklistItem = mutation({
 async function clearPropertyFromBeneficiaryWishlists(
   ctx: MutationCtx,
   propertyId: Id<'properties'>,
-  now: number
+  now: number,
+  reason: string
 ): Promise<void> {
-  const profiles = await ctx.db.query('beneficiaryProfiles').collect()
-  for (const profile of profiles) {
-    if (profile.propriedadeSelecionadaId !== propertyId) continue
-    await ctx.db.patch(profile._id, {
-      propriedadeSelecionadaId: undefined,
-      selecaoBloqueada: false,
-      selecaoBloqueadaEm: undefined,
-      atualizadoEm: now
-    })
+  const trimmedReason = reason.trim()
+  if (trimmedReason.length < 3) {
+    throw new Error('Informe o motivo da rejeição (mín. 3 caracteres)')
   }
+
   const openSelections = await ctx.db
     .query('selectionsHistory')
     .withIndex('by_property', (q) => q.eq('propertyId', propertyId))
-    .filter((q) => q.eq(q.field('removidoEm'), undefined))
     .collect()
   for (const row of openSelections) {
-    await ctx.db.patch(row._id, { removidoEm: now })
+    if (!isSelectionActivePending(row)) continue
+    await ctx.db.patch(row._id, {
+      removidoEm: now,
+      outcome: 'rejected',
+      rejectedReason: trimmedReason
+    })
   }
 }
 
@@ -739,10 +750,16 @@ export const adminInvalidateListing = mutation({
       throw new Error('Propriedade não encontrada')
     }
     const now = Date.now()
-    await clearPropertyFromBeneficiaryWishlists(ctx, args.propertyId, now)
+    const reason = args.motivo.trim()
+    await clearPropertyFromBeneficiaryWishlists(
+      ctx,
+      args.propertyId,
+      now,
+      reason
+    )
     await ctx.db.patch(args.propertyId, {
       status: 'rejected',
-      motivoRejeicao: args.motivo.trim(),
+      motivoRejeicao: reason,
       rejeitadoEm: now,
       rejeitadoPor: args.adminId,
       atualizadoEm: now
@@ -990,9 +1007,29 @@ export const markAsSold = mutation({
       throw new Error("Propriedade deve estar no status 'selected'")
     }
 
+    const lines = await ctx.db
+      .query('selectionsHistory')
+      .withIndex('by_beneficiario', (q) =>
+        q.eq('beneficiarioId', args.beneficiarioId)
+      )
+      .collect()
+    const activeLine = lines.find(
+      (line) =>
+        line.propertyId === args.propertyId && isSelectionActivePending(line)
+    )
+    if (!activeLine) {
+      throw new Error('Linha de aquisição ativa não encontrada')
+    }
+    const now = Date.now()
+    await ctx.db.patch(activeLine._id, {
+      outcome: 'sold',
+      removidoEm: now,
+      rejectedReason: undefined
+    })
+
     await ctx.db.patch(args.propertyId, {
       status: 'sold',
-      atualizadoEm: Date.now()
+      atualizadoEm: now
     })
 
     return { success: true }
@@ -1022,5 +1059,32 @@ export const softDelete = mutation({
     }
 
     return { success: true }
+  }
+})
+
+/** One-off: define explicit outcomes for pre-migration rows. */
+export const backfillSelectionOutcomes = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db.query('selectionsHistory').collect()
+    let updated = 0
+
+    for (const row of rows) {
+      if (row.removidoEm === undefined && row.outcome !== 'pending') {
+        await ctx.db.patch(row._id, { outcome: 'pending' })
+        updated += 1
+        continue
+      }
+
+      if (row.removidoEm !== undefined && row.outcome === 'pending') {
+        await ctx.db.patch(row._id, {
+          outcome: 'withdrawn',
+          rejectedReason: undefined
+        })
+        updated += 1
+      }
+    }
+
+    return { scanned: rows.length, updated }
   }
 })

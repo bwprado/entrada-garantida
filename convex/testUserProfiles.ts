@@ -41,9 +41,6 @@ export async function ensureTestUserProfiles(
       telefoneRecado: '',
       falarCom: '',
       aceitaComunicacoes: false,
-      propriedadeSelecionadaId: undefined,
-      selecaoBloqueada: false,
-      selecaoBloqueadaEm: undefined,
       criadoEm: now,
       atualizadoEm: now
     })

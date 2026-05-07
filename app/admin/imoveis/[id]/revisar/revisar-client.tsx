@@ -32,6 +32,10 @@ import type { Id } from '@/convex/_generated/dataModel'
 import { useAuth } from '@/lib/auth-context'
 import { documentTipoLabel } from '@/lib/document-tipo-labels'
 import { FileTypeIconView } from '@/lib/file-type-icon'
+import {
+  resolveSelectionOutcome,
+  selectionOutcomeLabelPt
+} from '@/lib/selection-outcome-labels-pt'
 import { useMutation, useQuery } from 'convex/react'
 import {
   ArrowLeft,
@@ -265,9 +269,12 @@ export function RevisarClient() {
     }
   }
 
-  const dataLabel = new Date(p.dataConstrucao).toLocaleDateString('pt-BR', {
-    timeZone: 'UTC'
-  })
+  const dataLabel =
+    p.dataConstrucao !== undefined
+      ? new Date(p.dataConstrucao).toLocaleDateString('pt-BR', {
+          timeZone: 'UTC'
+        })
+      : 'N/A'
 
   return (
     <div className="space-y-8">
@@ -409,11 +416,11 @@ export function RevisarClient() {
           </div>
           <div>
             <span className="text-muted-foreground">Matrícula (informada)</span>
-            <p className="font-medium break-words">{p.matricula}</p>
+            <p className="font-medium wrap-break-word">{p.matricula}</p>
           </div>
           <div>
             <span className="text-muted-foreground">Inscrição imobiliária</span>
-            <p className="font-medium break-words">{p.inscricaoImobiliaria}</p>
+            <p className="font-medium wrap-break-word">{p.inscricaoImobiliaria}</p>
           </div>
           {p.cep && (
             <div>
@@ -451,6 +458,8 @@ export function RevisarClient() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Beneficiário</TableHead>
+                  <TableHead className="w-28">Situação</TableHead>
+                  <TableHead className="min-w-48">Motivo</TableHead>
                   <TableHead className="w-24">Ordem</TableHead>
                   <TableHead className="w-44">Selecionado em</TableHead>
                 </TableRow>
@@ -459,6 +468,7 @@ export function RevisarClient() {
                 {interessadosSorted.map(({ selection, beneficiary }) => {
                   const nome = beneficiary?.nome ?? 'Usuário indisponível'
                   const email = beneficiary?.email
+                  const outcome = resolveSelectionOutcome(selection)
                   return (
                     <TableRow key={selection._id}>
                       <TableCell>
@@ -477,6 +487,12 @@ export function RevisarClient() {
                               : `ID: ${String(selection.beneficiarioId)}`}
                           </p>
                         )}
+                      </TableCell>
+                      <TableCell>{selectionOutcomeLabelPt(outcome)}</TableCell>
+                      <TableCell className="max-w-xs text-muted-foreground whitespace-pre-wrap wrap-break-word">
+                        {outcome === 'rejected'
+                          ? (selection.rejectedReason ?? '—')
+                          : '—'}
                       </TableCell>
                       <TableCell>{selection.ordemPreferencia}</TableCell>
                       <TableCell className="text-muted-foreground">

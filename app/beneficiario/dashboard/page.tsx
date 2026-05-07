@@ -66,7 +66,7 @@ export default function BeneficiarioDashboardPage() {
   };
 
   const selectionCount = properties?.length || 0;
-  const selectionLocked = query?.selectionLocked ?? Boolean(profile?.selecaoBloqueada);
+  const selectionLocked = Boolean(query?.selectionLocked);
   const selectedProperty = query?.selectedProperty ?? properties?.[0];
 
   const formatCurrency = (value: number) => {

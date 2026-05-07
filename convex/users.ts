@@ -12,6 +12,7 @@ import type { MutationCtx } from './_generated/server'
 import { mutation, query } from './_generated/server'
 import { verifyAdmin, verifyLogin, verifySelfOrAdmin } from './authz'
 import { r2 } from './r2'
+import { isSelectionActivePending } from './selectionHistory'
 import {
   adminNivelAcessoEnum,
   deficienciaEnum,
@@ -62,17 +63,16 @@ export const getCurrentUserWithProfile = query({
 
     if (user.role === 'beneficiary' && user.beneficiaryProfileId) {
       const profile = await ctx.db.get(user.beneficiaryProfileId)
-      const properties = []
-      let selectedProperty = null
-      const selectionLocked = Boolean(profile?.selecaoBloqueada)
-
-      if (profile?.propriedadeSelecionadaId) {
-        const property = await ctx.db.get(profile.propriedadeSelecionadaId)
-        if (property) {
-          properties.push(property)
-          selectedProperty = property
-        }
-      }
+      const lines = await ctx.db
+        .query('selectionsHistory')
+        .withIndex('by_beneficiario', (q) => q.eq('beneficiarioId', user._id))
+        .collect()
+      const activeLine = lines.find((line) => isSelectionActivePending(line))
+      const selectedProperty = activeLine
+        ? await ctx.db.get(activeLine.propertyId)
+        : null
+      const properties = selectedProperty ? [selectedProperty] : []
+      const selectionLocked = selectedProperty !== null
       return {
         user,
         profile: await ctx.db.get(user.beneficiaryProfileId),
@@ -954,26 +954,16 @@ export const selectProperty = mutation({
       throw new Error('Beneficiário precisa aceitar os termos primeiro')
     }
 
-    if (!user.beneficiaryProfileId) {
-      throw new Error('Perfil de beneficiário não encontrado')
-    }
+    const lines = await ctx.db
+      .query('selectionsHistory')
+      .withIndex('by_beneficiario', (q) => q.eq('beneficiarioId', args.userId))
+      .collect()
+    const currentSelection = lines.find((line) => isSelectionActivePending(line))
 
-    const profile = await ctx.db.get(user.beneficiaryProfileId)
-    if (!profile) {
-      throw new Error('Perfil de beneficiário não encontrado')
-    }
-
-    const currentSelection = profile.propriedadeSelecionadaId
-    const selectionLocked = Boolean(profile.selecaoBloqueada)
-
-    if (selectionLocked) {
+    if (currentSelection) {
       throw new Error(
         'Sua seleção está bloqueada até liberação da equipe responsável'
       )
-    }
-
-    if (currentSelection === args.propertyId) {
-      throw new Error('Propriedade já confirmada')
     }
 
     // Verify property is validated
@@ -982,18 +972,12 @@ export const selectProperty = mutation({
       throw new Error('Propriedade não disponível para seleção')
     }
 
-    await ctx.db.patch(user.beneficiaryProfileId, {
-      propriedadeSelecionadaId: args.propertyId,
-      selecaoBloqueada: true,
-      selecaoBloqueadaEm: Date.now(),
-      atualizadoEm: Date.now()
-    })
-
     await ctx.db.insert('selectionsHistory', {
       beneficiarioId: args.userId,
       propertyId: args.propertyId,
       ordemPreferencia: 1,
-      selecionadoEm: Date.now()
+      selecionadoEm: Date.now(),
+      outcome: 'pending'
     })
 
     return { success: true, propertyId: args.propertyId, selectionLocked: true }
@@ -1016,45 +1000,25 @@ export const removePropertySelection = mutation({
       throw new Error('Usuário inválido')
     }
 
-    if (!user.beneficiaryProfileId) {
-      throw new Error('Perfil de beneficiário não encontrado')
-    }
+    const historyRows = await ctx.db
+      .query('selectionsHistory')
+      .withIndex('by_beneficiario', (q) => q.eq('beneficiarioId', args.userId))
+      .collect()
 
-    const profile = await ctx.db.get(user.beneficiaryProfileId)
-    if (!profile) {
-      throw new Error('Perfil de beneficiário não encontrado')
-    }
+    const historyEntry = historyRows.find(
+      (row) =>
+        row.propertyId === args.propertyId && isSelectionActivePending(row)
+    )
 
-    if (profile.selecaoBloqueada) {
-      throw new Error(
-        'Seleção bloqueada. Aguarde liberação da equipe responsável.'
-      )
-    }
-
-    if (profile.propriedadeSelecionadaId !== args.propertyId) {
+    if (!historyEntry) {
       throw new Error('Este imóvel não está selecionado para o beneficiário')
     }
 
-    await ctx.db.patch(user.beneficiaryProfileId, {
-      propriedadeSelecionadaId: undefined,
-      atualizadoEm: Date.now()
+    await ctx.db.patch(historyEntry._id, {
+      removidoEm: Date.now(),
+      outcome: 'withdrawn',
+      rejectedReason: undefined
     })
-
-    const historyEntry = await ctx.db
-      .query('selectionsHistory')
-      .withIndex('by_beneficiario', (q) => q.eq('beneficiarioId', args.userId))
-      .filter(
-        (q) =>
-          q.eq(q.field('propertyId'), args.propertyId) &&
-          q.eq(q.field('removidoEm'), undefined)
-      )
-      .first()
-
-    if (historyEntry) {
-      await ctx.db.patch(historyEntry._id, {
-        removidoEm: Date.now()
-      })
-    }
 
     return { success: true }
   }
@@ -1063,21 +1027,24 @@ export const removePropertySelection = mutation({
 export const adminUnlockPropertySelection = mutation({
   args: { userId: v.id('users') },
   handler: async (ctx, args) => {
-    await verifyAdmin(ctx)
+    const admin = await verifyAdmin(ctx)
     const user = await ctx.db.get(args.userId)
-    if (!user || user.role !== 'beneficiary' || !user.beneficiaryProfileId) {
+    if (!user || user.role !== 'beneficiary') {
       throw new Error('Beneficiário não encontrado')
     }
 
-    const profile = await ctx.db.get(user.beneficiaryProfileId)
-    if (!profile) {
-      throw new Error('Perfil de beneficiário não encontrado')
+    const lines = await ctx.db
+      .query('selectionsHistory')
+      .withIndex('by_beneficiario', (q) => q.eq('beneficiarioId', args.userId))
+      .collect()
+    const activeLine = lines.find((line) => isSelectionActivePending(line))
+    if (activeLine) {
+      await ctx.db.patch(activeLine._id, {
+        removidoEm: Date.now(),
+        outcome: 'withdrawn',
+        rejectedReason: `Removido por administrador ${admin.nome}`
+      })
     }
-
-    await ctx.db.patch(user.beneficiaryProfileId, {
-      selecaoBloqueada: false,
-      atualizadoEm: Date.now()
-    })
 
     return { success: true }
   }
@@ -1354,10 +1321,7 @@ export const bulkUploadBeneficiaries = mutation({
           aceitaComunicacoes: false,
           // Timestamps
           criadoEm: now,
-          atualizadoEm: now,
-          propriedadeSelecionadaId: undefined,
-          selecaoBloqueada: false,
-          selecaoBloqueadaEm: undefined
+          atualizadoEm: now
         })
 
         // Update user with profile reference
@@ -1697,10 +1661,7 @@ export const createBeneficiary = mutation({
       falarCom: '',
       aceitaComunicacoes: false,
       criadoEm: now,
-      atualizadoEm: now,
-      propriedadeSelecionadaId: undefined,
-      selecaoBloqueada: false,
-      selecaoBloqueadaEm: undefined
+      atualizadoEm: now
     })
 
     // Update user with profile reference

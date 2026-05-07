@@ -237,11 +237,6 @@ export const beneficiaryProfiles = defineTable({
   falarCom: v.optional(v.string()),
   aceitaComunicacoes: v.boolean(),
 
-  // Single property selection flow
-  propriedadeSelecionadaId: v.optional(v.id('properties')),
-  selecaoBloqueada: v.optional(v.boolean()),
-  selecaoBloqueadaEm: v.optional(v.number()),
-
   // Timestamps
   criadoEm: v.number(),
   atualizadoEm: v.number()
@@ -378,16 +373,26 @@ export const documents = defineTable({
   .index('by_user_and_tipo', ['userId', 'tipo'])
   .index('by_property_and_tipo', ['propertyId', 'tipo'])
 
+export const selectionOutcomeEnum = v.union(
+  v.literal('pending'),
+  v.literal('withdrawn'),
+  v.literal('rejected'),
+  v.literal('sold')
+)
+
 // Beneficiary selections history
 export const selectionsHistory = defineTable({
   beneficiarioId: v.id('users'),
   propertyId: v.id('properties'),
   ordemPreferencia: v.number(),
   selecionadoEm: v.number(),
-  removidoEm: v.optional(v.number())
+  removidoEm: v.optional(v.number()),
+  outcome: selectionOutcomeEnum,
+  rejectedReason: v.optional(v.string())
 })
   .index('by_beneficiario', ['beneficiarioId'])
   .index('by_property', ['propertyId'])
+  .index('by_property_and_outcome', ['propertyId', 'outcome'])
 
 export const files = defineTable({
   r2Key: v.string(),
