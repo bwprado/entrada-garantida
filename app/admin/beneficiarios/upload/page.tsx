@@ -360,326 +360,309 @@ export default function AdminBulkUploadPage() {
   }
 
   return (
-    <div className="flex w-full flex-1 flex-col bg-muted/30 px-4 py-8">
-      <div className="container mx-auto max-w-4xl">
-        <Button variant="ghost" asChild className="mb-4">
-          <Link href="/admin/dashboard">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar ao painel
-          </Link>
-        </Button>
-
-        <h1 className="text-3xl font-bold mb-2">Importar Beneficiários</h1>
-        <p className="text-muted-foreground mb-6">
-          Envie um CSV no formato do template ou um PDF do ANEXO I (listagem com
-          CPF e telefone).
-        </p>
-
+    <div className="">
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-lg">Formato do Arquivo</CardTitle>
+          <CardDescription>
+            CSV com colunas obrigatórias, ou PDF texto (ANEXO I — listagem Villa
+            Adagio / SECID).
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" onClick={downloadTemplate}>
+            <Download className="w-4 h-4 mr-2" />
+            Baixar Template CSV
+          </Button>
+          <div className="mt-4 text-sm text-muted-foreground">
+            <p className="font-medium mb-2">Colunas obrigatórias (CSV):</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>
+                <strong>cpf</strong> - CPF com 11 dígitos (apenas números)
+              </li>
+              <li>
+                <strong>nome</strong> - Nome completo
+              </li>
+              <li>
+                <strong>telefone</strong> - Telefone com DDD
+              </li>
+              <li>
+                <strong>meses_aluguel_social</strong> - Meses em aluguel social
+              </li>
+              <li>
+                <strong>possui_idoso_familia</strong> - true/false
+              </li>
+              <li>
+                <strong>chefia_feminina</strong> - true/false
+              </li>
+            </ul>
+            <p className="font-medium mt-4 mb-2">PDF (ANEXO I):</p>
+            <p>
+              O PDF deve ser texto selecionável e conter o cabeçalho da listagem
+              (BENEFICIÁRIO, CPF, TELEFONE). Campos de perfil abaixo valem para{' '}
+              <strong>todos</strong> os registros importados do PDF.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+      {importSource === 'pdf' && pdfRawRows && pdfRawRows.length > 0 && (
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="text-lg">Formato do Arquivo</CardTitle>
+            <CardTitle className="text-lg">
+              Campos do PDF (aplicados a todos)
+            </CardTitle>
             <CardDescription>
-              CSV com colunas obrigatórias, ou PDF texto (ANEXO I — listagem
-              Villa Adagio / SECID).
+              O anexo não traz estes dados; defina antes de importar.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Button variant="outline" onClick={downloadTemplate}>
-              <Download className="w-4 h-4 mr-2" />
-              Baixar Template CSV
-            </Button>
-            <div className="mt-4 text-sm text-muted-foreground">
-              <p className="font-medium mb-2">Colunas obrigatórias (CSV):</p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>
-                  <strong>cpf</strong> - CPF com 11 dígitos (apenas números)
-                </li>
-                <li>
-                  <strong>nome</strong> - Nome completo
-                </li>
-                <li>
-                  <strong>telefone</strong> - Telefone com DDD
-                </li>
-                <li>
-                  <strong>meses_aluguel_social</strong> - Meses em aluguel
-                  social
-                </li>
-                <li>
-                  <strong>possui_idoso_familia</strong> - true/false
-                </li>
-                <li>
-                  <strong>chefia_feminina</strong> - true/false
-                </li>
-              </ul>
-              <p className="font-medium mt-4 mb-2">PDF (ANEXO I):</p>
-              <p>
-                O PDF deve ser texto selecionável e conter o cabeçalho da
-                listagem (BENEFICIÁRIO, CPF, TELEFONE). Campos de perfil abaixo
-                valem para <strong>todos</strong> os registros importados do
-                PDF.
-              </p>
+          <CardContent className="grid gap-6 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="pdf-meses">Meses em aluguel social</Label>
+              <Input
+                id="pdf-meses"
+                type="number"
+                min={0}
+                value={pdfMeses}
+                onChange={(e) =>
+                  setPdfMeses(Math.max(0, parseInt(e.target.value, 10) || 0))
+                }
+                disabled={isUploading}
+              />
             </div>
-          </CardContent>
-        </Card>
-        {importSource === 'pdf' && pdfRawRows && pdfRawRows.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-lg">
-                Campos do PDF (aplicados a todos)
-              </CardTitle>
-              <CardDescription>
-                O anexo não traz estes dados; defina antes de importar.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-6 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="pdf-meses">Meses em aluguel social</Label>
-                <Input
-                  id="pdf-meses"
-                  type="number"
-                  min={0}
-                  value={pdfMeses}
-                  onChange={(e) =>
-                    setPdfMeses(Math.max(0, parseInt(e.target.value, 10) || 0))
-                  }
+            <div className="flex flex-col justify-end gap-4">
+              <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+                <Label htmlFor="pdf-idoso" className="cursor-pointer">
+                  Possui idoso na família
+                </Label>
+                <Switch
+                  id="pdf-idoso"
+                  checked={pdfPossuiIdoso}
+                  onCheckedChange={setPdfPossuiIdoso}
                   disabled={isUploading}
                 />
               </div>
-              <div className="flex flex-col justify-end gap-4">
-                <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
-                  <Label htmlFor="pdf-idoso" className="cursor-pointer">
-                    Possui idoso na família
-                  </Label>
-                  <Switch
-                    id="pdf-idoso"
-                    checked={pdfPossuiIdoso}
-                    onCheckedChange={setPdfPossuiIdoso}
-                    disabled={isUploading}
-                  />
-                </div>
-                <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
-                  <Label htmlFor="pdf-chefia" className="cursor-pointer">
-                    Chefia feminina
-                  </Label>
-                  <Switch
-                    id="pdf-chefia"
-                    checked={pdfChefiaFeminina}
-                    onCheckedChange={setPdfChefiaFeminina}
-                    disabled={isUploading}
-                  />
-                </div>
+              <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+                <Label htmlFor="pdf-chefia" className="cursor-pointer">
+                  Chefia feminina
+                </Label>
+                <Switch
+                  id="pdf-chefia"
+                  checked={pdfChefiaFeminina}
+                  onCheckedChange={setPdfChefiaFeminina}
+                  disabled={isUploading}
+                />
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg">Upload do Arquivo</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap items-center gap-4">
-              <Input
-                ref={fileInputRef}
-                type="file"
-                accept=".csv,.pdf,application/pdf,text/csv"
-                onChange={handleFileChange}
-                className="flex-1 min-w-[200px]"
-                disabled={isParsing || isUploading}
-              />
-              {file && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  {importSource === 'pdf' ? (
-                    <FileText className="w-4 h-4 shrink-0" />
-                  ) : (
-                    <FileSpreadsheet className="w-4 h-4 shrink-0" />
-                  )}
-                  <span>{file.name}</span>
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>
+      )}
 
-        {parsedData.length > 0 && !uploadResult && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-lg">Pré-visualização</CardTitle>
-              <CardDescription>
-                {parsedData.filter((p) => p.valid).length} de{' '}
-                {parsedData.length} registros válidos
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="border rounded-lg overflow-auto max-h-96">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Linha</TableHead>
-                      <TableHead>CPF</TableHead>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Telefone</TableHead>
-                      <TableHead>Meses</TableHead>
-                      <TableHead>Idoso</TableHead>
-                      <TableHead>Chefia Fem.</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {parsedData.slice(0, 50).map((row) => (
-                      <TableRow
-                        key={`${row.linha}-${row.cpf}`}
-                        className={!row.valid ? 'bg-destructive/10' : ''}
-                      >
-                        <TableCell>{row.linha}</TableCell>
-                        <TableCell>
-                          {row.cpf.replace(
-                            /(\d{3})(\d{3})(\d{3})(\d{2})/,
-                            '$1.$2.$3-$4'
-                          )}
-                        </TableCell>
-                        <TableCell>{row.nome}</TableCell>
-                        <TableCell>{row.telefone}</TableCell>
-                        <TableCell>{row.mesesAluguelSocial}</TableCell>
-                        <TableCell>
-                          {row.possuiIdosoFamilia ? 'Sim' : 'Não'}
-                        </TableCell>
-                        <TableCell>
-                          {row.chefiaFeminina ? 'Sim' : 'Não'}
-                        </TableCell>
-                        <TableCell>
-                          {row.valid ? (
-                            <Badge
-                              variant="secondary"
-                              className="bg-green-100 text-green-800"
-                            >
-                              <CheckCircle2 className="w-3 h-3 mr-1" />
-                              Válido
-                            </Badge>
-                          ) : (
-                            <Badge variant="destructive">
-                              <XCircle className="w-3 h-3 mr-1" />
-                              {row.error}
-                            </Badge>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                {parsedData.length > 50 && (
-                  <p className="text-sm text-muted-foreground p-2 text-center">
-                    Mostrando primeiros 50 de {parsedData.length} registros
-                  </p>
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-lg">Upload do Arquivo</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-center gap-4">
+            <Input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,.pdf,application/pdf,text/csv"
+              onChange={handleFileChange}
+              className="flex-1 min-w-[200px]"
+              disabled={isParsing || isUploading}
+            />
+            {file && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                {importSource === 'pdf' ? (
+                  <FileText className="w-4 h-4 shrink-0" />
+                ) : (
+                  <FileSpreadsheet className="w-4 h-4 shrink-0" />
                 )}
+                <span>{file.name}</span>
               </div>
-              <div className="flex gap-4 mt-4">
-                <Button
-                  onClick={handleUpload}
-                  disabled={
-                    isUploading ||
-                    parsedData.length === 0 ||
-                    !me ||
-                    me.role !== 'admin'
-                  }
-                >
-                  {isUploading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Importando...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Importar {parsedData.length} beneficiários
-                    </>
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setFile(null)
-                    setParsedData([])
-                    setPdfRawRows(null)
-                    setImportSource(null)
-                    setUploadResult(null)
-                    if (fileInputRef.current) {
-                      fileInputRef.current.value = ''
-                    }
-                  }}
-                  disabled={isUploading}
-                >
-                  Limpar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-        {uploadResult && (
-          <Card className="border-green-500">
-            <CardHeader>
-              <CardTitle className="text-lg text-green-600">
-                Importação Concluída
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-6">
-                <div className="text-center p-4 bg-muted rounded-lg">
-                  <p className="text-3xl font-bold">{uploadResult.total}</p>
-                  <p className="text-sm text-muted-foreground">Total</p>
-                </div>
-                <div className="text-center p-4 bg-green-100 rounded-lg">
-                  <p className="text-3xl font-bold text-green-600">
-                    {uploadResult.sucessos}
-                  </p>
-                  <p className="text-sm text-green-700">Importados</p>
-                </div>
-                <div className="text-center p-4 bg-emerald-50 rounded-lg">
-                  <p className="text-3xl font-bold text-emerald-700">
-                    {uploadResult.importadosSemErro}
-                  </p>
-                  <p className="text-sm text-emerald-700">Sem erro</p>
-                </div>
-                <div className="text-center p-4 bg-amber-50 rounded-lg">
-                  <p className="text-3xl font-bold text-amber-700">
-                    {uploadResult.importadosComErro}
-                  </p>
-                  <p className="text-sm text-amber-700">Com erro</p>
-                </div>
-                <div className="text-center p-4 bg-slate-100 rounded-lg">
-                  <p className="text-3xl font-bold text-slate-700">
-                    {uploadResult.ignorados}
-                  </p>
-                  <p className="text-sm text-slate-700">Ignorados</p>
-                </div>
-                <div className="text-center p-4 bg-red-100 rounded-lg">
-                  <p className="text-3xl font-bold text-red-600">
-                    {uploadResult.erros.length}
-                  </p>
-                  <p className="text-sm text-red-700">Erros</p>
-                </div>
-              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
-              {uploadResult.erros.length > 0 && (
-                <div className="border rounded-lg p-4">
-                  <p className="font-medium mb-2">Detalhes dos erros:</p>
-                  <ul className="text-sm space-y-1">
-                    {uploadResult.erros.map((e, i) => (
-                      <li key={i} className="text-destructive">
-                        Linha {e.linha}: {e.erro}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+      {parsedData.length > 0 && !uploadResult && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-lg">Pré-visualização</CardTitle>
+            <CardDescription>
+              {parsedData.filter((p) => p.valid).length} de {parsedData.length}{' '}
+              registros válidos
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="border rounded-lg overflow-auto max-h-96">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Linha</TableHead>
+                    <TableHead>CPF</TableHead>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Telefone</TableHead>
+                    <TableHead>Meses</TableHead>
+                    <TableHead>Idoso</TableHead>
+                    <TableHead>Chefia Fem.</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {parsedData.slice(0, 50).map((row) => (
+                    <TableRow
+                      key={`${row.linha}-${row.cpf}`}
+                      className={!row.valid ? 'bg-destructive/10' : ''}
+                    >
+                      <TableCell>{row.linha}</TableCell>
+                      <TableCell>
+                        {row.cpf.replace(
+                          /(\d{3})(\d{3})(\d{3})(\d{2})/,
+                          '$1.$2.$3-$4'
+                        )}
+                      </TableCell>
+                      <TableCell>{row.nome}</TableCell>
+                      <TableCell>{row.telefone}</TableCell>
+                      <TableCell>{row.mesesAluguelSocial}</TableCell>
+                      <TableCell>
+                        {row.possuiIdosoFamilia ? 'Sim' : 'Não'}
+                      </TableCell>
+                      <TableCell>
+                        {row.chefiaFeminina ? 'Sim' : 'Não'}
+                      </TableCell>
+                      <TableCell>
+                        {row.valid ? (
+                          <Badge
+                            variant="secondary"
+                            className="bg-green-100 text-green-800"
+                          >
+                            <CheckCircle2 className="w-3 h-3 mr-1" />
+                            Válido
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive">
+                            <XCircle className="w-3 h-3 mr-1" />
+                            {row.error}
+                          </Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {parsedData.length > 50 && (
+                <p className="text-sm text-muted-foreground p-2 text-center">
+                  Mostrando primeiros 50 de {parsedData.length} registros
+                </p>
               )}
-
-              <Button onClick={() => router.push('/admin/dashboard')}>
-                Voltar ao painel
+            </div>
+            <div className="flex gap-4 mt-4">
+              <Button
+                onClick={handleUpload}
+                disabled={
+                  isUploading ||
+                  parsedData.length === 0 ||
+                  !me ||
+                  me.role !== 'admin'
+                }
+              >
+                {isUploading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Importando...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Importar {parsedData.length} beneficiários
+                  </>
+                )}
               </Button>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setFile(null)
+                  setParsedData([])
+                  setPdfRawRows(null)
+                  setImportSource(null)
+                  setUploadResult(null)
+                  if (fileInputRef.current) {
+                    fileInputRef.current.value = ''
+                  }
+                }}
+                disabled={isUploading}
+              >
+                Limpar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      {uploadResult && (
+        <Card className="border-green-500">
+          <CardHeader>
+            <CardTitle className="text-lg text-green-600">
+              Importação Concluída
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-6">
+              <div className="text-center p-4 bg-muted rounded-lg">
+                <p className="text-3xl font-bold">{uploadResult.total}</p>
+                <p className="text-sm text-muted-foreground">Total</p>
+              </div>
+              <div className="text-center p-4 bg-green-100 rounded-lg">
+                <p className="text-3xl font-bold text-green-600">
+                  {uploadResult.sucessos}
+                </p>
+                <p className="text-sm text-green-700">Importados</p>
+              </div>
+              <div className="text-center p-4 bg-emerald-50 rounded-lg">
+                <p className="text-3xl font-bold text-emerald-700">
+                  {uploadResult.importadosSemErro}
+                </p>
+                <p className="text-sm text-emerald-700">Sem erro</p>
+              </div>
+              <div className="text-center p-4 bg-amber-50 rounded-lg">
+                <p className="text-3xl font-bold text-amber-700">
+                  {uploadResult.importadosComErro}
+                </p>
+                <p className="text-sm text-amber-700">Com erro</p>
+              </div>
+              <div className="text-center p-4 bg-slate-100 rounded-lg">
+                <p className="text-3xl font-bold text-slate-700">
+                  {uploadResult.ignorados}
+                </p>
+                <p className="text-sm text-slate-700">Ignorados</p>
+              </div>
+              <div className="text-center p-4 bg-red-100 rounded-lg">
+                <p className="text-3xl font-bold text-red-600">
+                  {uploadResult.erros.length}
+                </p>
+                <p className="text-sm text-red-700">Erros</p>
+              </div>
+            </div>
+
+            {uploadResult.erros.length > 0 && (
+              <div className="border rounded-lg p-4">
+                <p className="font-medium mb-2">Detalhes dos erros:</p>
+                <ul className="text-sm space-y-1">
+                  {uploadResult.erros.map((e, i) => (
+                    <li key={i} className="text-destructive">
+                      Linha {e.linha}: {e.erro}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <Button onClick={() => router.push('/admin/dashboard')}>
+              Voltar ao painel
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

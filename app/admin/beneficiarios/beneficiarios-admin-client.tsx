@@ -160,7 +160,8 @@ export function BeneficiariosAdminClient() {
       await unlockSelectionMutation({ userId })
       toast.success('Seleção do beneficiário desbloqueada')
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Erro ao desbloquear seleção'
+      const message =
+        error instanceof Error ? error.message : 'Erro ao desbloquear seleção'
       toast.error(message)
     } finally {
       setUnlockingBeneficiaryId(null)
@@ -169,7 +170,7 @@ export function BeneficiariosAdminClient() {
 
   return (
     <>
-      <Card className="mt-6">
+      <Card>
         <CardHeader>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -191,7 +192,12 @@ export function BeneficiariosAdminClient() {
                 <Plus className="w-4 h-4 mr-2" />
                 Adicionar
               </Button>
-              <Button asChild variant="outline" size="sm" className="bg-transparent">
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="bg-transparent"
+              >
                 <Link href={adminPaths.beneficiariosUpload}>
                   <Download className="w-4 h-4 mr-2" />
                   Importar
@@ -266,12 +272,8 @@ export function BeneficiariosAdminClient() {
                       <TableCell>{normalizePhone(b.phone).display()}</TableCell>
                       <TableCell>
                         <Badge
-                          variant={
-                            b.dadosComErro ? 'destructive' : 'secondary'
-                          }
-                          className={
-                            b.dadosComErro ? '' : 'bg-secondary/50'
-                          }
+                          variant={b.dadosComErro ? 'destructive' : 'secondary'}
+                          className={b.dadosComErro ? '' : 'bg-secondary/50'}
                         >
                           {b.dadosComErro
                             ? 'Erro Reportado'
@@ -450,18 +452,13 @@ export function BeneficiariosAdminClient() {
               perfil, documentos e sessões de{' '}
               <strong>{beneficiaryToDelete?.nome}</strong>
               {beneficiaryToDelete?.phone && (
-                <>
-                  {' '}
-                  ({normalizePhone(beneficiaryToDelete.phone).display()})
-                </>
+                <> ({normalizePhone(beneficiaryToDelete.phone).display()})</>
               )}
               .
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel
-              disabled={deletingBeneficiaryId !== null}
-            >
+            <AlertDialogCancel disabled={deletingBeneficiaryId !== null}>
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction

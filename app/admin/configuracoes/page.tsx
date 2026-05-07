@@ -53,15 +53,8 @@ export default function AdminConfiguracoesPage() {
 
   return (
     <div className="flex w-full flex-1 flex-col">
-      <div className="flex-1 bg-muted/30 px-4 py-8">
-        <div className="container mx-auto max-w-3xl">
-          <div className="mb-8">
-            <h2 className="mb-2 text-3xl font-bold">Configurações</h2>
-            <p className="text-muted-foreground">
-              Controle de disponibilidade de login por perfil.
-            </p>
-          </div>
-
+      <div className="flex-1 bg-muted/30 p-4">
+        <div className="w-full">
           <Card>
             <CardHeader>
               <CardTitle>Controle de acesso por perfil</CardTitle>

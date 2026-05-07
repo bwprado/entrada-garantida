@@ -1,5 +1,6 @@
 'use client'
 
+import { AppHeader } from '@/components/admin/app-header'
 import {
   Sidebar,
   SidebarContent,
@@ -14,11 +15,10 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarRail,
-  SidebarSeparator,
-  SidebarTrigger
+  SidebarSeparator
 } from '@/components/ui/sidebar'
-import { useAuth } from '@/lib/auth-context'
 import { adminPaths } from '@/lib/app-links'
+import { useAuth } from '@/lib/auth-context'
 import type { LucideIcon } from 'lucide-react'
 import {
   Building2,
@@ -114,7 +114,7 @@ export function AdminAppShell({ children }: { children: ReactNode }) {
                 sizes="36px"
               />
             </div>
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden">
+            <div className="flex min-w-0 flex-1 flex-col leading-none group-data-[collapsible=icon]:hidden">
               <span className="truncate text-sm font-semibold text-sidebar-foreground">
                 Aquisição Assistida
               </span>
@@ -196,11 +196,8 @@ export function AdminAppShell({ children }: { children: ReactNode }) {
         <SidebarRail />
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-background px-4 md:hidden">
-          <SidebarTrigger className="-ml-1" />
-          <span className="text-sm font-medium">Painel admin</span>
-        </header>
-        <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+        <AppHeader />
+        <div className="flex min-h-0 flex-1 flex-col p-4">{children}</div>
       </SidebarInset>
     </SidebarProvider>
   )

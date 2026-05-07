@@ -40,7 +40,7 @@ export function OfertantesAdminClient() {
 
   return (
     <>
-      <Card className="mt-6">
+      <Card>
         <CardHeader>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
