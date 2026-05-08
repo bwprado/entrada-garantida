@@ -102,7 +102,7 @@ export function Header({
               {actions}
             </div>
           ) : null}
-          <MobileNav footer={mobileDrawerFooter ?? undefined} />
+          {/* <MobileNav footer={mobileDrawerFooter ?? undefined} /> */}
         </div>
       </nav>
     </header>

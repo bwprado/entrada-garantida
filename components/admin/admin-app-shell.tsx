@@ -1,5 +1,6 @@
 'use client'
 
+import { AdminSidebarAccount } from '@/components/admin/admin-sidebar-account'
 import { AppHeader } from '@/components/admin/app-header'
 import {
   Sidebar,
@@ -18,13 +19,11 @@ import {
   SidebarSeparator
 } from '@/components/ui/sidebar'
 import { adminPaths } from '@/lib/app-links'
-import { useAuth } from '@/lib/auth-context'
 import type { LucideIcon } from 'lucide-react'
 import {
   Building2,
   Home,
   LayoutDashboard,
-  LogOut,
   Settings2,
   Shield,
   Upload,
@@ -91,11 +90,6 @@ const nav: Array<{
 
 export function AdminAppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
-  const { logout, user } = useAuth()
-
-  const handleLogout = async () => {
-    await logout('/login/admin')
-  }
 
   return (
     <SidebarProvider>
@@ -176,22 +170,7 @@ export function AdminAppShell({ children }: { children: ReactNode }) {
         </SidebarContent>
         <SidebarSeparator />
         <SidebarFooter>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <div className="truncate px-2 py-1.5 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-                {user?.nome ?? user?.phone ?? '—'}
-              </div>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                onClick={() => void handleLogout()}
-                tooltip="Sair"
-              >
-                <LogOut />
-                <span>Sair</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
+          <AdminSidebarAccount />
         </SidebarFooter>
         <SidebarRail />
       </Sidebar>

@@ -7,6 +7,7 @@ import {
   StaggerContainer,
   StaggerItem
 } from '@/components/animations'
+import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import {
   Card,
@@ -16,7 +17,6 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { api } from '@/convex/_generated/api'
 import { useQuery } from 'convex/react'
 import { ArrowLeft, Building2, Fingerprint, UsersRound } from 'lucide-react'
@@ -40,11 +40,11 @@ export default function LoginHubPage() {
             </Link>
           </AnimatedSection>
 
-          <AnimatedSection className="text-center space-y-3" delay={0.1}>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
+          <AnimatedSection className="text-center" delay={0.1}>
+            <h1 className="text-2xl md:text-4xl font-bold tracking-tight text-foreground">
               Acesso ao sistema
             </h1>
-            <p className="text-muted-foreground text-lg">
+            <p className="text-muted-foreground text-base">
               Escolha como você acessa o Aquisição Assistida
             </p>
           </AnimatedSection>

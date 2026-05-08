@@ -1,65 +1,45 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
 
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { AccountMenuPanel } from '@/components/account/account-menu-panel'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button, buttonVariants } from '@/components/ui/button'
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger
 } from '@/components/ui/hover-card'
-import { useAuth } from '@/lib/auth-context'
 import {
-  getHeaderQuickActionLinks,
-  getProfileHref,
-  getSelectedPropertiesHomeHref
-} from '@/lib/app-links'
-import { House, LayoutDashboard, LogOut, UserRound } from 'lucide-react'
-
-function getInitials(value: string): string {
-  const normalized = value.trim()
-  if (!normalized) return 'AA'
-
-  const words = normalized.split(/\s+/).filter(Boolean)
-  if (words.length >= 2) {
-    return `${words[0][0]}${words[1][0]}`.toUpperCase()
-  }
-
-  const letters = normalized.replace(/[^a-zA-ZÀ-ÿ]/g, '')
-  if (letters.length >= 2) {
-    return letters.slice(0, 2).toUpperCase()
-  }
-
-  const digits = normalized.replace(/\D/g, '')
-  if (digits.length >= 2) {
-    return digits.slice(-2)
-  }
-
-  return normalized.slice(0, 2).toUpperCase()
-}
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetTrigger
+} from '@/components/ui/sheet'
+import { useAuth } from '@/lib/auth-context'
+import { getHeaderQuickActionLinks } from '@/lib/app-links'
+import { getInitials } from '@/lib/user-display'
 
 export function AuthenticatedHeaderActions() {
   const { user, logout, isLoading } = useAuth()
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const closeSheet = () => setSheetOpen(false)
 
-  const fullName =
-    user === undefined || isLoading
-      ? 'Carregando usuário...'
-      : (user?.nome ?? user?.phone ?? 'Usuário')
   const initials = getInitials(user?.nome ?? user?.phone ?? 'AA')
-  const accountHref = getProfileHref(user?.role)
-  const selectedPropertiesHref = getSelectedPropertiesHomeHref(user?.role)
   const quickLinks = getHeaderQuickActionLinks(user?.role)
-  const isOfertante = user?.role === 'ofertante'
-  const homeMenuLabel = isOfertante
-    ? 'Aplicação atual'
-    : 'Imóveis selecionados'
-  const HomeMenuIcon = isOfertante ? LayoutDashboard : House
+
+  const avatarInner = (
+    <>
+      {user?.image ? <AvatarImage src={user.image} alt="" /> : null}
+      <AvatarFallback>{initials}</AvatarFallback>
+    </>
+  )
 
   return (
     <div className="flex items-center gap-2">
       {quickLinks.length > 0 ? (
-        <div className="flex max-w-full flex-wrap items-center justify-end gap-1.5 sm:gap-2">
+        <div className="hidden max-w-full flex-wrap items-center justify-end gap-1.5 md:flex sm:gap-2">
           {quickLinks.map(({ href, label, icon: Icon }) => (
             <Link
               key={href + label}
@@ -77,60 +57,65 @@ export function AuthenticatedHeaderActions() {
         </div>
       ) : null}
 
-      <HoverCard openDelay={120} closeDelay={80}>
-        <HoverCardTrigger>
-          <Avatar>
-            <AvatarFallback>{initials}</AvatarFallback>
-          </Avatar>
-        </HoverCardTrigger>
-        <HoverCardContent
-          className="flex w-64 flex-col gap-3"
-          side="bottom"
-          align="end"
-        >
-          <div className="flex items-center gap-2">
-            <Avatar size="sm">
-              <AvatarFallback>{initials}</AvatarFallback>
-            </Avatar>
-            <p className="truncate text-sm font-medium" title={fullName}>
-              {fullName}
-            </p>
-          </div>
-          <Link
-            href={accountHref}
-            className={buttonVariants({
-              variant: 'outline',
-              size: 'sm',
-              className: 'justify-start'
-            })}
+      <div className="hidden md:block">
+        <HoverCard openDelay={120} closeDelay={80}>
+          <HoverCardTrigger asChild>
+            <button
+              type="button"
+              className="rounded-full outline-none ring-offset-background transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <Avatar>{avatarInner}</Avatar>
+            </button>
+          </HoverCardTrigger>
+          <HoverCardContent
+            className="w-[min(100vw-2rem,20rem)] p-0"
+            side="bottom"
+            align="end"
           >
-            <UserRound className="size-4" />
-            Minha conta
-          </Link>
+            <div className="p-4">
+              <AccountMenuPanel
+                user={user}
+                isLoading={isLoading}
+                onLogout={logout}
+              />
+            </div>
+          </HoverCardContent>
+        </HoverCard>
+      </div>
 
-          <Link
-            href={selectedPropertiesHref}
-            className={buttonVariants({
-              variant: 'outline',
-              size: 'sm',
-              className: 'justify-start'
-            })}
+      <div className="md:hidden">
+        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+          <SheetTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-9 shrink-0 rounded-full"
+              aria-label="Abrir menu da conta"
+            >
+              <Avatar className="size-8">{avatarInner}</Avatar>
+            </Button>
+          </SheetTrigger>
+          <SheetContent
+            side="right"
+            className="flex w-[min(100vw-1rem,22rem)] flex-col gap-0 overflow-y-auto p-0 sm:max-w-md"
+            showCloseButton
           >
-            <HomeMenuIcon className="size-4" />
-            {homeMenuLabel}
-          </Link>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => void logout()}
-            className="justify-start"
-          >
-            <LogOut className="size-4" />
-            Sair
-          </Button>
-        </HoverCardContent>
-      </HoverCard>
+            <SheetTitle className="sr-only">Conta e atalhos</SheetTitle>
+            <div className="flex flex-1 flex-col p-4 pb-6">
+              <AccountMenuPanel
+                user={user}
+                isLoading={isLoading}
+                onLogout={() => {
+                  closeSheet()
+                  void logout()
+                }}
+                onNavigate={closeSheet}
+              />
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
     </div>
   )
 }
