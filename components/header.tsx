@@ -71,9 +71,14 @@ export function Header({
               priority
             />
           </span>
-          <span className="min-w-0 truncate text-left font-semibold leading-tight">
-            Aquisição Assistida
-          </span>
+          <div className="flex flex-col">
+            <span className="min-w-0 truncate text-left font-semibold leading-tight">
+              Aquisição Assistida
+            </span>
+            <span className="text-xs text-muted-foreground">
+              Secretaria de Estado das Cidades e Desenvolvimento Urbano
+            </span>
+          </div>
         </Link>
 
         <div className="hidden min-w-0 flex-1 items-center justify-end gap-2 md:flex">

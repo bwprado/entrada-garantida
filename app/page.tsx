@@ -8,11 +8,13 @@ import {
 } from '@/components/animations'
 import { AuthenticatedHeaderActions } from '@/components/authenticated-header-actions'
 import { HeroAccessCtas } from '@/components/home/hero-access-ctas'
+import { OfertanteCtaSection } from '@/components/home/ofertante-cta-section'
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { getServerCurrentUser } from '@/lib/server-auth'
 import {
+  ArrowDown,
   Building2,
   FileText,
   Fingerprint,
@@ -37,7 +39,7 @@ export default async function LandingPage() {
       )}
 
       {/* Hero: overlap header so the image reaches the viewport top (header stays z-50 on top). */}
-      <section className="relative min-h-[calc(100dvh-5rem)] md:h-screen flex flex-col overflow-hidden">
+      <section className="relative h-[calc(100dvh-5rem)] flex flex-col overflow-hidden">
         {/* Background Image */}
         <div className="absolute inset-0 z-0">
           <Image
@@ -52,21 +54,21 @@ export default async function LandingPage() {
         </div>
 
         {/* Hero Content */}
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10 flex-1 flex items-center justify-center py-20 md:py-32">
+        <div className="container mx-auto px-4 z-10 flex-1 flex items-center justify-center">
           <div className="max-w-4xl mx-auto text-center">
             <AnimatedSection delay={0} direction="up">
-              <div className="inline-flex items-center gap-2 bg-white/95 text-secondary px-4 py-2 rounded-full text-sm font-medium mb-8 shadow-lg backdrop-blur-sm">
+              <div className="inline-flex items-center gap-2 bg-white/95 text-secondary px-4 py-2 rounded-full text-sm font-medium shadow-lg backdrop-blur-sm">
                 <Fingerprint className="w-4 h-4" />
                 Iniciativa oficial do Governo do Maranhão
               </div>
             </AnimatedSection>
 
             <AnimatedSection delay={0.1} direction="up">
-              <div className="mb-8 flex justify-center">
+              <div className="flex justify-center">
                 <Image
                   src="/logo-secid-contorno.png"
                   alt="Governo do Maranhão e SECID"
-                  width={600}
+                  width={500}
                   height={170}
                   className="object-contain drop-shadow-2xl"
                   priority
@@ -75,7 +77,7 @@ export default async function LandingPage() {
             </AnimatedSection>
 
             <AnimatedSection delay={0.2} direction="up">
-              <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold mb-6 text-white drop-shadow-lg tracking-tight leading-tight">
+              <h1 className="text-3xl font-bold mb-6 text-white drop-shadow-lg tracking-tight leading-tight">
                 Aquisição Assistida para Sua Casa Própria
               </h1>
             </AnimatedSection>
@@ -113,10 +115,8 @@ export default async function LandingPage() {
           className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20"
         >
           <div className="flex flex-col items-center gap-2 text-white/80 hover:text-white transition-colors cursor-pointer group">
-            <span className="text-sm font-medium">Saiba mais</span>
-            <div className="w-6 h-10 border-2 border-white/60 rounded-full flex justify-center group-hover:border-white transition-colors">
-              <div className="w-1 h-3 bg-white/60 rounded-full mt-2 animate-bounce group-hover:bg-white transition-colors" />
-            </div>
+            <span className="text-xs font-medium">Saiba mais</span>
+            <ArrowDown className="size-6 animate-bounce" />
           </div>
         </AnimatedSection>
       </section>
@@ -153,6 +153,8 @@ export default async function LandingPage() {
           </StaggerContainer>
         </div>
       </section>
+
+      <OfertanteCtaSection />
 
       {/* About Section - Asymmetric Layout */}
       <section className="py-20 md:py-34 bg-linear-to-br from-blue-300 via-primary/50 to-accent/80">
@@ -253,7 +255,7 @@ export default async function LandingPage() {
 
       {/* Fluxograma Section - Masonry/Asymmetric Layout */}
       <section className="py-20 md:py-28 bg-background">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+        <div className="container mx-auto px-4">
           {/* Header */}
           <AnimatedSection className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-5 tracking-tight text-foreground">
@@ -271,12 +273,12 @@ export default async function LandingPage() {
             staggerDelay={0.15}
           >
             {/* Card 1 - Preparation (taller) */}
-            <StaggerItem className="md:col-span-1 lg:row-span-2 flex min-h-0 flex-col">
+            <StaggerItem className="flex w-full flex-col md:col-span-1 lg:row-span-2 lg:min-h-0">
               <Card
                 variant="elevated"
-                className="h-full min-h-0 border-2 border-secondary hover:border-secondary/70 bg-linear-to-br from-secondary/5 to-transparent"
+                className="w-full border-2 border-secondary hover:border-secondary/70 bg-linear-to-br from-secondary/5 to-transparent lg:h-full lg:min-h-0"
               >
-                <CardContent className="pt-8 pb-8 flex flex-col items-center text-center h-full">
+                <CardContent className="flex flex-col items-center pt-8 pb-8 text-center lg:h-full">
                   <div className="size-16 bg-secondary rounded-2xl flex items-center justify-center mb-6 shadow-brand-md border-2 border-secondary">
                     <FileText className="size-8 text-secondary-foreground" />
                   </div>
@@ -292,12 +294,12 @@ export default async function LandingPage() {
             </StaggerItem>
 
             {/* Card 2 - Habilitation (same row band as Preparation) */}
-            <StaggerItem className="md:col-span-1 lg:row-span-2 flex min-h-0 flex-col">
+            <StaggerItem className="flex w-full flex-col md:col-span-1 lg:row-span-2 lg:min-h-0">
               <Card
                 variant="elevated"
-                className="h-full min-h-0 border-primary border-2 bg-linear-to-br from-primary/20 to-transparent"
+                className="w-full border-primary border-2 bg-linear-to-br from-primary/20 to-transparent lg:h-full lg:min-h-0"
               >
-                <CardContent className="flex min-h-0 flex-1 flex-col items-center justify-center text-center">
+                <CardContent className="flex flex-col items-center justify-center py-8 text-center lg:min-h-0 lg:flex-1 lg:py-0">
                   <div className="size-16 bg-primary rounded-xl flex items-center justify-center mb-4 shadow-brand-md">
                     <Building2 className="size-8 text-primary-foreground" />
                   </div>
@@ -313,12 +315,12 @@ export default async function LandingPage() {
             </StaggerItem>
 
             {/* Card 3 - Operation (same row band as Preparation) */}
-            <StaggerItem className="md:col-span-1 lg:row-span-2 flex min-h-0 flex-col">
+            <StaggerItem className="flex w-full flex-col md:col-span-1 lg:row-span-2 lg:min-h-0">
               <Card
                 variant="elevated"
-                className="h-full min-h-0 border-2 border-accent hover:border-accent/70 bg-linear-to-tr from-accent/20 to-transparent"
+                className="w-full border-2 border-accent hover:border-accent/70 bg-linear-to-tr from-accent/20 to-transparent lg:h-full lg:min-h-0"
               >
-                <CardContent className="flex min-h-0 flex-1 flex-col items-center justify-center text-center">
+                <CardContent className="flex flex-col items-center justify-center py-8 text-center lg:min-h-0 lg:flex-1 lg:py-0">
                   <div className="size-16 bg-accent rounded-xl flex items-center justify-center mb-4 shadow-brand-md border-2 border-accent">
                     <Handshake className="size-8 text-accent-foreground" />
                   </div>
@@ -334,10 +336,10 @@ export default async function LandingPage() {
             </StaggerItem>
 
             {/* Additional info cards in masonry style */}
-            <StaggerItem className="md:col-span-2 lg:col-span-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-muted/50 rounded-xl p-5 border border-border">
-                  <div className="text-3xl font-bold text-primary mb-1 tracking-tight">
+            <StaggerItem className="w-full md:col-span-2 lg:col-span-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="min-w-0 rounded-xl border border-border bg-muted/50 p-5">
+                  <div className="mb-1 text-3xl font-bold tracking-tight text-primary wrap-break-word">
                     R$ 200.000,00
                     <sup className="text-lg font-semibold align-super ml-0.5">
                       *
@@ -350,8 +352,8 @@ export default async function LandingPage() {
                     *sujeito à avaliação pela Caixa Econômica Federal
                   </p>
                 </div>
-                <div className="bg-muted/50 rounded-xl p-5 border border-border">
-                  <div className="text-3xl font-bold text-secondary mb-1 tracking-tight">
+                <div className="min-w-0 rounded-xl border border-border bg-muted/50 p-5">
+                  <div className="mb-1 text-3xl font-bold tracking-tight text-secondary wrap-break-word">
                     180 dias
                   </div>
                   <div className="text-sm text-muted-foreground">
@@ -364,52 +366,23 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 md:py-34 bg-primary text-primary-foreground relative overflow-hidden">
-        {/* Background decoration */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2" />
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl transform translate-x-1/2 translate-y-1/2" />
-        </div>
-
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl relative z-10">
-          <AnimatedSection className="text-center">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-5 tracking-tight">
-              Tem um Imóvel para Vender?
-            </h2>
-            <p className="text-lg md:text-xl mb-10 opacity-95 leading-relaxed max-w-2xl mx-auto">
-              Cadastre seu imóvel e faça parte desta iniciativa que vai
-              transformar a vida de famílias maranhenses desalojadas
-            </p>
-            <Button
-              size="lg"
-              variant="secondary"
-              asChild
-              className="text-base bg-white text-secondary hover:bg-white/90 shadow-xl"
-            >
-              <Link href="/ofertante/cadastro">
-                <Building2 className="w-5 h-5 mr-2" />
-                Cadastrar Imóvel
-              </Link>
-            </Button>
-          </AnimatedSection>
-        </div>
-      </section>
-
       {/* Footer */}
       <footer className="border-t py-16 bg-secondary text-secondary-foreground">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
             <div>
-              <div className="relative mb-6 h-32 w-auto">
+              <Link
+                href="/"
+                className="relative mb-6 block h-32 w-full max-w-[220px]"
+              >
                 <Image
                   src="/logo-secid-horizontal.png"
                   alt="Governo do Maranhão e SECID"
                   fill
-                  sizes="200px"
+                  sizes="220px"
                   className="object-contain object-left"
                 />
-              </div>
+              </Link>
               <h3 className="font-bold mb-4 text-accent text-lg">
                 Aquisição Assistida
               </h3>
@@ -427,15 +400,23 @@ export default async function LandingPage() {
               <ul className="space-y-3 text-sm">
                 <li>
                   <Link
-                    href="/beneficiario/cadastro"
+                    href="/"
                     className="text-secondary-foreground/80 hover:text-secondary-foreground transition-colors"
                   >
-                    Cadastro de Beneficiário
+                    Início
                   </Link>
                 </li>
                 <li>
                   <Link
-                    href="/ofertante/cadastro"
+                    href="/login/beneficiario"
+                    className="text-secondary-foreground/80 hover:text-secondary-foreground transition-colors"
+                  >
+                    Login de Beneficiário
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/login/ofertante"
                     className="text-secondary-foreground/80 hover:text-secondary-foreground transition-colors"
                   >
                     Cadastro de Ofertante
@@ -443,7 +424,7 @@ export default async function LandingPage() {
                 </li>
                 <li>
                   <Link
-                    href="/imoveis"
+                    href="/ofertante/imoveis"
                     className="text-secondary-foreground/80 hover:text-secondary-foreground transition-colors"
                   >
                     Imóveis Disponíveis
@@ -468,7 +449,12 @@ export default async function LandingPage() {
                 Entre em contato com a SECID - Secretaria de Estado de Cidades e
                 Desenvolvimento Urbano.
                 <br />
-                aquisicao@secid.ma.gov.br
+                <a
+                  href="mailto:aquisicao@secid.ma.gov.br"
+                  className="text-secondary-foreground/80 hover:text-secondary-foreground transition-colors underline-offset-4 hover:underline"
+                >
+                  aquisicao@secid.ma.gov.br
+                </a>
               </p>
             </div>
           </div>
