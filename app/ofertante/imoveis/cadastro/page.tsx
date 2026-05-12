@@ -85,6 +85,9 @@ import {
   FileText,
   Flame,
   Loader2,
+  Map,
+  Navigation,
+  ShieldCheck,
   Sofa,
   Star,
   Sun,
@@ -468,9 +471,9 @@ function ImovelCadastroPageInner() {
           salasEstar: rest.salasEstar,
           cozinhas: rest.cozinhas,
           vagasGaragem: rest.vagasGaragem,
-          areasServico: rest.areasServico,
+          areasServico: 0,
           ruaPavimentada: rest.ruaPavimentada,
-          garagem: rest.garagem,
+          garagem: rest.vagasGaragem > 0,
           areaLavanderia: rest.areaLavanderia,
           portaria24h: rest.portaria24h,
           elevador: rest.elevador,
@@ -530,9 +533,9 @@ function ImovelCadastroPageInner() {
         salasEstar: rest.salasEstar,
         cozinhas: rest.cozinhas,
         vagasGaragem: rest.vagasGaragem,
-        areasServico: rest.areasServico,
+        areasServico: 0,
         ruaPavimentada: rest.ruaPavimentada,
-        garagem: rest.garagem,
+        garagem: rest.vagasGaragem > 0,
         areaLavanderia: rest.areaLavanderia,
         portaria24h: rest.portaria24h,
         elevador: rest.elevador,
@@ -646,10 +649,10 @@ function ImovelCadastroPageInner() {
   } as const
 
   const AMENITY_ICON_MAP = {
-    ruaPavimentada: <Wifi className="size-5" />,
+    ruaPavimentada: <Navigation className="size-5" />,
     garagem: <Car className="size-5" />,
     areaLavanderia: <WashingMachine className="size-5" />,
-    portaria24h: <Wifi className="size-5" />,
+    portaria24h: <ShieldCheck className="size-5" />,
     elevador: <Building className="size-5" />,
     piscina: <Waves className="size-5" />,
     churrasqueira: <Flame className="size-5" />,
@@ -841,10 +844,6 @@ function ImovelCadastroPageInner() {
               {
                 key: 'vagasGaragem' as RoomType,
                 icon: ROOM_ICON_MAP.vagasGaragem
-              },
-              {
-                key: 'areasServico' as RoomType,
-                icon: ROOM_ICON_MAP.areasServico
               }
             ] as const
           ).map(({ key, icon }) => (
@@ -876,7 +875,6 @@ function ImovelCadastroPageInner() {
                 key: 'ruaPavimentada' as AmenityType,
                 icon: AMENITY_ICON_MAP.ruaPavimentada
               },
-              { key: 'garagem' as AmenityType, icon: AMENITY_ICON_MAP.garagem },
               {
                 key: 'areaLavanderia' as AmenityType,
                 icon: AMENITY_ICON_MAP.areaLavanderia
