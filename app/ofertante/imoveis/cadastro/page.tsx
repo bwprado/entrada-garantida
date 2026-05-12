@@ -446,6 +446,7 @@ function ImovelCadastroPageInner() {
           toast.error('Aguarde o carregamento da documentação do imóvel.')
           return
         }
+        /* 
         if (
           !PROPERTY_SALE_DOCUMENT_TIPOS.every((t) => Boolean(saleDocFileIds[t]))
         ) {
@@ -454,6 +455,7 @@ function ImovelCadastroPageInner() {
           )
           return
         }
+        */
         await updateProperty({
           propertyId: existingProperty._id,
           titulo: rest.titulo,
@@ -502,6 +504,7 @@ function ImovelCadastroPageInner() {
         return
       }
 
+      /*
       if (
         !PROPERTY_SALE_DOCUMENT_TIPOS.every((t) =>
           Boolean(stagedSaleDocFileIds[t])
@@ -512,6 +515,7 @@ function ImovelCadastroPageInner() {
         )
         return
       }
+      */
 
       const cepDigitsCreate = (rest.cep ?? '').replace(/\D/g, '')
       const cepArgCreate =
@@ -556,9 +560,7 @@ function ImovelCadastroPageInner() {
       try {
         for (const tipo of PROPERTY_SALE_DOCUMENT_TIPOS) {
           const fileId = stagedSaleDocFileIds[tipo]
-          if (!fileId) {
-            throw new Error(`Documento ausente: ${tipo}`)
-          }
+          if (!fileId) continue
           await attachPropertySaleDocumentFromUploadedFile({
             propertyId: result.propertyId,
             tipo,
@@ -1131,11 +1133,11 @@ function ImovelCadastroPageInner() {
       component: (
         <div className="col-span-full flex flex-col gap-4">
           <Field className="gap-1">
-            <FieldLabel>Documentação para venda *</FieldLabel>
+            <FieldLabel>Documentação para venda</FieldLabel>
             <FieldDescription>
-              Arquivos obrigatórios para análise do programa. A certidão de
-              matrícula aqui é o arquivo (PDF ou imagem), não apenas o número
-              informado na etapa anterior.
+              Envie os documentos necessários. Você pode salvar o cadastro sem
+              eles e anexá-los depois, mas o imóvel só poderá ser enviado para
+              análise quando todos estiverem presentes.
             </FieldDescription>
           </Field>
           {PROPERTY_SALE_DOCUMENT_ITEMS.map((item) => (
