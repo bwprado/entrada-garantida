@@ -201,7 +201,7 @@ export default async function LandingPage() {
                           famílias desalojadas
                         </strong>{' '}
                         pelas obras do PAC Rio Anil, garantindo acesso à moradia
-                        digna por meio de subsidição na compra de imóveis.
+                        digna por meio de subsídio na compra de imóveis.
                       </p>
                     </div>
                   </div>
@@ -371,15 +371,12 @@ export default async function LandingPage() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
             <div>
-              <Link
-                href="/"
-                className="relative mb-6 block h-32 w-full max-w-[220px]"
-              >
+              <Link href="/" className="relative block h-48 w-full">
                 <Image
-                  src="/logo-secid-horizontal.png"
+                  src="/logo-secid-contorno.png"
                   alt="Governo do Maranhão e SECID"
                   fill
-                  sizes="220px"
+                  sizes="320px"
                   className="object-contain object-left"
                 />
               </Link>
