@@ -48,6 +48,9 @@ import {
   useMultiStepForm,
   type StepFieldConfig
 } from '@/hooks/use-multi-step-viewer'
+import {
+  DatePicker
+} from '@/components/ui/date-picker'
 import { useConvexAuth } from 'convex/react'
 
 import { useAuth } from '@/lib/auth-context'
@@ -215,9 +218,6 @@ export default function OfertanteCadastroPage() {
   const phoneInputRef = useMaskito({ options: phoneMaskOptions })
   const cpfInputRef = useMaskito({ options: cpfMaskOptions })
   const cepInputRef = useMaskito({ options: cepMaskOptions })
-  const dataNascimentoInputRef = useMaskito({
-    options: dataNascimentoBrMaskOptions
-  })
 
   const stepsFields = useMemo(
     (): StepFieldConfig[] => [
@@ -345,18 +345,12 @@ export default function OfertanteCadastroPage() {
                   <FieldLabel htmlFor="dataNascimento">
                     Data de nascimento *
                   </FieldLabel>
-                  <Input
-                    ref={mergeRefs(field.ref, dataNascimentoInputRef)}
+                  <DatePicker
                     id="dataNascimento"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="bday"
                     placeholder="DD/MM/AAAA"
-                    aria-invalid={fieldState.invalid}
-                    name={field.name}
-                    onBlur={field.onBlur}
-                    value={field.value ?? ''}
+                    value={field.value}
                     onChange={field.onChange}
+                    yearRange={[1900, new Date().getFullYear()]}
                   />
                   <FieldDescription>
                     Formato DD/MM/AAAA (dia-mês-ano).
@@ -628,7 +622,6 @@ export default function OfertanteCadastroPage() {
       cepInputRef,
       cpfInputRef,
       phoneInputRef,
-      dataNascimentoInputRef,
       otpSent,
       otpValue
     ]
@@ -742,7 +735,7 @@ export default function OfertanteCadastroPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+    <div className="min-h-screen flex flex-col bg-linear-to-br from-primary/5 via-background to-secondary/5">
       <div className="flex-1 py-6 px-4 sm:py-10">
         <div className="container mx-auto max-w-lg sm:max-w-xl">
           <Button variant="ghost" asChild className="mb-4 -ms-2">

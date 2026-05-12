@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { DatePicker } from "@/components/ui/date-picker";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -122,9 +123,6 @@ export default function OfertanteOnboardingPage() {
 
   const cpfInputRef = useMaskito({ options: cpfMaskOptions });
   const cepInputRef = useMaskito({ options: cepMaskOptions });
-  const dataNascimentoInputRef = useMaskito({
-    options: dataNascimentoBrMaskOptions,
-  });
 
   const formatDataNascimentoDisplay = (value: string) => {
     const iso = parseDataNascimentoBrParaIso(value);
@@ -271,7 +269,7 @@ export default function OfertanteOnboardingPage() {
   );
 
   return (
-    <div className="min-h-[calc(100vh-80px)] flex flex-col bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+    <div className="min-h-[calc(100vh-80px)] flex flex-col bg-linear-to-br from-primary/5 via-background to-secondary/5">
       <div className="flex-1 py-8 px-4">
         <div className="container mx-auto max-w-2xl">
           {/* Header */}
@@ -358,16 +356,12 @@ export default function OfertanteOnboardingPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="data-nascimento">Data de Nascimento *</Label>
-                  <Input
+                  <DatePicker
                     id="data-nascimento"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="bday"
                     placeholder="DD/MM/AAAA"
                     value={dataNascimento}
-                    onChange={(e) => setDataNascimento(e.target.value)}
-                    ref={dataNascimentoInputRef}
-                    required
+                    onChange={setDataNascimento}
+                    yearRange={[1900, new Date().getFullYear()]}
                   />
                   <p className="text-xs text-muted-foreground">
                     Formato brasileiro: dia, mês e ano

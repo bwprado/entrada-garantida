@@ -14,8 +14,10 @@ import {
 } from '@/components/multi-step-viewer'
 import { AmenityToggle } from '@/components/property/amenity-toggle'
 import { RoomCounter } from '@/components/property/room-counter'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
+import { DatePicker } from '@/components/ui/date-picker'
 import {
   Field,
   FieldDescription,
@@ -67,6 +69,7 @@ import { useMutation, useQuery } from 'convex/react'
 import { format, isValid, subYears } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
+  AlertTriangle,
   ArrowLeft,
   Bath,
   BedDouble,
@@ -961,72 +964,36 @@ function ImovelCadastroPageInner() {
                   className="col-span-full"
                 >
                   <FieldLabel>Data da construção *</FieldLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <div className="relative w-full">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          id="data_construcao"
-                          className={cn(
-                            'w-full justify-start text-start font-normal active:scale-none',
-                            !selectedDate && 'text-muted-foreground'
-                          )}
-                        >
-                          <CalendarIcon className="size-4 shrink-0" />
-                          {selectedDate ? (
-                            <span>
-                              {format(selectedDate, 'dd/MM/yyyy', {
-                                locale: ptBR
-                              })}
-                            </span>
-                          ) : (
-                            <span>Selecione a data</span>
-                          )}
-                        </Button>
-                        {selectedDate && fieldState.isDirty && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            className="absolute inset-e-1 top-1/2 -translate-y-1/2 rounded-full"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              form.resetField('data_construcao', {
-                                defaultValue: undefined
-                              })
-                            }}
-                          >
-                            <X className="size-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={(d) => {
-                          if (!d || !isValid(d)) return
-                          const now = new Date()
-                          const boundary = subYears(now, 20)
-                          const clamped =
-                            d > now ? now : d < boundary ? boundary : d
-                          form.setValue('data_construcao', clamped, {
-                            shouldDirty: true,
-                            shouldValidate: true
-                          })
-                          if (d > now || d < boundary) {
-                            toast.info(
-                              'Data ajustada para limite válido (20 anos atrás ou hoje)'
-                            )
-                          }
-                        }}
-                        locale={ptBR}
-                        defaultMonth={selectedDate ?? new Date()}
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <DatePicker
+                    id="data_construcao"
+                    placeholder="DD/MM/AAAA"
+                    value={field.value}
+                    onSelect={(d) => {
+                      if (!d || !isValid(d)) {
+                        field.onChange(undefined)
+                        return
+                      }
+                      const now = new Date()
+                      const boundary = subYears(now, 20)
+                      const clamped =
+                        d > now ? now : d < boundary ? boundary : d
+                      
+                      field.onChange(clamped)
+                      
+                      if (d > now || d < boundary) {
+                        toast.info(
+                          'Data ajustada para limite válido (20 anos atrás ou hoje)'
+                        )
+                      }
+                    }}
+                    yearRange={[new Date().getFullYear() - 20, new Date().getFullYear()]}
+                  />
+                  <Alert className="mt-2 bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/20 dark:border-amber-900/30 dark:text-amber-400">
+                    <AlertTriangle className="size-4" />
+                    <AlertDescription className="text-amber-800 dark:text-amber-400">
+                      Imóveis construídos há mais de 20 anos não são aceitos pelo programa.
+                    </AlertDescription>
+                  </Alert>
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />
                   )}

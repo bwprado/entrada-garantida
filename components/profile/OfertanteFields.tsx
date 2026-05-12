@@ -19,6 +19,7 @@ import {
 import { mergeRefs } from "@/lib/utils"
 import { useMaskito } from "@maskito/react"
 import { dataNascimentoBrMaskOptions } from "@/lib/masks"
+import { DatePicker } from "@/components/ui/date-picker"
 
 const estadoCivilOptions = [
   { value: "solteiro", label: "Solteiro(a)" },
@@ -34,7 +35,6 @@ interface OfertanteFieldsProps {
 }
 
 export function OfertanteFields({ control }: OfertanteFieldsProps) {
-  const dataNascRef = useMaskito({ options: dataNascimentoBrMaskOptions })
 
   return (
     <div className="space-y-6">
@@ -64,10 +64,10 @@ export function OfertanteFields({ control }: OfertanteFieldsProps) {
             <FormItem>
               <FormLabel>Data de Nascimento</FormLabel>
               <FormControl>
-                <Input
-                  {...field}
-                  ref={mergeRefs(field.ref, dataNascRef)}
-                  placeholder="DD/MM/AAAA"
+                <DatePicker
+                  value={field.value}
+                  onChange={field.onChange}
+                  yearRange={[1900, new Date().getFullYear()]}
                 />
               </FormControl>
               <FormMessage />
