@@ -443,8 +443,8 @@ export default async function LandingPage() {
               <p className="text-sm text-secondary-foreground/80 leading-relaxed">
                 Dúvidas sobre a Aquisição Assistida?
                 <br />
-                Entre em contato com a SECID - Secretaria de Estado de Cidades e
-                Desenvolvimento Urbano.
+                Entre em contato com a SECID - Secretaria de Estado das Cidades
+                e Desenvolvimento Urbano.
                 <br />
                 <a
                   href="mailto:aquisicao@secid.ma.gov.br"
