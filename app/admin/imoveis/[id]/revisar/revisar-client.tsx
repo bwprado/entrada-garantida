@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
+import { R2FileUploader } from '@/components/design/r2-file-uploader'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -17,7 +18,18 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Table,
   TableBody,
@@ -29,9 +41,14 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { api } from '@/convex/_generated/api'
 import type { Id } from '@/convex/_generated/dataModel'
+import { useUploadFile } from '@convex-dev/r2/react'
 import { useAuth } from '@/lib/auth-context'
 import { documentTipoLabel } from '@/lib/document-tipo-labels'
 import { FileTypeIconView } from '@/lib/file-type-icon'
+import {
+  PROPERTY_SALE_DOCUMENT_ITEMS,
+  type PropertySaleDocumentTipo
+} from '@/lib/property-sale-documents'
 import {
   resolveSelectionOutcome,
   selectionOutcomeLabelPt
@@ -48,6 +65,7 @@ import {
   Play,
   Ban,
   RotateCcw,
+  Upload,
   Users
 } from 'lucide-react'
 
@@ -124,6 +142,19 @@ export function RevisarClient() {
   )
   const reopenToPending = useMutation(api.properties.reopenToPending)
 
+  const saleDocFileIds = useQuery(
+    api.documents.getPropertySaleDocumentFileIds,
+    propertyId ? { propertyId } : 'skip'
+  )
+  const uploadFile = useUploadFile(api.r2)
+  const completeSaleDoc = useMutation(
+    api.documents.completePropertySaleDocumentFromUpload
+  )
+  const deleteSaleDoc = useMutation(
+    api.documents.deletePropertySaleDocumentByFileId
+  )
+
+  const [docDialogOpen, setDocDialogOpen] = useState(false)
   const [rejectOpen, setRejectOpen] = useState(false)
   const [approveOpen, setApproveOpen] = useState(false)
   const [motivo, setMotivo] = useState('')
@@ -269,6 +300,29 @@ export function RevisarClient() {
     }
   }
 
+  async function handleSaleDocUpload(
+    tipo: PropertySaleDocumentTipo,
+    files: File[]
+  ) {
+    for (const file of files) {
+      const r2Key = await uploadFile(file)
+      await completeSaleDoc({
+        propertyId: p._id,
+        tipo,
+        r2Key,
+        nomeOriginal: file.name,
+        contentType: file.type || 'application/octet-stream',
+        size: file.size
+      })
+    }
+    toast.success('Documento enviado')
+  }
+
+  async function handleSaleDocDelete(fileId: Id<'files'>) {
+    await deleteSaleDoc({ fileId })
+    toast.success('Arquivo excluído com sucesso')
+  }
+
   const dataLabel =
     p.dataConstrucao !== undefined
       ? new Date(p.dataConstrucao).toLocaleDateString('pt-BR', {
@@ -277,7 +331,7 @@ export function RevisarClient() {
       : 'N/A'
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{p.titulo}</h1>
@@ -420,7 +474,9 @@ export function RevisarClient() {
           </div>
           <div>
             <span className="text-muted-foreground">Inscrição imobiliária</span>
-            <p className="font-medium wrap-break-word">{p.inscricaoImobiliaria}</p>
+            <p className="font-medium wrap-break-word">
+              {p.inscricaoImobiliaria}
+            </p>
           </div>
           {p.cep && (
             <div>
@@ -550,10 +606,73 @@ export function RevisarClient() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <FileText className="size-5" />
-            Documentos do imóvel
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <FileText className="size-5" />
+              Documentos do imóvel
+            </CardTitle>
+            <Dialog open={docDialogOpen} onOpenChange={setDocDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="gap-1.5">
+                  <Upload className="size-4" />
+                  Gerenciar
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-xl">
+                <DialogHeader>
+                  <DialogTitle>Documentos para venda</DialogTitle>
+                  <DialogDescription>
+                    Gerencie os documentos obrigatórios do imóvel para validação.
+                  </DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="max-h-[70vh]">
+                  <div className="space-y-4 pr-4">
+                    {saleDocFileIds === undefined ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : (
+                      PROPERTY_SALE_DOCUMENT_ITEMS.map((item) => (
+                        <div
+                          key={item.tipo}
+                          className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-start sm:justify-between"
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                              <FileText className="size-5 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-medium">{item.title}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {item.description}
+                              </p>
+                            </div>
+                          </div>
+                          <R2FileUploader
+                            multiple={false}
+                            filesIds={
+                              saleDocFileIds[item.tipo]
+                                ? [saleDocFileIds[item.tipo]!]
+                                : []
+                            }
+                            handleUploadFiles={(files) =>
+                              handleSaleDocUpload(item.tipo, files)
+                            }
+                            handleDeleteFile={handleSaleDocDelete}
+                          />
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button variant="outline">Fechar</Button>
+                  </DialogClose>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {!docRows.length && (
