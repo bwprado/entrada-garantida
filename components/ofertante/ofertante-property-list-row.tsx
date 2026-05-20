@@ -40,7 +40,7 @@ function propertyStatusLabel(
     case 'draft':
       return { label: 'Rascunho', variant: 'secondary' }
     case 'pending':
-      return { label: 'Em análise', variant: 'default' }
+      return { label: 'Em análise', variant: 'accent' }
     case 'validated':
       return { label: 'Aprovado', variant: 'default' }
     case 'paused':

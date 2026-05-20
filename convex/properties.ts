@@ -17,10 +17,6 @@ import {
   verifySelfOrAdmin
 } from './authz'
 import { isSelectionActivePending } from './selectionHistory'
-import {
-  PROPERTY_SALE_DOCUMENT_TIPOS,
-  missingSaleDocumentMessage
-} from './propertySaleDocuments'
 import { MAX_PROPERTY_PRICE } from './schema'
 
 const r2 = new R2(components.r2)
@@ -576,17 +572,6 @@ export const submitForValidation = mutation({
     const comp = validateCompartimentos(property.compartimentos ?? 0)
     if (!comp.valid) {
       throw new Error(comp.errors.join('; '))
-    }
-
-    const propertyDocs = await ctx.db
-      .query('documents')
-      .withIndex('by_property', (q) => q.eq('propertyId', args.propertyId))
-      .collect()
-    const missing = PROPERTY_SALE_DOCUMENT_TIPOS.filter(
-      (t) => !propertyDocs.some((d) => d.tipo === t)
-    )
-    if (missing.length > 0) {
-      throw new Error(missingSaleDocumentMessage(missing))
     }
 
     const now = Date.now()
