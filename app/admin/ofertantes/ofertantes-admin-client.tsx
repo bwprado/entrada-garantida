@@ -12,20 +12,87 @@ import {
   CardTitle
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { DataTable } from '@/components/ui/data-table'
 import {
   CheckCircle2,
   Clock,
   Eye,
   Home,
-  Phone
+  Phone,
+  XCircle,
+  Ban
 } from 'lucide-react'
 import { UserDetailSheet } from '@/app/admin/dashboard/user-detail-sheet'
-import type { Id } from '@/convex/_generated/dataModel'
+import type { Doc, Id } from '@/convex/_generated/dataModel'
 import { normalizePhone } from '@/lib/normalize-phone'
+import type { ColumnDef } from '@tanstack/react-table'
 
 function formatCPF(cpf: string) {
   return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+}
+
+function statusBadge(status: string) {
+  switch (status) {
+    case 'onboarding':
+      return (
+        <Badge
+          variant="outline"
+          className="bg-yellow-50 text-yellow-700 border-yellow-200"
+        >
+          <Clock className="size-3" />
+          Pendente Onboarding
+        </Badge>
+      )
+    case 'active':
+      return (
+        <Badge
+          variant="secondary"
+          className="bg-green-100 text-green-700 border-green-200"
+        >
+          <CheckCircle2 className="size-3" />
+          Ativo
+        </Badge>
+      )
+    case 'pending':
+      return (
+        <Badge
+          variant="outline"
+          className="bg-gray-100 text-gray-600 border-gray-200"
+        >
+          <Clock className="size-3" />
+          Pendente
+        </Badge>
+      )
+    case 'rejected':
+      return (
+        <Badge variant="destructive">
+          <XCircle className="size-3" />
+          Rejeitado
+        </Badge>
+      )
+    case 'verified':
+      return (
+        <Badge
+          variant="outline"
+          className="bg-blue-50 text-blue-700 border-blue-200"
+        >
+          <CheckCircle2 className="size-3" />
+          Verificado
+        </Badge>
+      )
+    case 'suspended':
+      return (
+        <Badge
+          variant="outline"
+          className="bg-orange-50 text-orange-700 border-orange-200"
+        >
+          <Ban className="size-3" />
+          Suspenso
+        </Badge>
+      )
+    default:
+      return <Badge variant="outline">{status}</Badge>
+  }
 }
 
 export function OfertantesAdminClient() {
@@ -34,9 +101,81 @@ export function OfertantesAdminClient() {
   const [detailSheetPreviewNome, setDetailSheetPreviewNome] = useState('')
 
   const ofertantes = useQuery(api.users.getOfertantes, {})
-  const ofertantesPendentes = useQuery(api.users.getOfertantesPendentes, {})
 
-  const pendentesCount = ofertantesPendentes?.length ?? 0
+  const columns: ColumnDef<Doc<'users'>, unknown>[] = [
+    {
+      accessorKey: 'nome',
+      header: 'Nome'
+    },
+    {
+      accessorKey: 'cpf',
+      header: 'CPF',
+      cell: ({ row }) => {
+        const cpf = row.getValue<string | undefined>('cpf')
+        return (
+          <span className="text-muted-foreground">
+            {cpf ? formatCPF(cpf) : '-'}
+          </span>
+        )
+      }
+    },
+    {
+      accessorKey: 'phone',
+      header: 'Telefone',
+      cell: ({ row }) => {
+        const phone = row.getValue<string | undefined>('phone')
+        return (
+          <span className="text-muted-foreground">
+            {phone ? normalizePhone(phone).display() : '-'}
+          </span>
+        )
+      }
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => statusBadge(row.getValue('status'))
+    },
+    {
+      accessorKey: 'criadoEm',
+      header: 'Cadastro',
+      cell: ({ row }) => {
+        const date = row.getValue<number>('criadoEm')
+        return (
+          <span className="text-muted-foreground">
+            {new Date(date).toLocaleDateString('pt-BR')}
+          </span>
+        )
+      }
+    },
+    {
+      id: 'acoes',
+      header: () => <span className="sr-only">Ações</span>,
+      cell: ({ row }) => {
+        const user = row.original
+        return (
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-transparent"
+              onClick={() => {
+                setDetailSheetUserId(user._id)
+                setDetailSheetPreviewNome(user.nome)
+              }}
+            >
+              <Eye className="size-4" />
+              Ver Detalhes
+            </Button>
+            <Button variant="outline" size="sm" className="bg-transparent">
+              <Phone className="size-4" />
+              Contatar
+            </Button>
+          </div>
+        )
+      }
+    }
+  ]
 
   return (
     <>
@@ -55,154 +194,12 @@ export function OfertantesAdminClient() {
           </div>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="pendentes" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-grid">
-              <TabsTrigger value="pendentes">
-                <Clock className="mr-2 size-4" />
-                Pendentes de Onboarding
-                {pendentesCount > 0 && (
-                  <span className="ml-2 flex size-5 items-center justify-center rounded-full bg-yellow-500 text-xs text-white">
-                    {pendentesCount}
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="ativos">
-                <CheckCircle2 className="mr-2 size-4" />
-                Ativos
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="pendentes">
-              {ofertantesPendentes?.length === 0 ? (
-                <div className="py-12 text-center">
-                  <CheckCircle2 className="mx-auto mb-4 size-12 text-secondary" />
-                  <p className="text-muted-foreground">
-                    Nenhum ofertante pendente de onboarding.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {ofertantesPendentes?.map((o) => (
-                    <div
-                      key={o._id}
-                      className="rounded-lg border p-4 transition-colors hover:bg-muted/50"
-                    >
-                      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-                        <div className="flex-1">
-                          <div className="mb-2 flex items-center gap-3">
-                            <h4 className="font-semibold">{o.nome}</h4>
-                            <Badge variant="outline" className="bg-yellow-50">
-                              <Clock className="mr-1 size-3" />
-                              Pendente Onboarding
-                            </Badge>
-                          </div>
-                          <div className="grid grid-cols-1 gap-2 text-sm text-muted-foreground md:grid-cols-2">
-                            <p>
-                              Telefone: {normalizePhone(o.phone).display()}
-                            </p>
-                            <p>
-                              Cadastro:{' '}
-                              {new Date(o.criadoEm).toLocaleDateString('pt-BR')}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="bg-transparent"
-                            onClick={() => {
-                              setDetailSheetUserId(o._id)
-                              setDetailSheetPreviewNome(o.nome)
-                            }}
-                          >
-                            <Eye className="mr-2 size-4" />
-                            Ver Detalhes
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="ativos">
-              {ofertantes?.filter((o) => o.status === 'active').length ===
-              0 ? (
-                <div className="py-12 text-center">
-                  <Home className="mx-auto mb-4 size-12 text-muted-foreground" />
-                  <p className="text-muted-foreground">
-                    Nenhum ofertante ativo.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {ofertantes
-                    ?.filter((o) => o.status === 'active')
-                    .map((o) => (
-                      <div
-                        key={o._id}
-                        className="rounded-lg border p-4 transition-colors hover:bg-muted/50"
-                      >
-                        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-                          <div className="flex-1">
-                            <div className="mb-2 flex items-center gap-3">
-                              <h4 className="font-semibold">{o.nome}</h4>
-                              <Badge
-                                variant="secondary"
-                                className="bg-secondary/50"
-                              >
-                                <CheckCircle2 className="mr-1 size-3" />
-                                Ativo
-                              </Badge>
-                            </div>
-                            <div className="grid grid-cols-1 gap-2 text-sm text-muted-foreground md:grid-cols-3">
-                              <p>
-                                CPF:{' '}
-                                {o.cpf ? formatCPF(o.cpf) : 'Não informado'}
-                              </p>
-                              <p>
-                                Telefone:{' '}
-                                {normalizePhone(o.phone).display()}
-                              </p>
-                              <p>
-                                Cadastro:{' '}
-                                {new Date(o.criadoEm).toLocaleDateString(
-                                  'pt-BR'
-                                )}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="bg-transparent"
-                              onClick={() => {
-                                setDetailSheetUserId(o._id)
-                                setDetailSheetPreviewNome(o.nome)
-                              }}
-                            >
-                              <Eye className="mr-2 size-4" />
-                              Ver Detalhes
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="bg-transparent"
-                            >
-                              <Phone className="mr-2 size-4" />
-                              Contatar
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
+          <DataTable
+            columns={columns}
+            data={ofertantes ?? []}
+            searchKey="global"
+            searchPlaceholder="Buscar por nome, CPF, telefone ou email..."
+          />
         </CardContent>
       </Card>
 
