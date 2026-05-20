@@ -1092,6 +1092,14 @@ function ImovelCadastroPageInner() {
               </Field>
             )}
           />
+          <Alert className="mt-2 bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/20 dark:border-amber-900/30 dark:text-amber-400">
+            <AlertTriangle className="size-4" />
+            <AlertDescription className="text-amber-800 dark:text-amber-400">
+              O imóvel será avaliado pela CAIXA Econômica Federal. O valor
+              final de compra pode ser reajustado conforme a avaliação do
+              banco.
+            </AlertDescription>
+          </Alert>
         </>
       )
     },
